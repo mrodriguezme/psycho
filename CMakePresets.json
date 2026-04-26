@@ -1,0 +1,116 @@
+{
+  "version": 3,
+  "cmakeMinimumRequired": {
+    "major": 3,
+    "minor": 22,
+    "patch": 1
+  },
+  "configurePresets": [
+    {
+      "name": "base",
+      "hidden": true,
+      "description": "Default build using Ninja generator",
+      "generator": "Ninja",
+      "cacheVariables": {
+        "CMAKE_EXPORT_COMPILE_COMMANDS": {
+          "type": "BOOL",
+          "value": "ON"
+        }
+      }
+    },
+    {
+      "name": "dbg",
+      "hidden": true,
+      "inherits": "base",
+      "description": "Base configuration for Debug builds",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": {
+          "type": "STRING",
+          "value": "Debug"
+        },
+        "PSYCHO_ENABLE_SANITIZERS": {
+          "type": "BOOL",
+          "value": "ON"
+        }
+      }
+    },
+    {
+      "name": "rel",
+      "hidden": true,
+      "inherits": "base",
+      "description": "Base configuration for Release builds",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": {
+          "type": "STRING",
+          "value": "Release"
+        }
+      }
+    },
+    {
+      "name": "clang",
+      "hidden": true,
+      "description": "Base configuration for clang",
+      "cacheVariables": {
+        "CMAKE_C_COMPILER": {
+          "type": "STRING",
+          "value": "clang"
+        }
+      }
+    },
+    {
+      "name": "gcc",
+      "hidden": true,
+      "description": "Base configuration for gcc",
+      "cacheVariables": {
+        "CMAKE_C_COMPILER": {
+          "type": "STRING",
+          "value": "gcc"
+        }
+      }
+    },
+    {
+      "name": "clang-dbg",
+      "hidden": false,
+      "binaryDir": "${sourceDir}/build-clang-dbg",
+      "displayName": "Build with clang in Debug mode",
+      "description": "Build the project with clang in Debug mode",
+      "inherits": [
+        "clang",
+        "dbg"
+      ]
+    },
+    {
+      "name": "clang-rel",
+      "hidden": false,
+      "binaryDir": "${sourceDir}/build-clang-rel",
+      "displayName": "Build with clang in Release mode",
+      "description": "Build the project with clang in Release mode",
+      "inherits": [
+        "clang",
+        "rel"
+      ]
+    },
+    {
+      "name": "gcc-dbg",
+      "hidden": false,
+      "binaryDir": "${sourceDir}/build-gcc-dbg",
+      "displayName": "Build with gcc in Debug mode",
+      "description": "Build the project with gcc in Debug mode",
+      "inherits": [
+        "gcc",
+        "dbg"
+      ]
+    },
+    {
+      "name": "gcc-rel",
+      "hidden": false,
+      "binaryDir": "${sourceDir}/build-gcc-rel",
+      "displayName": "Build with gcc in Release mode",
+      "description": "Build the project with gcc in Release mode",
+      "inherits": [
+        "gcc",
+        "rel"
+      ]
+    }
+  ]
+}
