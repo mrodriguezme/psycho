@@ -44,7 +44,10 @@ enum psycho_log_level {
 	PSYCHO_LOG_LEVEL_COUNT
 };
 
-enum psycho_log_module { PSYCHO_LOG_MODULE_CTX, PSYCHO_LOG_MODULE_COUNT };
+enum psycho_log_module {
+	PSYCHO_LOG_MODULE_CTX,
+	PSYCHO_LOG_MODULE_COUNT,
+};
 
 struct psycho_log_msg_data {
 	const char *const msg;
