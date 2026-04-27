@@ -25,5 +25,11 @@ target_link_libraries(psycho PRIVATE psycho_cfg_base_c)
 
 target_sources(
 	psycho PRIVATE
+	include/psycho/ctx.h
+	include/psycho/log.h
 	src/ctx.c
+	src/log.c
+	src/log.h
 )
+
+target_include_directories(psycho PUBLIC include)

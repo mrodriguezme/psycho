@@ -20,54 +20,49 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-#include <assert.h>
-#include <stdio.h>
+#pragma once
 
-#include "ansi-color-codes.h"
-#include "psycho/ctx.h"
+#include <stddef.h>
 
-static struct psycho_ctx m_ctx;
+#ifdef __cplusplus
+extern "C" {
+#endif // __cplusplus
 
-static void log_cb(struct psycho_ctx *const ctx,
-		   const struct psycho_log_msg_data *const msg)
-{
-	assert(ctx != NULL);
-	assert(msg != NULL);
+struct psycho_ctx;
 
-	static const char *const color_str[PSYCHO_LOG_LEVEL_COUNT] = {
-		// clang-format off
+enum {
+	PSYCHO_LOG_MSG_LEN_MAX = 512,
+};
 
-		[PSYCHO_LOG_LEVEL_INFO]		= BHWHT "%s\n" CRESET,
-		[PSYCHO_LOG_LEVEL_WARN]		= BHYEL "%s\n" CRESET,
-		[PSYCHO_LOG_LEVEL_ERR]		= BHRED "%s\n" CRESET,
-		[PSYCHO_LOG_LEVEL_DBG]		= BHCYN "%s\n" CRESET,
-		[PSYCHO_LOG_LEVEL_TRACE]	= BHMAG "%s\n" CRESET
+enum psycho_log_level {
+	PSYCHO_LOG_LEVEL_OFF,
+	PSYCHO_LOG_LEVEL_INFO,
+	PSYCHO_LOG_LEVEL_WARN,
+	PSYCHO_LOG_LEVEL_ERR,
+	PSYCHO_LOG_LEVEL_DBG,
+	PSYCHO_LOG_LEVEL_TRACE,
+	PSYCHO_LOG_LEVEL_COUNT
+};
 
-		// clang-format on
-	};
+enum psycho_log_module { PSYCHO_LOG_MODULE_CTX, PSYCHO_LOG_MODULE_COUNT };
 
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wformat-nonliteral"
-	printf(color_str[msg->level], msg->msg);
-#pragma GCC diagnostic pop
+struct psycho_log_msg_data {
+	const char *const msg;
+	const size_t len;
+	const enum psycho_log_module module;
+	const enum psycho_log_level level;
+};
+
+struct psycho_log_cfg {
+	void (*log_cb)(struct psycho_ctx *ctx,
+		       const struct psycho_log_msg_data *msg);
+	enum psycho_log_level modules[PSYCHO_LOG_MODULE_COUNT];
+};
+
+struct psycho_log {
+	struct psycho_log_cfg cfg;
+};
+
+#ifdef __cplusplus
 }
-
-int main(void)
-{
-	const struct psycho_ctx_cfg cfg = {
-		// clang-format off
-
-		.log	= {
-			.log_cb		= log_cb,
-			.modules	= {
-				[PSYCHO_LOG_MODULE_CTX]	= PSYCHO_LOG_LEVEL_TRACE
-			}
-		}
-
-		// clang-format on
-	};
-
-	psycho_ctx_init(&m_ctx, &cfg);
-
-	return 0;
-}
+#endif // __cplusplus

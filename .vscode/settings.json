@@ -3,5 +3,6 @@
         80
     ],
     "files.trimTrailingWhitespace": true,
-    "files.insertFinalNewline": true
+    "files.insertFinalNewline": true,
+    "cmake.copyCompileCommands": "${workspaceFolder}/compile_commands.json"
 }

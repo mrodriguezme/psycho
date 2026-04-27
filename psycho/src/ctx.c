@@ -19,3 +19,21 @@
 // LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
+
+#include <assert.h>
+#include <stddef.h>
+
+#include "psycho/ctx.h"
+#include "log.h"
+
+LOG_MODULE(PSYCHO_LOG_MODULE_CTX);
+
+void psycho_ctx_init(struct psycho_ctx *const ctx,
+		     const struct psycho_ctx_cfg *const cfg)
+{
+	assert(ctx != NULL);
+	assert(cfg != NULL);
+
+	psycho_log_init(ctx, &cfg->log);
+	LOG_INFO(ctx, "initialized");
+}

@@ -21,4 +21,4 @@
 # SOFTWARE.
 
 add_executable(psycho-testbed main.c)
-target_link_libraries(psycho-testbed PRIVATE psycho_cfg_base_c)
+target_link_libraries(psycho-testbed PRIVATE psycho_cfg_base_c psycho)

@@ -22,21 +22,42 @@
 
 #pragma once
 
+#include "psycho/ctx.h"
+
 #ifdef __cplusplus
 extern "C" {
 #endif // __cplusplus
 
-#include "log.h"
+#define LOG_MODULE(mod) static const enum psycho_log_module m_log_module = (mod)
 
-struct psycho_ctx {
-	struct psycho_log log;
-};
+#define LOG_MSG(ctx, module, lvl, args...)                            \
+	({                                                            \
+		struct psycho_ctx *const m_ctx = (ctx);               \
+                                                                      \
+		if (m_ctx->log.cfg.modules[(module)] >= (lvl))        \
+			psycho_log_msg(m_ctx, (module), (lvl), args); \
+	})
 
-struct psycho_ctx_cfg {
-	struct psycho_log_cfg log;
-};
+#define LOG_INFO(ctx, args...) \
+	(LOG_MSG((ctx), m_log_module, PSYCHO_LOG_LEVEL_INFO, args))
 
-void psycho_ctx_init(struct psycho_ctx *ctx, const struct psycho_ctx_cfg *cfg);
+#define LOG_WARN(ctx, args...) \
+	(LOG_MSG((ctx), m_log_module, PSYCHO_LOG_LEVEL_WARN, args))
+
+#define LOG_ERR(ctx, args...) \
+	(LOG_MSG((ctx), m_log_module, PSYCHO_LOG_LEVEL_ERR, args))
+
+#define LOG_DBG(ctx, args...) \
+	(LOG_MSG((ctx), m_log_module, PSYCHO_LOG_LEVEL_DBG, args))
+
+#define LOG_TRACE(ctx, args...) \
+	(LOG_MSG((ctx), m_log_module, PSYCHO_LOG_LEVEL_TRACE, args))
+
+void psycho_log_init(struct psycho_ctx *ctx, const struct psycho_log_cfg *cfg);
+
+void psycho_log_msg(struct psycho_ctx *const ctx,
+		    const enum psycho_log_module module,
+		    const enum psycho_log_level level, const char *fmt, ...);
 
 #ifdef __cplusplus
 }
