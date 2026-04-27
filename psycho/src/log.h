@@ -34,7 +34,8 @@ extern "C" {
 	({                                                            \
 		struct psycho_ctx *const m_ctx = (ctx);               \
                                                                       \
-		if (m_ctx->log.cfg.modules[(module)] >= (lvl))        \
+		if ((m_ctx->log.cfg.log_cb) &&                        \
+		    m_ctx->log.cfg.modules[(module)] >= (lvl))        \
 			psycho_log_msg(m_ctx, (module), (lvl), args); \
 	})
 
