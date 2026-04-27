@@ -20,54 +20,58 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-#pragma once
+#include <assert.h>
+#include <string.h>
 
-#include <stddef.h>
+#include "bus.h"
+#include "cpu.h"
+#include "cpu-defs.h"
+#include "log.h"
 
-#ifdef __cplusplus
-extern "C" {
-#endif // __cplusplus
+LOG_MODULE(PSYCHO_LOG_MODULE_CPU);
 
-struct psycho_ctx;
+static void illegal_instr(struct psycho_ctx *const ctx)
+{
+	assert(ctx != NULL);
 
-enum {
-	PSYCHO_LOG_MSG_LEN_MAX = 512,
-};
+	LOG_ERR(ctx, "illegal instruction trapped (pc=0x%08X, instr=0x%08X)",
+		ctx->cpu.pc, ctx->cpu.instr);
 
-enum psycho_log_level {
-	PSYCHO_LOG_LEVEL_OFF,
-	PSYCHO_LOG_LEVEL_INFO,
-	PSYCHO_LOG_LEVEL_WARN,
-	PSYCHO_LOG_LEVEL_ERR,
-	PSYCHO_LOG_LEVEL_DBG,
-	PSYCHO_LOG_LEVEL_TRACE,
-	PSYCHO_LOG_LEVEL_COUNT
-};
-
-enum psycho_log_module {
-	PSYCHO_LOG_MODULE_CTX,
-	PSYCHO_LOG_MODULE_CPU,
-	PSYCHO_LOG_MODULE_BUS,
-	PSYCHO_LOG_MODULE_COUNT,
-};
-
-struct psycho_log_msg_data {
-	const char *const msg;
-	const size_t len;
-	const enum psycho_log_module module;
-	const enum psycho_log_level level;
-};
-
-struct psycho_log_cfg {
-	void (*log_cb)(struct psycho_ctx *ctx,
-		       const struct psycho_log_msg_data *msg);
-	enum psycho_log_level modules[PSYCHO_LOG_MODULE_COUNT];
-};
-
-struct psycho_log {
-	struct psycho_log_cfg cfg;
-};
-
-#ifdef __cplusplus
+	ctx->cpu.cfg.illegal_instr(ctx, ctx->cpu.instr);
 }
-#endif // __cplusplus
+
+static uint32_t load_word(struct psycho_ctx *const ctx, uint32_t vaddr)
+{
+	assert(ctx != NULL);
+
+	vaddr = psycho_cpu_vaddr_to_paddr(vaddr);
+	return psycho_bus_load_word(ctx, vaddr);
+}
+
+void psycho_cpu_init(struct psycho_ctx *const ctx,
+		     const struct psycho_cpu_cfg *const cfg)
+{
+	assert(ctx != NULL);
+	assert(cfg != NULL);
+
+	ctx->cpu.cfg = *cfg;
+	LOG_INFO(ctx, "initialized");
+}
+
+void psycho_cpu_reset(struct psycho_ctx *const ctx)
+{
+	assert(ctx != NULL);
+
+	memset(ctx->cpu.gpr, 0, sizeof(ctx->cpu.gpr));
+	ctx->cpu.pc = CPU_RESET_VECTOR;
+
+	LOG_INFO(ctx, "reset");
+}
+
+void psycho_cpu_step(struct psycho_ctx *const ctx)
+{
+	assert(ctx != NULL);
+
+	ctx->cpu.instr = load_word(ctx, ctx->cpu.pc);
+	illegal_instr(ctx);
+}

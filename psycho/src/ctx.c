@@ -23,7 +23,7 @@
 #include <assert.h>
 #include <stddef.h>
 
-#include "psycho/ctx.h"
+#include "cpu.h"
 #include "log.h"
 
 LOG_MODULE(PSYCHO_LOG_MODULE_CTX);
@@ -35,5 +35,22 @@ void psycho_ctx_init(struct psycho_ctx *const ctx,
 	assert(cfg != NULL);
 
 	psycho_log_init(ctx, &cfg->log);
+	psycho_cpu_init(ctx, &cfg->cpu);
+
+	psycho_ctx_reset(ctx);
 	LOG_INFO(ctx, "initialized");
+}
+
+void psycho_ctx_reset(struct psycho_ctx *const ctx)
+{
+	assert(ctx != NULL);
+
+	psycho_cpu_reset(ctx);
+	LOG_INFO(ctx, "reset");
+}
+
+void psycho_ctx_step(struct psycho_ctx *const ctx)
+{
+	assert(ctx != NULL);
+	psycho_cpu_step(ctx);
 }

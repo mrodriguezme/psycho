@@ -22,52 +22,10 @@
 
 #pragma once
 
-#include <stddef.h>
+#include "psycho/ctx.h"
 
-#ifdef __cplusplus
-extern "C" {
-#endif // __cplusplus
+void psycho_cpu_init(struct psycho_ctx *ctx, const struct psycho_cpu_cfg *cfg);
 
-struct psycho_ctx;
+void psycho_cpu_reset(struct psycho_ctx *ctx);
 
-enum {
-	PSYCHO_LOG_MSG_LEN_MAX = 512,
-};
-
-enum psycho_log_level {
-	PSYCHO_LOG_LEVEL_OFF,
-	PSYCHO_LOG_LEVEL_INFO,
-	PSYCHO_LOG_LEVEL_WARN,
-	PSYCHO_LOG_LEVEL_ERR,
-	PSYCHO_LOG_LEVEL_DBG,
-	PSYCHO_LOG_LEVEL_TRACE,
-	PSYCHO_LOG_LEVEL_COUNT
-};
-
-enum psycho_log_module {
-	PSYCHO_LOG_MODULE_CTX,
-	PSYCHO_LOG_MODULE_CPU,
-	PSYCHO_LOG_MODULE_BUS,
-	PSYCHO_LOG_MODULE_COUNT,
-};
-
-struct psycho_log_msg_data {
-	const char *const msg;
-	const size_t len;
-	const enum psycho_log_module module;
-	const enum psycho_log_level level;
-};
-
-struct psycho_log_cfg {
-	void (*log_cb)(struct psycho_ctx *ctx,
-		       const struct psycho_log_msg_data *msg);
-	enum psycho_log_level modules[PSYCHO_LOG_MODULE_COUNT];
-};
-
-struct psycho_log {
-	struct psycho_log_cfg cfg;
-};
-
-#ifdef __cplusplus
-}
-#endif // __cplusplus
+void psycho_cpu_step(struct psycho_ctx *ctx);

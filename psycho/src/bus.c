@@ -20,54 +20,44 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-#pragma once
+#include <assert.h>
+#include <string.h>
 
-#include <stddef.h>
+#include "bus.h"
+#include "log.h"
 
-#ifdef __cplusplus
-extern "C" {
-#endif // __cplusplus
-
-struct psycho_ctx;
+LOG_MODULE(PSYCHO_LOG_MODULE_BUS);
 
 enum {
-	PSYCHO_LOG_MSG_LEN_MAX = 512,
+	// clang-format off
+
+	BIOS_PADDR_BEGIN	= 0x1FC00000,
+	BIOS_PADDR_END		= 0x1FC7FFFF,
+	BIOS_PADDR_MASK		= 0x000FFFFF
+
+	// clang-format on
 };
 
-enum psycho_log_level {
-	PSYCHO_LOG_LEVEL_OFF,
-	PSYCHO_LOG_LEVEL_INFO,
-	PSYCHO_LOG_LEVEL_WARN,
-	PSYCHO_LOG_LEVEL_ERR,
-	PSYCHO_LOG_LEVEL_DBG,
-	PSYCHO_LOG_LEVEL_TRACE,
-	PSYCHO_LOG_LEVEL_COUNT
-};
-
-enum psycho_log_module {
-	PSYCHO_LOG_MODULE_CTX,
-	PSYCHO_LOG_MODULE_CPU,
-	PSYCHO_LOG_MODULE_BUS,
-	PSYCHO_LOG_MODULE_COUNT,
-};
-
-struct psycho_log_msg_data {
-	const char *const msg;
-	const size_t len;
-	const enum psycho_log_module module;
-	const enum psycho_log_level level;
-};
-
-struct psycho_log_cfg {
-	void (*log_cb)(struct psycho_ctx *ctx,
-		       const struct psycho_log_msg_data *msg);
-	enum psycho_log_level modules[PSYCHO_LOG_MODULE_COUNT];
-};
-
-struct psycho_log {
-	struct psycho_log_cfg cfg;
-};
-
-#ifdef __cplusplus
+uint8_t *psycho_bus_bios_data_get(struct psycho_ctx *const ctx)
+{
+	return ctx->bus.bios;
 }
-#endif // __cplusplus
+
+uint32_t psycho_bus_load_word(struct psycho_ctx *ctx, const uint32_t paddr)
+{
+	assert(ctx != NULL);
+
+	uint32_t word;
+
+	switch (paddr) {
+	case BIOS_PADDR_BEGIN ... BIOS_PADDR_END:
+		memcpy(&word, &ctx->bus.bios[paddr & BIOS_PADDR_MASK],
+		       sizeof(uint32_t));
+		return word;
+
+	default:
+		LOG_WARN(ctx,
+			 "unknown word load: 0x%08X; returning 0xFFFF'FFFF");
+		return 0xFFFFFFFF;
+	}
+}

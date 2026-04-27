@@ -22,7 +22,8 @@
 
 #pragma once
 
-#include <stddef.h>
+#include <stdint.h>
+#include "cpu-defs.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -30,42 +31,16 @@ extern "C" {
 
 struct psycho_ctx;
 
-enum {
-	PSYCHO_LOG_MSG_LEN_MAX = 512,
+struct psycho_cpu_cfg {
+	void (*illegal_instr)(struct psycho_ctx *ctx, const uint32_t instr);
 };
 
-enum psycho_log_level {
-	PSYCHO_LOG_LEVEL_OFF,
-	PSYCHO_LOG_LEVEL_INFO,
-	PSYCHO_LOG_LEVEL_WARN,
-	PSYCHO_LOG_LEVEL_ERR,
-	PSYCHO_LOG_LEVEL_DBG,
-	PSYCHO_LOG_LEVEL_TRACE,
-	PSYCHO_LOG_LEVEL_COUNT
-};
+struct psycho_cpu {
+	uint32_t gpr[PSYCHO_CPU_GPR_COUNT];
+	uint32_t pc;
+	uint32_t instr;
 
-enum psycho_log_module {
-	PSYCHO_LOG_MODULE_CTX,
-	PSYCHO_LOG_MODULE_CPU,
-	PSYCHO_LOG_MODULE_BUS,
-	PSYCHO_LOG_MODULE_COUNT,
-};
-
-struct psycho_log_msg_data {
-	const char *const msg;
-	const size_t len;
-	const enum psycho_log_module module;
-	const enum psycho_log_level level;
-};
-
-struct psycho_log_cfg {
-	void (*log_cb)(struct psycho_ctx *ctx,
-		       const struct psycho_log_msg_data *msg);
-	enum psycho_log_level modules[PSYCHO_LOG_MODULE_COUNT];
-};
-
-struct psycho_log {
-	struct psycho_log_cfg cfg;
+	struct psycho_cpu_cfg cfg;
 };
 
 #ifdef __cplusplus

@@ -22,50 +22,44 @@
 
 #pragma once
 
-#include <stddef.h>
-
 #ifdef __cplusplus
 extern "C" {
 #endif // __cplusplus
 
-struct psycho_ctx;
-
-enum {
-	PSYCHO_LOG_MSG_LEN_MAX = 512,
-};
-
-enum psycho_log_level {
-	PSYCHO_LOG_LEVEL_OFF,
-	PSYCHO_LOG_LEVEL_INFO,
-	PSYCHO_LOG_LEVEL_WARN,
-	PSYCHO_LOG_LEVEL_ERR,
-	PSYCHO_LOG_LEVEL_DBG,
-	PSYCHO_LOG_LEVEL_TRACE,
-	PSYCHO_LOG_LEVEL_COUNT
-};
-
-enum psycho_log_module {
-	PSYCHO_LOG_MODULE_CTX,
-	PSYCHO_LOG_MODULE_CPU,
-	PSYCHO_LOG_MODULE_BUS,
-	PSYCHO_LOG_MODULE_COUNT,
-};
-
-struct psycho_log_msg_data {
-	const char *const msg;
-	const size_t len;
-	const enum psycho_log_module module;
-	const enum psycho_log_level level;
-};
-
-struct psycho_log_cfg {
-	void (*log_cb)(struct psycho_ctx *ctx,
-		       const struct psycho_log_msg_data *msg);
-	enum psycho_log_level modules[PSYCHO_LOG_MODULE_COUNT];
-};
-
-struct psycho_log {
-	struct psycho_log_cfg cfg;
+enum psycho_cpu_gpr {
+	PSYCHO_CPU_REG_ZERO,
+	PSYCHO_CPU_REG_AT,
+	PSYCHO_CPU_REG_V0,
+	PSYCHO_CPU_REG_V1,
+	PSYCHO_CPU_REG_A0,
+	PSYCHO_CPU_REG_A1,
+	PSYCHO_CPU_REG_A2,
+	PSYCHO_CPU_REG_A3,
+	PSYCHO_CPU_REG_T0,
+	PSYCHO_CPU_REG_T1,
+	PSYCHO_CPU_REG_T2,
+	PSYCHO_CPU_REG_T3,
+	PSYCHO_CPU_REG_T4,
+	PSYCHO_CPU_REG_T5,
+	PSYCHO_CPU_REG_T6,
+	PSYCHO_CPU_REG_T7,
+	PSYCHO_CPU_REG_S0,
+	PSYCHO_CPU_REG_S1,
+	PSYCHO_CPU_REG_S2,
+	PSYCHO_CPU_REG_S3,
+	PSYCHO_CPU_REG_S4,
+	PSYCHO_CPU_REG_S5,
+	PSYCHO_CPU_REG_S6,
+	PSYCHO_CPU_REG_S7,
+	PSYCHO_CPU_REG_T8,
+	PSYCHO_CPU_REG_T9,
+	PSYCHO_CPU_REG_K0,
+	PSYCHO_CPU_REG_K1,
+	PSYCHO_CPU_REG_GP,
+	PSYCHO_CPU_REG_SP,
+	PSYCHO_CPU_REG_FP,
+	PSYCHO_CPU_REG_RA,
+	PSYCHO_CPU_GPR_COUNT
 };
 
 #ifdef __cplusplus

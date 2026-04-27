@@ -25,8 +25,16 @@ target_link_libraries(psycho PRIVATE psycho_cfg_base_c)
 
 target_sources(
 	psycho PRIVATE
+	include/psycho/bus.h
+	include/psycho/cpu-defs.h
+	include/psycho/cpu.h
 	include/psycho/ctx.h
 	include/psycho/log.h
+	src/bus.c
+	src/bus.h
+	src/cpu-defs.h
+	src/cpu.c
+	src/cpu.h
 	src/ctx.c
 	src/log.c
 	src/log.h

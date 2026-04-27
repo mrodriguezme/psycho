@@ -26,17 +26,26 @@
 extern "C" {
 #endif // __cplusplus
 
+#include "cpu.h"
+#include "bus.h"
 #include "log.h"
 
 struct psycho_ctx {
+	struct psycho_cpu cpu;
+	struct psycho_bus bus;
 	struct psycho_log log;
 };
 
 struct psycho_ctx_cfg {
+	struct psycho_cpu_cfg cpu;
 	struct psycho_log_cfg log;
 };
 
 void psycho_ctx_init(struct psycho_ctx *ctx, const struct psycho_ctx_cfg *cfg);
+
+void psycho_ctx_reset(struct psycho_ctx *ctx);
+
+void psycho_ctx_step(struct psycho_ctx *ctx);
 
 #ifdef __cplusplus
 }
