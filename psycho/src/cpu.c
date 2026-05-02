@@ -98,6 +98,7 @@ void psycho_cpu_step(struct psycho_ctx *const ctx)
 #define funct (cpu_instr_funct(ctx->cpu.instr))
 #define base (rs)
 #define zextimm (zero_ext_16_32(cpu_instr_imm(ctx->cpu.instr)))
+#define sextimm (sign_ext_16_32(cpu_instr_imm(ctx->cpu.instr)))
 #define offset (sign_ext_16_32(cpu_instr_imm(ctx->cpu.instr)))
 #define gpr (ctx->cpu.gpr)
 
@@ -118,6 +119,10 @@ void psycho_cpu_step(struct psycho_ctx *const ctx)
 			illegal_instr(ctx);
 			return;
 		}
+		break;
+
+	case CPU_INSTR_ADDIU:
+		gpr[rt] = gpr[rs] + sextimm;
 		break;
 
 	case CPU_INSTR_ORI:
