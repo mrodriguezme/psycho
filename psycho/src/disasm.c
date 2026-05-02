@@ -90,7 +90,10 @@ void psycho_disasm_instr(struct psycho_ctx *const ctx, char *const dst,
 
 #define op (cpu_instr_op(instr))
 #define rt (cpu_instr_rt(instr))
-#define rs (cpu_instr_rs(ctx->cpu.instr))
+#define rs (cpu_instr_rs(instr))
+#define rd (cpu_instr_rd(instr))
+#define shamt (cpu_instr_shamt(instr))
+#define funct (cpu_instr_funct(instr))
 #define imm (cpu_instr_imm(instr))
 #define offset (imm)
 #define base (rs)
@@ -100,6 +103,17 @@ void psycho_disasm_instr(struct psycho_ctx *const ctx, char *const dst,
 #define FORMAT(args...) *len = snprintf(dst, PSYCHO_DISASM_LEN_MAX, args)
 
 	switch (op) {
+	case CPU_INSTR_GROUP_SPECIAL:
+		switch (funct) {
+		case CPU_INSTR_SLL:
+			FORMAT("sll %s, %s, 0x%X", gpr[rd], gpr[rt], shamt);
+			return;
+
+		default:
+			break;
+		}
+		break;
+
 	case CPU_INSTR_ORI:
 		FORMAT("ori %s, %s, 0x%04X", gpr[rt], gpr[rs], imm);
 		return;

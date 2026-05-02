@@ -93,6 +93,9 @@ void psycho_cpu_step(struct psycho_ctx *const ctx)
 #define op (cpu_instr_op(ctx->cpu.instr))
 #define rt (cpu_instr_rt(ctx->cpu.instr))
 #define rs (cpu_instr_rs(ctx->cpu.instr))
+#define rd (cpu_instr_rd(ctx->cpu.instr))
+#define shamt (cpu_instr_shamt(ctx->cpu.instr))
+#define funct (cpu_instr_funct(ctx->cpu.instr))
 #define base (rs)
 #define zextimm (zero_ext_16_32(cpu_instr_imm(ctx->cpu.instr)))
 #define offset (sign_ext_16_32(cpu_instr_imm(ctx->cpu.instr)))
@@ -105,6 +108,18 @@ void psycho_cpu_step(struct psycho_ctx *const ctx)
 	ctx->cpu.instr = load_word(ctx, ctx->cpu.pc);
 
 	switch (op) {
+	case CPU_INSTR_GROUP_SPECIAL:
+		switch (funct) {
+		case CPU_INSTR_SLL:
+			gpr[rd] = gpr[rt] << shamt;
+			break;
+
+		default:
+			illegal_instr(ctx);
+			return;
+		}
+		break;
+
 	case CPU_INSTR_ORI:
 		gpr[rt] = zextimm | gpr[rs];
 		break;
