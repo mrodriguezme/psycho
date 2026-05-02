@@ -28,3 +28,6 @@ uint32_t psycho_bus_load_word(struct psycho_ctx *ctx, const uint32_t paddr);
 
 void psycho_bus_store_word(struct psycho_ctx *ctx, const uint32_t paddr,
 			   const uint32_t word);
+
+void psycho_bus_store_halfword(struct psycho_ctx *ctx, const uint32_t paddr,
+			       const uint16_t halfword);
