@@ -139,6 +139,10 @@ void psycho_disasm_instr(struct psycho_ctx *const ctx, char *const dst,
 		       calc_branch_addr(pc, instr));
 		return;
 
+	case CPU_INSTR_ADDI:
+		FORMAT("addi %s, %s, 0x%04X", gpr[rs], gpr[rs], imm);
+		return;
+
 	case CPU_INSTR_ADDIU:
 		FORMAT("addiu %s, %s, 0x%04X", gpr[rt], gpr[rs], imm);
 		return;
