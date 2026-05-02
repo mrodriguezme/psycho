@@ -28,6 +28,7 @@
 
 #include "bus.h"
 #include "cpu-defs.h"
+#include "util.h"
 
 static const char *const gpr[PSYCHO_CPU_GPR_COUNT] = {
 	// clang-format off
@@ -69,7 +70,7 @@ static const char *const gpr[PSYCHO_CPU_GPR_COUNT] = {
 
 PSYCHO_NODISCARD static uint32_t instr_get(struct psycho_ctx *ctx, uint32_t pc)
 {
-	pc = psycho_cpu_vaddr_to_paddr(pc);
+	pc = cpu_vaddr_to_paddr(pc);
 	return psycho_bus_load_word(ctx, pc);
 }
 
@@ -87,9 +88,22 @@ void psycho_disasm_instr(struct psycho_ctx *const ctx, char *const dst,
 	assert(dst != NULL);
 	assert(len != NULL);
 
+#define op (cpu_instr_op(instr))
+#define rt (cpu_instr_rt(instr))
+#define zextimm (zero_ext_16_32(cpu_instr_imm(instr)))
+
 	const uint32_t instr = instr_get(ctx, pc);
 
 #define FORMAT(args...) *len = snprintf(dst, PSYCHO_DISASM_LEN_MAX, args)
+
+	switch (op) {
+	case CPU_INSTR_LUI:
+		FORMAT("lui %s, 0x%04X", gpr[rt], zextimm);
+		return;
+
+	default:
+		break;
+	}
 
 	FORMAT("illegal 0x%08X", instr);
 }

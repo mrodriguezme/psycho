@@ -27,6 +27,7 @@
 #include "cpu.h"
 #include "cpu-defs.h"
 #include "log.h"
+#include "util.h"
 
 LOG_MODULE(PSYCHO_LOG_MODULE_CPU);
 
@@ -44,7 +45,7 @@ static uint32_t load_word(struct psycho_ctx *const ctx, uint32_t vaddr)
 {
 	assert(ctx != NULL);
 
-	vaddr = psycho_cpu_vaddr_to_paddr(vaddr);
+	vaddr = cpu_vaddr_to_paddr(vaddr);
 	return psycho_bus_load_word(ctx, vaddr);
 }
 
@@ -82,10 +83,27 @@ void psycho_cpu_reset(struct psycho_ctx *const ctx)
 
 void psycho_cpu_step(struct psycho_ctx *const ctx)
 {
+#define op (cpu_instr_op(ctx->cpu.instr))
+#define rt (cpu_instr_rt(ctx->cpu.instr))
+#define zextimm (zero_ext_16_32(cpu_instr_imm(ctx->cpu.instr)))
+#define gpr (ctx->cpu.gpr)
+
+
 	assert(ctx != NULL);
 
 	disasm_trace(ctx);
 
 	ctx->cpu.instr = load_word(ctx, ctx->cpu.pc);
-	illegal_instr(ctx);
+
+	switch (op) {
+	case CPU_INSTR_LUI:
+		gpr[rt] = zextimm << 16;
+		break;
+
+	default:
+		illegal_instr(ctx);
+		return;
+	}
+
+	ctx->cpu.pc += sizeof(ctx->cpu.instr);
 }

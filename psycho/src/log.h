@@ -31,7 +31,7 @@ extern "C" {
 #define LOG_MODULE(mod) static const enum psycho_log_module m_log_module = (mod)
 
 #define MODULE_LOG_LEVEL_ACTIVE(ctx, lvl) \
-	psycho_log_enabled((ctx), m_log_module, (lvl))
+	log_enabled((ctx), m_log_module, (lvl))
 
 #define LOG_MSG(ctx, lvl, args...)                                        \
 	({                                                                \
@@ -49,9 +49,9 @@ extern "C" {
 	psycho_log_msg((ctx), m_log_module, PSYCHO_LOG_LEVEL_TRACE, args)
 
 PSYCHO_NODISCARD PSYCHO_ALWAYS_INLINE bool
-psycho_log_enabled(const struct psycho_ctx *const ctx,
-		   const enum psycho_log_module module,
-		   const enum psycho_log_level level)
+log_enabled(const struct psycho_ctx *const ctx,
+	    const enum psycho_log_module module,
+	    const enum psycho_log_level level)
 {
 	return (ctx->log.cfg.log_cb) && ctx->log.cfg.modules[module] >= level;
 }
