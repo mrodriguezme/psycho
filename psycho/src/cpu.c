@@ -138,6 +138,10 @@ void psycho_cpu_step(struct psycho_ctx *const ctx)
 			gpr[rd] = gpr[rs] | gpr[rt];
 			break;
 
+		case CPU_INSTR_SLTU:
+			gpr[rd] = gpr[rs] < gpr[rt];
+			break;
+
 		default:
 			illegal_instr(ctx);
 			return;
