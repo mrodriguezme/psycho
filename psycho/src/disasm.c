@@ -63,6 +63,7 @@ static const char *const gpr[PSYCHO_CPU_GPR_COUNT] = {
 	[PSYCHO_CPU_REG_K1]	= "$k1",
 	[PSYCHO_CPU_REG_GP]	= "$gp",
 	[PSYCHO_CPU_REG_SP]	= "$sp",
+	[PSYCHO_CPU_REG_FP]	= "$fp",
 	[PSYCHO_CPU_REG_RA]	= "$ra"
 
 	// clang-format on
@@ -107,6 +108,10 @@ void psycho_disasm_instr(struct psycho_ctx *const ctx, char *const dst,
 		switch (funct) {
 		case CPU_INSTR_SLL:
 			FORMAT("sll %s, %s, 0x%X", gpr[rd], gpr[rt], shamt);
+			return;
+
+		case CPU_INSTR_OR:
+			FORMAT("or %s, %s, %s", gpr[rd], gpr[rs], gpr[rt]);
 			return;
 
 		default:

@@ -38,6 +38,7 @@ enum psycho_cpu_instr_op {
 
 enum psycho_cpu_instr_special {
 	CPU_INSTR_SLL = 0x00,
+	CPU_INSTR_OR = 0x25
 };
 
 PSYCHO_NODISCARD PSYCHO_ALWAYS_INLINE uint32_t
