@@ -48,6 +48,18 @@ static uint32_t load_word(struct psycho_ctx *const ctx, uint32_t vaddr)
 	return psycho_bus_load_word(ctx, vaddr);
 }
 
+static void disasm_trace(struct psycho_ctx *const ctx)
+{
+	if (MODULE_LOG_LEVEL_ACTIVE(ctx, PSYCHO_LOG_LEVEL_TRACE)) {
+		char result[PSYCHO_DISASM_LEN_MAX];
+		size_t len;
+
+		psycho_disasm_instr(ctx, result, &len, ctx->cpu.pc);
+		LOG_TRACE_UNCHECKED(ctx, "[disasm] 0x%08X: %s", ctx->cpu.pc,
+				    result);
+	}
+}
+
 void psycho_cpu_init(struct psycho_ctx *const ctx,
 		     const struct psycho_cpu_cfg *const cfg)
 {
@@ -71,6 +83,8 @@ void psycho_cpu_reset(struct psycho_ctx *const ctx)
 void psycho_cpu_step(struct psycho_ctx *const ctx)
 {
 	assert(ctx != NULL);
+
+	disasm_trace(ctx);
 
 	ctx->cpu.instr = load_word(ctx, ctx->cpu.pc);
 	illegal_instr(ctx);

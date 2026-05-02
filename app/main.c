@@ -97,26 +97,27 @@ static bool load_bios_file(const char *const bios_file)
 		return false;
 	}
 
-	FILE *fd = fopen(bios_file, "rb");
+	FILE *handle = fopen(bios_file, "rb");
 
-	if (!fd) {
+	if (!handle) {
 		fprintf(stderr, "%s: unable to open bios file %s: %s\n",
 			prog_name, bios_file, strerror(errno));
 		return false;
 	}
 
 	uint8_t *dst = psycho_bus_bios_data_get(&m_ctx);
-	const size_t bytes_read = fread(dst, sizeof(uint8_t), file_size, fd);
+	const size_t bytes_read =
+		fread(dst, sizeof(uint8_t), file_size, handle);
 
-	if ((bytes_read != file_size) || (ferror(fd))) {
+	if (bytes_read != file_size) {
 		fprintf(stderr,
 			"%s: not all bytes were read from bios file %s: %s\n",
 			prog_name, bios_file, strerror(errno));
-		fclose(fd);
+		fclose(handle);
 
 		return false;
 	}
-	fclose(fd);
+	fclose(handle);
 	return true;
 }
 

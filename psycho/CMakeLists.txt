@@ -29,6 +29,7 @@ target_sources(
 	include/psycho/cpu-defs.h
 	include/psycho/cpu.h
 	include/psycho/ctx.h
+	include/psycho/disasm.h
 	include/psycho/log.h
 	src/bus.c
 	src/bus.h
@@ -36,6 +37,7 @@ target_sources(
 	src/cpu.c
 	src/cpu.h
 	src/ctx.c
+	src/disasm.c
 	src/log.c
 	src/log.h
 )

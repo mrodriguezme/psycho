@@ -52,5 +52,6 @@ void psycho_ctx_reset(struct psycho_ctx *const ctx)
 void psycho_ctx_step(struct psycho_ctx *const ctx)
 {
 	assert(ctx != NULL);
+
 	psycho_cpu_step(ctx);
 }

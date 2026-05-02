@@ -1,0 +1,95 @@
+// SPDX-License-Identifier: MIT
+//
+// Copyright 2026 Michael Rodriguez
+//
+// Permission is hereby granted, free of charge, to any person obtaining a copy
+// of this software and associated documentation files (the “Software”), to deal
+// in the Software without restriction, including without limitation the rights
+// to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+// copies of the Software, and to permit persons to whom the Software is
+// furnished to do so, subject to the following conditions:
+//
+// The above copyright notice and this permission notice shall be included in
+// all copies or substantial portions of the Software.
+//
+// THE SOFTWARE IS PROVIDED “AS IS”, WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+// SOFTWARE.
+
+#include <assert.h>
+#include <stdio.h>
+
+#include "psycho/compiler.h"
+#include "psycho/ctx.h"
+
+#include "bus.h"
+#include "cpu-defs.h"
+
+static const char *const gpr[PSYCHO_CPU_GPR_COUNT] = {
+	// clang-format off
+
+	[PSYCHO_CPU_REG_ZERO]	= "$zero",
+	[PSYCHO_CPU_REG_AT]	= "$at",
+	[PSYCHO_CPU_REG_V0]	= "$v0",
+	[PSYCHO_CPU_REG_V1]	= "$v1",
+	[PSYCHO_CPU_REG_A0]	= "$a0",
+	[PSYCHO_CPU_REG_A1]	= "$a1",
+	[PSYCHO_CPU_REG_A2]	= "$a2",
+	[PSYCHO_CPU_REG_A3]	= "$a3",
+	[PSYCHO_CPU_REG_T0]	= "$t0",
+	[PSYCHO_CPU_REG_T1]	= "$t1",
+	[PSYCHO_CPU_REG_T2]	= "$t2",
+	[PSYCHO_CPU_REG_T3]	= "$t3",
+	[PSYCHO_CPU_REG_T4]	= "$t4",
+	[PSYCHO_CPU_REG_T5]	= "$t5",
+	[PSYCHO_CPU_REG_T6]	= "$t6",
+	[PSYCHO_CPU_REG_T7]	= "$t7",
+	[PSYCHO_CPU_REG_S0]	= "$s0",
+	[PSYCHO_CPU_REG_S1]	= "$s1",
+	[PSYCHO_CPU_REG_S2]	= "$s2",
+	[PSYCHO_CPU_REG_S3]	= "$s3",
+	[PSYCHO_CPU_REG_S4]	= "$s4",
+	[PSYCHO_CPU_REG_S5]	= "$s5",
+	[PSYCHO_CPU_REG_S6]	= "$s6",
+	[PSYCHO_CPU_REG_S7]	= "$s7",
+	[PSYCHO_CPU_REG_T8]	= "$t8",
+	[PSYCHO_CPU_REG_T9]	= "$t9",
+	[PSYCHO_CPU_REG_K0]	= "$k0",
+	[PSYCHO_CPU_REG_K1]	= "$k1",
+	[PSYCHO_CPU_REG_GP]	= "$gp",
+	[PSYCHO_CPU_REG_SP]	= "$sp",
+	[PSYCHO_CPU_REG_RA]	= "$ra"
+
+	// clang-format on
+};
+
+PSYCHO_NODISCARD static uint32_t instr_get(struct psycho_ctx *ctx, uint32_t pc)
+{
+	pc = psycho_cpu_vaddr_to_paddr(pc);
+	return psycho_bus_load_word(ctx, pc);
+}
+
+PSYCHO_NODISCARD const char *
+psycho_disasm_gpr_get(const enum psycho_cpu_gpr reg)
+{
+	assert(reg < PSYCHO_CPU_GPR_COUNT);
+	return gpr[reg];
+}
+
+void psycho_disasm_instr(struct psycho_ctx *const ctx, char *const dst,
+			 size_t *const len, const uint32_t pc)
+{
+	assert(ctx != NULL);
+	assert(dst != NULL);
+	assert(len != NULL);
+
+	const uint32_t instr = instr_get(ctx, pc);
+
+#define FORMAT(args...) *len = snprintf(dst, PSYCHO_DISASM_LEN_MAX, args)
+
+	FORMAT("illegal 0x%08X", instr);
+}

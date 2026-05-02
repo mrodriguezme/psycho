@@ -22,33 +22,36 @@
 
 #pragma once
 
+#include <stdbool.h>
+#include <stddef.h>
+#include <stdint.h>
+
+#include "compiler.h"
+#include "cpu-defs.h"
+
 #ifdef __cplusplus
 extern "C" {
 #endif // __cplusplus
 
-#include "cpu.h"
-#include "bus.h"
-#include "disasm.h"
-#include "log.h"
+struct psycho_ctx;
 
-struct psycho_ctx {
-	struct psycho_cpu cpu;
-	struct psycho_bus bus;
-	struct psycho_disasm disasm;
-	struct psycho_log log;
+enum {
+	PSYCHO_DISASM_LEN_MAX = 512,
 };
 
-struct psycho_ctx_cfg {
-	struct psycho_cpu_cfg cpu;
-	struct psycho_disasm_cfg disasm;
-	struct psycho_log_cfg log;
+struct psycho_disasm_cfg {
+	bool tracing;
 };
 
-void psycho_ctx_init(struct psycho_ctx *ctx, const struct psycho_ctx_cfg *cfg);
+struct psycho_disasm {
+	struct psycho_disasm_cfg cfg;
+};
 
-void psycho_ctx_reset(struct psycho_ctx *ctx);
+PSYCHO_NODISCARD const char *
+psycho_disasm_gpr_get(const enum psycho_cpu_gpr reg);
 
-void psycho_ctx_step(struct psycho_ctx *ctx);
+void psycho_disasm_instr(struct psycho_ctx *ctx, char *dst, size_t *len,
+			 uint32_t pc);
 
 #ifdef __cplusplus
 }
