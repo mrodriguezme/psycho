@@ -71,6 +71,15 @@ static void disasm_trace(struct psycho_ctx *const ctx)
 	}
 }
 
+static void branch_if(struct psycho_ctx *const ctx, const bool condition_met)
+{
+	assert(ctx != NULL);
+
+	if (condition_met)
+		ctx->cpu.next_pc =
+			calc_branch_addr(ctx->cpu.pc, ctx->cpu.instr);
+}
+
 void psycho_cpu_init(struct psycho_ctx *const ctx,
 		     const struct psycho_cpu_cfg *const cfg)
 {
@@ -137,6 +146,10 @@ void psycho_cpu_step(struct psycho_ctx *const ctx)
 
 	case CPU_INSTR_J:
 		ctx->cpu.next_pc = calc_jmp_addr(ctx->cpu.pc, ctx->cpu.instr);
+		break;
+
+	case CPU_INSTR_BNE:
+		branch_if(ctx, gpr[rs] != gpr[rt]);
 		break;
 
 	case CPU_INSTR_ADDIU:

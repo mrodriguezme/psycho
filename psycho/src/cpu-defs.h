@@ -24,12 +24,14 @@
 
 #include <stdint.h>
 #include "psycho/compiler.h"
+#include "util.h"
 
 #define CPU_RESET_VECTOR (UINT32_C(0xBFC00000))
 
 enum psycho_cpu_instr_op {
 	CPU_INSTR_GROUP_SPECIAL = 0x00,
 	CPU_INSTR_J = 0x02,
+	CPU_INSTR_BNE = 0x05,
 	CPU_INSTR_ADDIU = 0x09,
 	CPU_INSTR_ORI = 0x0D,
 	CPU_INSTR_LUI = 0x0F,
@@ -104,4 +106,10 @@ PSYCHO_NODISCARD PSYCHO_ALWAYS_INLINE uint32_t
 calc_jmp_addr(const uint32_t pc, const uint32_t instr)
 {
 	return (cpu_instr_target(instr) << 2) + (pc & 0xF0000000);
+}
+
+PSYCHO_NODISCARD PSYCHO_ALWAYS_INLINE uint32_t
+calc_branch_addr(const uint32_t pc, const uint32_t instr)
+{
+	return sign_ext_16_32(cpu_instr_imm(instr) << 2) + pc + sizeof(instr);
 }
