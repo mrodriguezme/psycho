@@ -28,7 +28,6 @@
 
 #include "bus.h"
 #include "cpu-defs.h"
-#include "util.h"
 
 static const char *const gpr[PSYCHO_CPU_GPR_COUNT] = {
 	// clang-format off
@@ -65,6 +64,18 @@ static const char *const gpr[PSYCHO_CPU_GPR_COUNT] = {
 	[PSYCHO_CPU_REG_SP]	= "$sp",
 	[PSYCHO_CPU_REG_FP]	= "$fp",
 	[PSYCHO_CPU_REG_RA]	= "$ra"
+
+	// clang-format on
+};
+
+static const char *const cop0[PSYCHO_CPU_COP0_COUNT] = {
+	// clang-format off
+
+	[PSYCHO_CPU_COP0_BADVADDR]	= "C0_BADVADDR",
+	[PSYCHO_CPU_COP0_SR]		= "C0_SR",
+	[PSYCHO_CPU_COP0_CAUSE]		= "C0_CAUSE",
+	[PSYCHO_CPU_COP0_EPC]		= "C0_EPC",
+	[PSYCHO_CPU_COP0_PRID]		= "C0_PRID"
 
 	// clang-format on
 };
@@ -134,6 +145,17 @@ void psycho_disasm_instr(struct psycho_ctx *const ctx, char *const dst,
 	case CPU_INSTR_LUI:
 		FORMAT("lui %s, 0x%04X", gpr[rt], imm);
 		return;
+
+	case CPU_INSTR_GROUP_COP0:
+		switch (rs) {
+		case CPU_INSTR_MTC:
+			FORMAT("mtc0 %s, %s", cop0[rd], gpr[rt]);
+			return;
+
+		default:
+			break;
+		}
+		break;
 
 	case CPU_INSTR_SW:
 		FORMAT("sw %s, 0x%04X(%s)", gpr[rt], offset, gpr[base]);

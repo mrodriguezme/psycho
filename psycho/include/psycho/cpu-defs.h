@@ -62,6 +62,15 @@ enum psycho_cpu_gpr {
 	PSYCHO_CPU_GPR_COUNT
 };
 
+enum psycho_cpu_cop0 {
+	PSYCHO_CPU_COP0_BADVADDR = 8,
+	PSYCHO_CPU_COP0_SR = 12,
+	PSYCHO_CPU_COP0_CAUSE = 13,
+	PSYCHO_CPU_COP0_EPC = 14,
+	PSYCHO_CPU_COP0_PRID = 15,
+	PSYCHO_CPU_COP0_COUNT = 32,
+};
+
 #ifdef __cplusplus
 }
 #endif // __cplusplus

@@ -33,12 +33,17 @@ enum psycho_cpu_instr_op {
 	CPU_INSTR_ADDIU = 0x09,
 	CPU_INSTR_ORI = 0x0D,
 	CPU_INSTR_LUI = 0x0F,
+	CPU_INSTR_GROUP_COP0 = 0x10,
 	CPU_INSTR_SW = 0x2B
 };
 
 enum psycho_cpu_instr_special {
 	CPU_INSTR_SLL = 0x00,
-	CPU_INSTR_OR = 0x25
+	CPU_INSTR_OR = 0x25,
+};
+
+enum psycho_cpu_instr_cop {
+	CPU_INSTR_MTC = 0x04,
 };
 
 PSYCHO_NODISCARD PSYCHO_ALWAYS_INLINE uint32_t

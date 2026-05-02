@@ -37,6 +37,7 @@ struct psycho_cpu_cfg {
 
 struct psycho_cpu {
 	uint32_t gpr[PSYCHO_CPU_GPR_COUNT];
+	uint32_t cop0[PSYCHO_CPU_COP0_COUNT];
 	uint32_t pc;
 	uint32_t next_pc;
 	uint32_t delay_pc;
