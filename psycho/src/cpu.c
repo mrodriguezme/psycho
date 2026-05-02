@@ -41,7 +41,8 @@ static void illegal_instr(struct psycho_ctx *const ctx)
 	ctx->cpu.cfg.illegal_instr(ctx, ctx->cpu.instr);
 }
 
-static uint32_t load_word(struct psycho_ctx *const ctx, uint32_t vaddr)
+PSYCHO_NODISCARD static uint32_t load_word(struct psycho_ctx *const ctx,
+					   uint32_t vaddr)
 {
 	assert(ctx != NULL);
 
@@ -58,6 +59,8 @@ static void store_word(struct psycho_ctx *const ctx, uint32_t vaddr,
 
 static void disasm_trace(struct psycho_ctx *const ctx)
 {
+	assert(ctx != NULL);
+
 	if (MODULE_LOG_LEVEL_ACTIVE(ctx, PSYCHO_LOG_LEVEL_TRACE)) {
 		char result[PSYCHO_DISASM_LEN_MAX];
 		size_t len;
@@ -83,7 +86,10 @@ void psycho_cpu_reset(struct psycho_ctx *const ctx)
 	assert(ctx != NULL);
 
 	memset(ctx->cpu.gpr, 0, sizeof(ctx->cpu.gpr));
+
+	ctx->cpu.delay_pc = CPU_RESET_VECTOR;
 	ctx->cpu.pc = CPU_RESET_VECTOR;
+	ctx->cpu.next_pc = CPU_RESET_VECTOR + sizeof(ctx->cpu.instr);
 
 	LOG_INFO(ctx, "reset");
 }
@@ -104,9 +110,13 @@ void psycho_cpu_step(struct psycho_ctx *const ctx)
 
 	assert(ctx != NULL);
 
-	disasm_trace(ctx);
-
+	ctx->cpu.pc = ctx->cpu.delay_pc;
 	ctx->cpu.instr = load_word(ctx, ctx->cpu.pc);
+
+	ctx->cpu.delay_pc = ctx->cpu.next_pc;
+	ctx->cpu.next_pc = ctx->cpu.delay_pc + sizeof(ctx->cpu.instr);
+
+	disasm_trace(ctx);
 
 	switch (op) {
 	case CPU_INSTR_GROUP_SPECIAL:
@@ -119,6 +129,10 @@ void psycho_cpu_step(struct psycho_ctx *const ctx)
 			illegal_instr(ctx);
 			return;
 		}
+		break;
+
+	case CPU_INSTR_J:
+		ctx->cpu.next_pc = calc_jmp_addr(ctx->cpu.pc, ctx->cpu.instr);
 		break;
 
 	case CPU_INSTR_ADDIU:
@@ -141,6 +155,4 @@ void psycho_cpu_step(struct psycho_ctx *const ctx)
 		illegal_instr(ctx);
 		return;
 	}
-
-	ctx->cpu.pc += sizeof(ctx->cpu.instr);
 }
