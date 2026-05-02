@@ -114,7 +114,7 @@ void psycho_cpu_step(struct psycho_ctx *const ctx)
 #define base (rs)
 #define zextimm (zero_ext_16_32(cpu_instr_imm(ctx->cpu.instr)))
 #define sextimm (sign_ext_16_32(cpu_instr_imm(ctx->cpu.instr)))
-#define offset (sign_ext_16_32(cpu_instr_imm(ctx->cpu.instr)))
+#define offset (sextimm)
 #define gpr (ctx->cpu.gpr)
 
 	assert(ctx != NULL);
@@ -132,6 +132,10 @@ void psycho_cpu_step(struct psycho_ctx *const ctx)
 		switch (funct) {
 		case CPU_INSTR_SLL:
 			gpr[rd] = gpr[rt] << shamt;
+			break;
+
+		case CPU_INSTR_ADDU:
+			gpr[rd] = gpr[rs] + gpr[rt];
 			break;
 
 		case CPU_INSTR_OR:
