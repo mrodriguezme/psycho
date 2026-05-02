@@ -49,6 +49,13 @@ static uint32_t load_word(struct psycho_ctx *const ctx, uint32_t vaddr)
 	return psycho_bus_load_word(ctx, vaddr);
 }
 
+static void store_word(struct psycho_ctx *const ctx, uint32_t vaddr,
+		       const uint32_t word)
+{
+	vaddr = cpu_vaddr_to_paddr(vaddr);
+	psycho_bus_store_word(ctx, vaddr, word);
+}
+
 static void disasm_trace(struct psycho_ctx *const ctx)
 {
 	if (MODULE_LOG_LEVEL_ACTIVE(ctx, PSYCHO_LOG_LEVEL_TRACE)) {
@@ -85,9 +92,11 @@ void psycho_cpu_step(struct psycho_ctx *const ctx)
 {
 #define op (cpu_instr_op(ctx->cpu.instr))
 #define rt (cpu_instr_rt(ctx->cpu.instr))
+#define rs (cpu_instr_rs(ctx->cpu.instr))
+#define base (rs)
 #define zextimm (zero_ext_16_32(cpu_instr_imm(ctx->cpu.instr)))
+#define offset (sign_ext_16_32(cpu_instr_imm(ctx->cpu.instr)))
 #define gpr (ctx->cpu.gpr)
-
 
 	assert(ctx != NULL);
 
@@ -96,8 +105,16 @@ void psycho_cpu_step(struct psycho_ctx *const ctx)
 	ctx->cpu.instr = load_word(ctx, ctx->cpu.pc);
 
 	switch (op) {
+	case CPU_INSTR_ORI:
+		gpr[rt] = zextimm | gpr[rs];
+		break;
+
 	case CPU_INSTR_LUI:
 		gpr[rt] = zextimm << 16;
+		break;
+
+	case CPU_INSTR_SW:
+		store_word(ctx, gpr[base] + offset, gpr[rt]);
 		break;
 
 	default:

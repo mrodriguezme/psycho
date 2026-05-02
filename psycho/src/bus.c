@@ -43,7 +43,8 @@ uint8_t *psycho_bus_bios_data_get(struct psycho_ctx *const ctx)
 	return ctx->bus.bios;
 }
 
-uint32_t psycho_bus_load_word(struct psycho_ctx *ctx, const uint32_t paddr)
+uint32_t psycho_bus_load_word(struct psycho_ctx *const ctx,
+			      const uint32_t paddr)
 {
 	assert(ctx != NULL);
 
@@ -60,4 +61,13 @@ uint32_t psycho_bus_load_word(struct psycho_ctx *ctx, const uint32_t paddr)
 			 "unknown word load: 0x%08X; returning 0xFFFF'FFFF");
 		return 0xFFFFFFFF;
 	}
+}
+
+void psycho_bus_store_word(struct psycho_ctx *const ctx, const uint32_t paddr,
+			   const uint32_t word)
+{
+	assert(ctx != NULL);
+
+	LOG_WARN(ctx, "unknown word store: 0x%08X <- 0x%08X; ignoring", paddr,
+		 word);
 }

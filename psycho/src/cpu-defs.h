@@ -28,7 +28,9 @@
 #define CPU_RESET_VECTOR (UINT32_C(0xBFC00000))
 
 enum psycho_cpu_instr_op {
+	CPU_INSTR_ORI = 0x0D,
 	CPU_INSTR_LUI = 0x0F,
+	CPU_INSTR_SW = 0x2B
 };
 
 PSYCHO_NODISCARD PSYCHO_ALWAYS_INLINE uint32_t
@@ -41,6 +43,12 @@ PSYCHO_NODISCARD PSYCHO_ALWAYS_INLINE unsigned int
 cpu_instr_op(const uint32_t instr)
 {
 	return instr >> 26;
+}
+
+PSYCHO_NODISCARD PSYCHO_ALWAYS_INLINE unsigned int
+cpu_instr_rs(const uint32_t instr)
+{
+	return (instr >> 21) & 0x1F;
 }
 
 PSYCHO_NODISCARD PSYCHO_ALWAYS_INLINE unsigned int

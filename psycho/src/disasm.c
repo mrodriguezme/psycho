@@ -90,15 +90,26 @@ void psycho_disasm_instr(struct psycho_ctx *const ctx, char *const dst,
 
 #define op (cpu_instr_op(instr))
 #define rt (cpu_instr_rt(instr))
-#define zextimm (zero_ext_16_32(cpu_instr_imm(instr)))
+#define rs (cpu_instr_rs(ctx->cpu.instr))
+#define imm (cpu_instr_imm(instr))
+#define offset (imm)
+#define base (rs)
 
 	const uint32_t instr = instr_get(ctx, pc);
 
 #define FORMAT(args...) *len = snprintf(dst, PSYCHO_DISASM_LEN_MAX, args)
 
 	switch (op) {
+	case CPU_INSTR_ORI:
+		FORMAT("ori %s, %s, 0x%04X", gpr[rt], gpr[rs], imm);
+		return;
+
 	case CPU_INSTR_LUI:
-		FORMAT("lui %s, 0x%04X", gpr[rt], zextimm);
+		FORMAT("lui %s, 0x%04X", gpr[rt], imm);
+		return;
+
+	case CPU_INSTR_SW:
+		FORMAT("sw %s, 0x%04X(%s)", gpr[rt], offset, gpr[base]);
 		return;
 
 	default:
