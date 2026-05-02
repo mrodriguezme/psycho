@@ -71,7 +71,13 @@ static const char *const gpr[PSYCHO_CPU_GPR_COUNT] = {
 static const char *const cop0[PSYCHO_CPU_COP0_COUNT] = {
 	// clang-format off
 
+	[PSYCHO_CPU_COP0_BPC]		= "C0_BPC",
+	[PSYCHO_CPU_COP0_BDA]		= "C0_BDA",
+	[PSYCHO_CPU_COP0_TAR]		= "C0_TAR",
+	[PSYCHO_CPU_COP0_DCIC]		= "C0_DCIC",
 	[PSYCHO_CPU_COP0_BADVADDR]	= "C0_BADVADDR",
+	[PSYCHO_CPU_COP0_BDAM]		= "C0_BDAM",
+	[PSYCHO_CPU_COP0_BPCM]		= "C0_BPCM",
 	[PSYCHO_CPU_COP0_SR]		= "C0_SR",
 	[PSYCHO_CPU_COP0_CAUSE]		= "C0_CAUSE",
 	[PSYCHO_CPU_COP0_EPC]		= "C0_EPC",
@@ -165,6 +171,10 @@ void psycho_disasm_instr(struct psycho_ctx *const ctx, char *const dst,
 			break;
 		}
 		break;
+
+	case CPU_INSTR_LW:
+		FORMAT("lw %s, 0x%04X(%s)", gpr[rt], offset, gpr[base]);
+		return;
 
 	case CPU_INSTR_SW:
 		FORMAT("sw %s, 0x%04X(%s)", gpr[rt], offset, gpr[base]);

@@ -180,6 +180,10 @@ void psycho_cpu_step(struct psycho_ctx *const ctx)
 		}
 		break;
 
+	case CPU_INSTR_LW:
+		gpr[rt] = load_word(ctx, gpr[base] + offset);
+		break;
+
 	case CPU_INSTR_SW:
 		store_word(ctx, gpr[base] + offset, gpr[rt]);
 		break;
