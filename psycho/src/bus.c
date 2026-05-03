@@ -80,6 +80,21 @@ uint32_t psycho_bus_load_word(struct psycho_ctx *const ctx,
 	}
 }
 
+uint8_t psycho_bus_load_byte(struct psycho_ctx *const ctx, const uint32_t paddr)
+{
+	assert(ctx != NULL);
+
+	switch (paddr) {
+	case BIOS_PADDR_BEGIN ... BIOS_PADDR_END:
+		return ctx->bus.bios[paddr & BIOS_PADDR_MASK];
+
+	default:
+		LOG_WARN(ctx, "unknown byte load: 0x%08X; returning 0xFF",
+			 paddr);
+		return UINT8_MAX;
+	}
+}
+
 void psycho_bus_store_word(struct psycho_ctx *const ctx, const uint32_t paddr,
 			   const uint32_t word)
 {

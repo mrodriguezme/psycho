@@ -50,6 +50,15 @@ PSYCHO_NODISCARD static uint32_t load_word(struct psycho_ctx *const ctx,
 	return psycho_bus_load_word(ctx, vaddr);
 }
 
+PSYCHO_NODISCARD static uint8_t load_byte(struct psycho_ctx *const ctx,
+					  uint32_t vaddr)
+{
+	assert(ctx != NULL);
+
+	vaddr = cpu_vaddr_to_paddr(vaddr);
+	return psycho_bus_load_byte(ctx, vaddr);
+}
+
 static void store_word(struct psycho_ctx *const ctx, uint32_t vaddr,
 		       const uint32_t word)
 {
@@ -215,6 +224,10 @@ void psycho_cpu_step(struct psycho_ctx *const ctx)
 				return;
 			}
 		}
+		break;
+
+	case CPU_INSTR_LB:
+		gpr[rt] = sign_ext_8_32(load_byte(ctx, gpr[base] + offset));
 		break;
 
 	case CPU_INSTR_LW:
