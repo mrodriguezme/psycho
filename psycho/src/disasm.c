@@ -156,6 +156,11 @@ void psycho_disasm_instr(struct psycho_ctx *const ctx, char *const dst,
 		FORMAT("jal 0x%08X", calc_jmp_addr(pc, instr));
 		return;
 
+	case CPU_INSTR_BEQ:
+		FORMAT("beq %s, %s, 0x%08X", gpr[rs], gpr[rt],
+		       calc_branch_addr(pc, instr));
+		return;
+
 	case CPU_INSTR_BNE:
 		FORMAT("bne %s, %s, 0x%08X", gpr[rs], gpr[rt],
 		       calc_branch_addr(pc, instr));

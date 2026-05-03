@@ -85,6 +85,9 @@ uint8_t psycho_bus_load_byte(struct psycho_ctx *const ctx, const uint32_t paddr)
 	assert(ctx != NULL);
 
 	switch (paddr) {
+	case RAM_PADDR_BEGIN ... RAM_PADDR_END:
+		return ctx->bus.ram[paddr & RAM_PADDR_MASK];
+
 	case BIOS_PADDR_BEGIN ... BIOS_PADDR_END:
 		return ctx->bus.bios[paddr & BIOS_PADDR_MASK];
 
@@ -127,6 +130,15 @@ void psycho_bus_store_byte(struct psycho_ctx *const ctx, const uint32_t paddr,
 			   const uint8_t byte)
 {
 	assert(ctx != NULL);
+
+	switch (paddr) {
+	case RAM_PADDR_BEGIN ... RAM_PADDR_END:
+		ctx->bus.ram[paddr & RAM_PADDR_MASK] = byte;
+		return;
+
+	default:
+		break;
+	}
 
 	LOG_WARN(ctx, "unknown byte store: 0x%08X <- 0x%02X; ignoring", paddr,
 		 byte);

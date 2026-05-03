@@ -190,6 +190,10 @@ void psycho_cpu_step(struct psycho_ctx *const ctx)
 
 		break;
 
+	case CPU_INSTR_BEQ:
+		branch_if(ctx, gpr[rs] == gpr[rt]);
+		break;
+
 	case CPU_INSTR_BNE:
 		branch_if(ctx, gpr[rs] != gpr[rt]);
 		break;
