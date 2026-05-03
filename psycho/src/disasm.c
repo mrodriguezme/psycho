@@ -233,6 +233,10 @@ void psycho_disasm_instr(struct psycho_ctx *const ctx, char *const dst,
 		FORMAT("slti %s, %s, 0x%04X", gpr[rt], gpr[rs], imm);
 		return;
 
+	case CPU_INSTR_SLTIU:
+		FORMAT("sltiu %s, %s, 0x%04X", gpr[rt], gpr[rs], imm);
+		return;
+
 	case CPU_INSTR_ANDI:
 		FORMAT("andi %s, %s, 0x%04X", gpr[rt], gpr[rs], imm);
 		return;
