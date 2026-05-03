@@ -23,18 +23,19 @@
 #pragma once
 
 #include "psycho/ctx.h"
+#include "types.h"
 
 void psycho_bus_init(struct psycho_ctx *ctx);
 
-uint32_t psycho_bus_load_word(struct psycho_ctx *ctx, const uint32_t paddr);
+u32 psycho_bus_load_word(struct psycho_ctx *ctx, const u32 paddr);
 
-uint8_t psycho_bus_load_byte(struct psycho_ctx *ctx, const uint32_t paddr);
+u8 psycho_bus_load_byte(struct psycho_ctx *ctx, const u32 paddr);
 
-void psycho_bus_store_word(struct psycho_ctx *ctx, const uint32_t paddr,
-			   const uint32_t word);
+void psycho_bus_store_word(struct psycho_ctx *ctx, const u32 paddr,
+			   const u32 word);
 
-void psycho_bus_store_halfword(struct psycho_ctx *ctx, const uint32_t paddr,
-			       const uint16_t halfword);
+void psycho_bus_store_halfword(struct psycho_ctx *ctx, const u32 paddr,
+			       const u16 halfword);
 
-void psycho_bus_store_byte(struct psycho_ctx *ctx, const uint32_t paddr,
-			   const uint8_t byte);
+void psycho_bus_store_byte(struct psycho_ctx *ctx, const u32 paddr,
+			   const u8 byte);

@@ -140,6 +140,10 @@ int main(int argc, char **argv)
 			.illegal_instr	= illegal_instr_cb
 		},
 
+		.disasm	= {
+			.tracing	= true
+		},
+
 		.log	= {
 			.log_cb		= log_cb,
 			.modules	= {

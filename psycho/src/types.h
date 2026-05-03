@@ -23,24 +23,13 @@
 #pragma once
 
 #include <stdint.h>
-#include "psycho/compiler.h"
-#include "types.h"
 
-#define ZEXT_FUNC(width)                                                 \
-	PSYCHO_NODISCARD PSYCHO_ALWAYS_INLINE u32 zero_ext_##width##_32( \
-		const u##width val)                                      \
-	{                                                                \
-		return val;                                              \
-	}
-
-#define SEXT_FUNC(width)                                                 \
-	PSYCHO_NODISCARD PSYCHO_ALWAYS_INLINE u32 sign_ext_##width##_32( \
-		const u##width val)                                      \
-	{                                                                \
-		return (s##width)val;                                    \
-	}
-
-ZEXT_FUNC(8);
-ZEXT_FUNC(16);
-SEXT_FUNC(8);
-SEXT_FUNC(16);
+typedef unsigned int uint;
+typedef uint64_t u64;
+typedef int64_t s64;
+typedef uint32_t u32;
+typedef int32_t s32;
+typedef uint16_t u16;
+typedef int16_t s16;
+typedef uint8_t u8;
+typedef int8_t s8;

@@ -43,7 +43,7 @@ enum {
 	// clang-format on
 };
 
-uint8_t *psycho_bus_bios_data_get(struct psycho_ctx *const ctx)
+u8 *psycho_bus_bios_data_get(struct psycho_ctx *const ctx)
 {
 	return ctx->bus.bios;
 }
@@ -55,32 +55,31 @@ void psycho_bus_init(struct psycho_ctx *const ctx)
 	ctx->bus.ram = malloc(RAM_PADDR_END + 1);
 }
 
-uint32_t psycho_bus_load_word(struct psycho_ctx *const ctx,
-			      const uint32_t paddr)
+u32 psycho_bus_load_word(struct psycho_ctx *const ctx, const u32 paddr)
 {
 	assert(ctx != NULL);
 
-	uint32_t word;
+	u32 word;
 
 	switch (paddr) {
 	case RAM_PADDR_BEGIN ... RAM_PADDR_END:
 		memcpy(&word, &ctx->bus.ram[paddr & RAM_PADDR_MASK],
-		       sizeof(uint32_t));
+		       sizeof(u32));
 		return word;
 
 	case BIOS_PADDR_BEGIN ... BIOS_PADDR_END:
 		memcpy(&word, &ctx->bus.bios[paddr & BIOS_PADDR_MASK],
-		       sizeof(uint32_t));
+		       sizeof(u32));
 		return word;
 
 	default:
 		LOG_WARN(ctx,
 			 "unknown word load: 0x%08X; returning 0xFFFF'FFFF");
-		return 0xFFFFFFFF;
+		return UINT32_MAX;
 	}
 }
 
-uint8_t psycho_bus_load_byte(struct psycho_ctx *const ctx, const uint32_t paddr)
+u8 psycho_bus_load_byte(struct psycho_ctx *const ctx, const u32 paddr)
 {
 	assert(ctx != NULL);
 
@@ -98,15 +97,15 @@ uint8_t psycho_bus_load_byte(struct psycho_ctx *const ctx, const uint32_t paddr)
 	}
 }
 
-void psycho_bus_store_word(struct psycho_ctx *const ctx, const uint32_t paddr,
-			   const uint32_t word)
+void psycho_bus_store_word(struct psycho_ctx *const ctx, const u32 paddr,
+			   const u32 word)
 {
 	assert(ctx != NULL);
 
 	switch (paddr) {
 	case RAM_PADDR_BEGIN ... RAM_PADDR_END:
 		memcpy(&ctx->bus.ram[paddr & RAM_PADDR_MASK], &word,
-		       sizeof(uint32_t));
+		       sizeof(u32));
 		return;
 
 	default:
@@ -117,8 +116,8 @@ void psycho_bus_store_word(struct psycho_ctx *const ctx, const uint32_t paddr,
 		 word);
 }
 
-void psycho_bus_store_halfword(struct psycho_ctx *const ctx,
-			       const uint32_t paddr, const uint16_t halfword)
+void psycho_bus_store_halfword(struct psycho_ctx *const ctx, const u32 paddr,
+			       const u16 halfword)
 {
 	assert(ctx != NULL);
 
@@ -126,8 +125,8 @@ void psycho_bus_store_halfword(struct psycho_ctx *const ctx,
 		 paddr, halfword);
 }
 
-void psycho_bus_store_byte(struct psycho_ctx *const ctx, const uint32_t paddr,
-			   const uint8_t byte)
+void psycho_bus_store_byte(struct psycho_ctx *const ctx, const u32 paddr,
+			   const u8 byte)
 {
 	assert(ctx != NULL);
 

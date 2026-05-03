@@ -25,6 +25,7 @@
 
 #include "bus.h"
 #include "cpu.h"
+#include "disasm.h"
 #include "log.h"
 
 LOG_MODULE(PSYCHO_LOG_MODULE_CTX);
@@ -36,6 +37,7 @@ void psycho_ctx_init(struct psycho_ctx *const ctx,
 	assert(cfg != NULL);
 
 	psycho_log_init(ctx, &cfg->log);
+	psycho_disasm_init(ctx, &cfg->disasm);
 	psycho_bus_init(ctx);
 	psycho_cpu_init(ctx, &cfg->cpu);
 

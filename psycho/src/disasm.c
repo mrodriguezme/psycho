@@ -22,12 +22,22 @@
 
 #include <assert.h>
 #include <stdio.h>
+#include <string.h>
 
 #include "psycho/compiler.h"
 #include "psycho/ctx.h"
 
 #include "bus.h"
 #include "cpu-defs.h"
+#include "disasm.h"
+#include "types.h"
+
+enum {
+	TRACE_NUM_SPACES = 30,
+};
+
+#define append(str, len, args...) \
+	(len) += snprintf(str[len], PSYCHO_DISASM_LEN_MAX, args)
 
 static const char *const gpr[PSYCHO_CPU_GPR_COUNT] = {
 	// clang-format off
@@ -71,25 +81,55 @@ static const char *const gpr[PSYCHO_CPU_GPR_COUNT] = {
 static const char *const cop0[PSYCHO_CPU_COP0_COUNT] = {
 	// clang-format off
 
+	[0]				= "C0_UNUSED0",
+	[1]				= "C0_UNUSED1",
+	[2]				= "C0_UNUSED2",
 	[PSYCHO_CPU_COP0_BPC]		= "C0_BPC",
+	[4]				= "C0_UNUSED4",
 	[PSYCHO_CPU_COP0_BDA]		= "C0_BDA",
 	[PSYCHO_CPU_COP0_TAR]		= "C0_TAR",
 	[PSYCHO_CPU_COP0_DCIC]		= "C0_DCIC",
 	[PSYCHO_CPU_COP0_BADVADDR]	= "C0_BADVADDR",
 	[PSYCHO_CPU_COP0_BDAM]		= "C0_BDAM",
+	[10]				= "C0_UNUSED10",
 	[PSYCHO_CPU_COP0_BPCM]		= "C0_BPCM",
 	[PSYCHO_CPU_COP0_SR]		= "C0_SR",
 	[PSYCHO_CPU_COP0_CAUSE]		= "C0_CAUSE",
 	[PSYCHO_CPU_COP0_EPC]		= "C0_EPC",
-	[PSYCHO_CPU_COP0_PRID]		= "C0_PRID"
+	[PSYCHO_CPU_COP0_PRID]		= "C0_PRID",
+	[16]				= "C0_UNUSED16",
+	[17]				= "C0_UNUSED17",
+	[18]				= "C0_UNUSED18",
+	[19]				= "C0_UNUSED19",
+	[20]				= "C0_UNUSED20",
+	[21]				= "C0_UNUSED21",
+	[22]				= "C0_UNUSED22",
+	[23]				= "C0_UNUSED23",
+	[24]				= "C0_UNUSED24",
+	[25]				= "C0_UNUSED25",
+	[26]				= "C0_UNUSED26",
+	[27]				= "C0_UNUSED27",
+	[28]				= "C0_UNUSED28",
+	[29]				= "C0_UNUSED29",
+	[30]				= "C0_UNUSED30",
+	[31]				= "C0_UNUSED31"
 
 	// clang-format on
 };
 
-PSYCHO_NODISCARD static uint32_t instr_get(struct psycho_ctx *ctx, uint32_t pc)
+PSYCHO_NODISCARD static u32 instr_get(struct psycho_ctx *const ctx, u32 pc)
 {
 	pc = cpu_vaddr_to_paddr(pc);
 	return psycho_bus_load_word(ctx, pc);
+}
+
+static void trace_add(struct psycho_disasm_traces *const traces,
+		      const enum psycho_disasm_trace trace)
+{
+	if (traces) {
+		assert(traces->count < sizeof(traces->data));
+		traces->data[traces->count++] = trace;
+	}
 }
 
 PSYCHO_NODISCARD const char *
@@ -99,12 +139,32 @@ psycho_disasm_gpr_get(const enum psycho_cpu_gpr reg)
 	return gpr[reg];
 }
 
-void psycho_disasm_instr(struct psycho_ctx *const ctx, char *const dst,
-			 size_t *const len, const uint32_t pc)
+PSYCHO_NODISCARD const char *
+psycho_disasm_cop0_get(const enum psycho_cpu_cop0 reg)
+{
+	assert(reg < PSYCHO_CPU_COP0_COUNT);
+	return cop0[reg];
+}
+
+void psycho_disasm_init(struct psycho_ctx *const ctx,
+			const struct psycho_disasm_cfg *const cfg)
+{
+	ctx->disasm.cfg = *cfg;
+}
+
+void psycho_disasm_instr(struct psycho_ctx *const ctx, const u32 pc,
+			 struct psycho_disasm_traces *traces)
 {
 	assert(ctx != NULL);
-	assert(dst != NULL);
-	assert(len != NULL);
+
+	memset(&ctx->disasm.res, 0, sizeof(ctx->disasm.res));
+
+	const u32 instr = instr_get(ctx, pc);
+
+	ctx->disasm.res.instr = instr;
+	ctx->disasm.res.pc = pc;
+
+#define fmt(args...) append(&ctx->disasm.res.str, ctx->disasm.res.len, args)
 
 #define op (cpu_instr_op(instr))
 #define rt (cpu_instr_rt(instr))
@@ -115,77 +175,83 @@ void psycho_disasm_instr(struct psycho_ctx *const ctx, char *const dst,
 #define imm (cpu_instr_imm(instr))
 #define offset (imm)
 #define base (rs)
-#define BRANCH_ADDR (calc_branch_addr(pc, instr))
-
-	const uint32_t instr = instr_get(ctx, pc);
-
-#define FORMAT(args...) *len = snprintf(dst, PSYCHO_DISASM_LEN_MAX, args)
+#define BRANCH_ADDR (cpu_branch_addr(pc, instr))
 
 	switch (op) {
 	case CPU_INSTR_GROUP_SPECIAL:
 		switch (funct) {
 		case CPU_INSTR_SLL:
-			FORMAT("sll %s, %s, 0x%X", gpr[rd], gpr[rt], shamt);
+			fmt("sll %s, %s, 0x%X", gpr[rd], gpr[rt], shamt);
+			trace_add(traces, PSYCHO_DISASM_TRACE_GPR_RD);
+
 			return;
 
 		case CPU_INSTR_SRL:
-			FORMAT("srl %s, %s, %u", gpr[rd], gpr[rt], shamt);
+			fmt("srl %s, %s, %u", gpr[rd], gpr[rt], shamt);
+			trace_add(traces, PSYCHO_DISASM_TRACE_GPR_RD);
+
 			return;
 
 		case CPU_INSTR_SRA:
-			FORMAT("sra %s, %s, %u", gpr[rd], gpr[rt], shamt);
+			fmt("sra %s, %s, %u", gpr[rd], gpr[rt], shamt);
+			trace_add(traces, PSYCHO_DISASM_TRACE_GPR_RD);
+
 			return;
 
 		case CPU_INSTR_JR:
-			FORMAT("jr %s", gpr[rs]);
+			fmt("jr %s", gpr[rs]);
 			return;
 
 		case CPU_INSTR_JALR:
-			FORMAT("jalr %s, %s", gpr[rd], gpr[rs]);
+			fmt("jalr %s, %s", gpr[rd], gpr[rs]);
 			return;
 
 		case CPU_INSTR_MFHI:
-			FORMAT("mfhi %s", gpr[rd]);
+			fmt("mfhi %s", gpr[rd]);
+			trace_add(traces, PSYCHO_DISASM_TRACE_GPR_RD);
+
 			return;
 
 		case CPU_INSTR_MFLO:
-			FORMAT("mflo %s", gpr[rd]);
+			fmt("mflo %s", gpr[rd]);
+			trace_add(traces, PSYCHO_DISASM_TRACE_GPR_RD);
+
 			return;
 
 		case CPU_INSTR_DIV:
-			FORMAT("div %s, %s", gpr[rs], gpr[rt]);
+			fmt("div %s, %s", gpr[rs], gpr[rt]);
 			return;
 
 		case CPU_INSTR_DIVU:
-			FORMAT("divu %s, %s", gpr[rs], gpr[rt]);
+			fmt("divu %s, %s", gpr[rs], gpr[rt]);
 			return;
 
 		case CPU_INSTR_ADD:
-			FORMAT("add %s, %s, %s", gpr[rd], gpr[rs], gpr[rt]);
+			fmt("add %s, %s, %s", gpr[rd], gpr[rs], gpr[rt]);
 			return;
 
 		case CPU_INSTR_ADDU:
-			FORMAT("addu %s, %s, %s", gpr[rd], gpr[rs], gpr[rt]);
+			fmt("addu %s, %s, %s", gpr[rd], gpr[rs], gpr[rt]);
 			return;
 
 		case CPU_INSTR_SUBU:
-			FORMAT("subu %s, %s, %s", gpr[rd], gpr[rs], gpr[rt]);
+			fmt("subu %s, %s, %s", gpr[rd], gpr[rs], gpr[rt]);
 			return;
 
 		case CPU_INSTR_AND:
-			FORMAT("and %s, %s, %s", gpr[rd], gpr[rs], gpr[rt]);
+			fmt("and %s, %s, %s", gpr[rd], gpr[rs], gpr[rt]);
 			return;
 
 		case CPU_INSTR_OR:
-			FORMAT("or %s, %s, %s", gpr[rd], gpr[rs], gpr[rt]);
+			fmt("or %s, %s, %s", gpr[rd], gpr[rs], gpr[rt]);
 			return;
 
 		case CPU_INSTR_SLT:
-			FORMAT("slt %s, %s, %s", gpr[rd], gpr[rs], gpr[rt]);
+			fmt("slt %s, %s, %s", gpr[rd], gpr[rs], gpr[rt]);
 			return;
 
 		case CPU_INSTR_SLTU:
-			FORMAT("sltu %s, %s, %s", gpr[rd], gpr[rs], gpr[rt]);
+			fmt("sltu %s, %s, %s", gpr[rd], gpr[rs], gpr[rt]);
 			return;
 
 		default:
@@ -193,15 +259,14 @@ void psycho_disasm_instr(struct psycho_ctx *const ctx, char *const dst,
 		}
 		break;
 
-
 	case CPU_INSTR_GROUP_REGIMM:
 		switch (rt) {
 		case CPU_INSTR_BLTZ:
-			FORMAT("bltz %s, 0x%08X", gpr[rs], BRANCH_ADDR);
+			fmt("bltz %s, 0x%08X", gpr[rs], BRANCH_ADDR);
 			return;
 
 		case CPU_INSTR_BGEZ:
-			FORMAT("bgez %s, 0x%08X", gpr[rs], BRANCH_ADDR);
+			fmt("bgez %s, 0x%08X", gpr[rs], BRANCH_ADDR);
 			return;
 
 		default:
@@ -210,65 +275,67 @@ void psycho_disasm_instr(struct psycho_ctx *const ctx, char *const dst,
 		break;
 
 	case CPU_INSTR_J:
-		FORMAT("j 0x%08X", calc_jmp_addr(pc, instr));
+		fmt("j 0x%08X", cpu_jmp_addr(pc, instr));
 		return;
 
 	case CPU_INSTR_JAL:
-		FORMAT("jal 0x%08X", calc_jmp_addr(pc, instr));
+		fmt("jal 0x%08X", cpu_jmp_addr(pc, instr));
 		return;
 
 	case CPU_INSTR_BEQ:
-		FORMAT("beq %s, %s, 0x%08X", gpr[rs], gpr[rt], BRANCH_ADDR);
+		fmt("beq %s, %s, 0x%08X", gpr[rs], gpr[rt], BRANCH_ADDR);
 		return;
 
 	case CPU_INSTR_BNE:
-		FORMAT("bne %s, %s, 0x%08X", gpr[rs], gpr[rt], BRANCH_ADDR);
+		fmt("bne %s, %s, 0x%08X", gpr[rs], gpr[rt], BRANCH_ADDR);
 		return;
 
 	case CPU_INSTR_BLEZ:
-		FORMAT("blez %s, 0x%08X", gpr[rs], BRANCH_ADDR);
+		fmt("blez %s, 0x%08X", gpr[rs], BRANCH_ADDR);
 		return;
 
 	case CPU_INSTR_BGTZ:
-		FORMAT("bgtz %s, 0x%08X", gpr[rs], BRANCH_ADDR);
+		fmt("bgtz %s, 0x%08X", gpr[rs], BRANCH_ADDR);
 		return;
 
 	case CPU_INSTR_ADDI:
-		FORMAT("addi %s, %s, 0x%04X", gpr[rs], gpr[rs], imm);
+		fmt("addi %s, %s, 0x%04X", gpr[rs], gpr[rs], imm);
 		return;
 
 	case CPU_INSTR_ADDIU:
-		FORMAT("addiu %s, %s, 0x%04X", gpr[rt], gpr[rs], imm);
+		fmt("addiu %s, %s, 0x%04X", gpr[rt], gpr[rs], imm);
 		return;
 
 	case CPU_INSTR_SLTI:
-		FORMAT("slti %s, %s, 0x%04X", gpr[rt], gpr[rs], imm);
+		fmt("slti %s, %s, 0x%04X", gpr[rt], gpr[rs], imm);
 		return;
 
 	case CPU_INSTR_SLTIU:
-		FORMAT("sltiu %s, %s, 0x%04X", gpr[rt], gpr[rs], imm);
+		fmt("sltiu %s, %s, 0x%04X", gpr[rt], gpr[rs], imm);
 		return;
 
 	case CPU_INSTR_ANDI:
-		FORMAT("andi %s, %s, 0x%04X", gpr[rt], gpr[rs], imm);
+		fmt("andi %s, %s, 0x%04X", gpr[rt], gpr[rs], imm);
 		return;
 
 	case CPU_INSTR_ORI:
-		FORMAT("ori %s, %s, 0x%04X", gpr[rt], gpr[rs], imm);
+		fmt("ori %s, %s, 0x%04X", gpr[rt], gpr[rs], imm);
 		return;
 
 	case CPU_INSTR_LUI:
-		FORMAT("lui %s, 0x%04X", gpr[rt], imm);
+		fmt("lui %s, 0x%04X", gpr[rt], imm);
+
+		trace_add(traces, PSYCHO_DISASM_TRACE_GPR_RT);
 		return;
 
 	case CPU_INSTR_GROUP_COP0:
 		switch (rs) {
 		case CPU_INSTR_MFC:
-			FORMAT("mfc0 %s, %s", gpr[rt], cop0[rd]);
+			fmt("mfc0 %s, %s", gpr[rt], cop0[rd]);
 			return;
 
 		case CPU_INSTR_MTC:
-			FORMAT("mtc0 %s, %s", cop0[rd], gpr[rt]);
+			fmt("mtc0 %s, %s", cop0[rd], gpr[rt]);
 			return;
 
 		default:
@@ -277,32 +344,77 @@ void psycho_disasm_instr(struct psycho_ctx *const ctx, char *const dst,
 		break;
 
 	case CPU_INSTR_LB:
-		FORMAT("lb %s, 0x%04X(%s)", gpr[rt], offset, gpr[base]);
+		fmt("lb %s, 0x%04X(%s)", gpr[rt], offset, gpr[base]);
 		return;
 
 	case CPU_INSTR_LW:
-		FORMAT("lw %s, 0x%04X(%s)", gpr[rt], offset, gpr[base]);
+		fmt("lw %s, 0x%04X(%s)", gpr[rt], offset, gpr[base]);
 		return;
 
 	case CPU_INSTR_LBU:
-		FORMAT("lbu %s, 0x%04X(%s)", gpr[rt], offset, gpr[base]);
+		fmt("lbu %s, 0x%04X(%s)", gpr[rt], offset, gpr[base]);
 		return;
 
 	case CPU_INSTR_SB:
-		FORMAT("sb %s, 0x%04X(%s)", gpr[rt], offset, gpr[base]);
+		fmt("sb %s, 0x%04X(%s)", gpr[rt], offset, gpr[base]);
 		return;
 
 	case CPU_INSTR_SH:
-		FORMAT("sh %s, 0x%04X(%s)", gpr[rt], offset, gpr[base]);
+		fmt("sh %s, 0x%04X(%s)", gpr[rt], offset, gpr[base]);
 		return;
 
 	case CPU_INSTR_SW:
-		FORMAT("sw %s, 0x%04X(%s)", gpr[rt], offset, gpr[base]);
+		fmt("sw %s, 0x%04X(%s)", gpr[rt], offset, gpr[base]);
 		return;
 
 	default:
 		break;
 	}
 
-	FORMAT("illegal 0x%08X", instr);
+	fmt("illegal 0x%08X", instr);
+
+#undef fmt
+#undef op
+#undef rt
+#undef rs
+#undef rd
+#undef shamt
+#undef funct
+#undef imm
+#undef offset
+#undef base
+#undef BRANCH_ADDR
+}
+
+void psycho_disasm_trace_begin(struct psycho_ctx *const ctx, const u32 pc)
+{
+	memset(&ctx->disasm.traces, 0, sizeof(ctx->disasm.traces));
+	psycho_disasm_instr(ctx, pc, &ctx->disasm.traces);
+
+	if (ctx->disasm.traces.count) {
+		memset(&ctx->disasm.res.str[ctx->disasm.res.len], ' ',
+		       TRACE_NUM_SPACES);
+
+		ctx->disasm.res.len += TRACE_NUM_SPACES;
+		append(&ctx->disasm.res.str, ctx->disasm.res.len, "; ");
+	}
+}
+
+void psycho_disasm_trace_end(struct psycho_ctx *const ctx)
+{
+#define fmt(args...) append(&ctx->disasm.res.str, ctx->disasm.res.len, args)
+#define rt (cpu_instr_rt(ctx->disasm.res.instr))
+
+	for (size_t trace = 0; trace < ctx->disasm.traces.count; ++trace) {
+		switch (ctx->disasm.traces.data[trace]) {
+		case PSYCHO_DISASM_TRACE_GPR_RT:
+			fmt("%s=0x%08X", gpr[rt], ctx->cpu.gpr[rt]);
+			break;
+
+		default:
+			break;
+		}
+	}
+
+#undef fmt
 }

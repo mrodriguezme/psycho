@@ -22,25 +22,11 @@
 
 #pragma once
 
-#include <stdint.h>
-#include "psycho/compiler.h"
+#include "psycho/ctx.h"
 #include "types.h"
 
-#define ZEXT_FUNC(width)                                                 \
-	PSYCHO_NODISCARD PSYCHO_ALWAYS_INLINE u32 zero_ext_##width##_32( \
-		const u##width val)                                      \
-	{                                                                \
-		return val;                                              \
-	}
+void psycho_disasm_init(struct psycho_ctx *ctx,
+			const struct psycho_disasm_cfg *cfg);
 
-#define SEXT_FUNC(width)                                                 \
-	PSYCHO_NODISCARD PSYCHO_ALWAYS_INLINE u32 sign_ext_##width##_32( \
-		const u##width val)                                      \
-	{                                                                \
-		return (s##width)val;                                    \
-	}
-
-ZEXT_FUNC(8);
-ZEXT_FUNC(16);
-SEXT_FUNC(8);
-SEXT_FUNC(16);
+void psycho_disasm_trace_begin(struct psycho_ctx *ctx, u32 pc);
+void psycho_disasm_trace_end(struct psycho_ctx *ctx);

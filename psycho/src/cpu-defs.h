@@ -84,68 +84,59 @@ enum psycho_cpu_instr_cop {
 	CPU_INSTR_MTC = 0x04,
 };
 
-PSYCHO_NODISCARD PSYCHO_ALWAYS_INLINE uint32_t
-cpu_vaddr_to_paddr(const uint32_t vaddr)
+PSYCHO_NODISCARD PSYCHO_ALWAYS_INLINE u32 cpu_vaddr_to_paddr(const u32 vaddr)
 {
 	return vaddr & 0x1FFFFFFF;
 }
 
-PSYCHO_NODISCARD PSYCHO_ALWAYS_INLINE unsigned int
-cpu_instr_op(const uint32_t instr)
+PSYCHO_NODISCARD PSYCHO_ALWAYS_INLINE uint cpu_instr_op(const u32 instr)
 {
 	return instr >> 26;
 }
 
-PSYCHO_NODISCARD PSYCHO_ALWAYS_INLINE unsigned int
-cpu_instr_rs(const uint32_t instr)
+PSYCHO_NODISCARD PSYCHO_ALWAYS_INLINE uint cpu_instr_rs(const u32 instr)
 {
 	return (instr >> 21) & 0x1F;
 }
 
-PSYCHO_NODISCARD PSYCHO_ALWAYS_INLINE unsigned int
-cpu_instr_rt(const uint32_t instr)
+PSYCHO_NODISCARD PSYCHO_ALWAYS_INLINE uint cpu_instr_rt(const u32 instr)
 {
 	return (instr >> 16) & 0x1F;
 }
 
-PSYCHO_NODISCARD PSYCHO_ALWAYS_INLINE unsigned int
-cpu_instr_rd(const uint32_t instr)
+PSYCHO_NODISCARD PSYCHO_ALWAYS_INLINE uint cpu_instr_rd(const u32 instr)
 {
 	return (instr >> 11) & 0x1F;
 }
 
-PSYCHO_NODISCARD PSYCHO_ALWAYS_INLINE unsigned int
-cpu_instr_shamt(const uint32_t instr)
+PSYCHO_NODISCARD PSYCHO_ALWAYS_INLINE uint cpu_instr_shamt(const u32 instr)
 {
 	return (instr >> 6) & 0x1F;
 }
 
-PSYCHO_NODISCARD PSYCHO_ALWAYS_INLINE unsigned int
-cpu_instr_funct(const uint32_t instr)
-{
-	return instr & 0x0000003F;
-}
-
-PSYCHO_NODISCARD PSYCHO_ALWAYS_INLINE uint16_t
-cpu_instr_imm(const uint32_t instr)
-{
-	return instr & UINT16_MAX;
-}
-
-PSYCHO_NODISCARD PSYCHO_ALWAYS_INLINE uint32_t
-cpu_instr_target(const uint32_t instr)
+PSYCHO_NODISCARD PSYCHO_ALWAYS_INLINE uint cpu_instr_target(const u32 instr)
 {
 	return instr & 0x03FFFFFF;
 }
 
-PSYCHO_NODISCARD PSYCHO_ALWAYS_INLINE uint32_t
-calc_jmp_addr(const uint32_t pc, const uint32_t instr)
+PSYCHO_NODISCARD PSYCHO_ALWAYS_INLINE uint cpu_instr_funct(const u32 instr)
+{
+	return instr & 0x0000003F;
+}
+
+PSYCHO_NODISCARD PSYCHO_ALWAYS_INLINE u16 cpu_instr_imm(const u32 instr)
+{
+	return instr & UINT16_MAX;
+}
+
+PSYCHO_NODISCARD PSYCHO_ALWAYS_INLINE u32 cpu_jmp_addr(const u32 pc,
+						       const u32 instr)
 {
 	return (cpu_instr_target(instr) << 2) + (pc & 0xF0000000);
 }
 
-PSYCHO_NODISCARD PSYCHO_ALWAYS_INLINE uint32_t
-calc_branch_addr(const uint32_t pc, const uint32_t instr)
+PSYCHO_NODISCARD PSYCHO_ALWAYS_INLINE u32 cpu_branch_addr(const u32 pc,
+							  const u32 instr)
 {
 	return sign_ext_16_32(cpu_instr_imm(instr) << 2) + pc + sizeof(instr);
 }

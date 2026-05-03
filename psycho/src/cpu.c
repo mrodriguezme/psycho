@@ -26,8 +26,10 @@
 #include "bus.h"
 #include "cpu.h"
 #include "cpu-defs.h"
+#include "disasm.h"
 #include "log.h"
 #include "util.h"
+#include "types.h"
 
 LOG_MODULE(PSYCHO_LOG_MODULE_CPU);
 
@@ -41,8 +43,7 @@ static void illegal_instr(struct psycho_ctx *const ctx)
 	ctx->cpu.cfg.illegal_instr(ctx, ctx->cpu.instr);
 }
 
-PSYCHO_NODISCARD static uint32_t load_word(struct psycho_ctx *const ctx,
-					   uint32_t vaddr)
+PSYCHO_NODISCARD static u32 load_word(struct psycho_ctx *const ctx, u32 vaddr)
 {
 	assert(ctx != NULL);
 
@@ -50,8 +51,7 @@ PSYCHO_NODISCARD static uint32_t load_word(struct psycho_ctx *const ctx,
 	return psycho_bus_load_word(ctx, vaddr);
 }
 
-PSYCHO_NODISCARD static uint8_t load_byte(struct psycho_ctx *const ctx,
-					  uint32_t vaddr)
+PSYCHO_NODISCARD static u8 load_byte(struct psycho_ctx *const ctx, u32 vaddr)
 {
 	assert(ctx != NULL);
 
@@ -59,8 +59,7 @@ PSYCHO_NODISCARD static uint8_t load_byte(struct psycho_ctx *const ctx,
 	return psycho_bus_load_byte(ctx, vaddr);
 }
 
-static void store_word(struct psycho_ctx *const ctx, uint32_t vaddr,
-		       const uint32_t word)
+static void store_word(struct psycho_ctx *const ctx, u32 vaddr, const u32 word)
 {
 	if (ctx->cpu.cop0[PSYCHO_CPU_COP0_SR] & CPU_SR_ISC)
 		return;
@@ -69,8 +68,8 @@ static void store_word(struct psycho_ctx *const ctx, uint32_t vaddr,
 	psycho_bus_store_word(ctx, vaddr, word);
 }
 
-static void store_halfword(struct psycho_ctx *const ctx, uint32_t vaddr,
-			   const uint16_t halfword)
+static void store_halfword(struct psycho_ctx *const ctx, u32 vaddr,
+			   const u16 halfword)
 {
 	if (ctx->cpu.cop0[PSYCHO_CPU_COP0_SR] & CPU_SR_ISC)
 		return;
@@ -79,8 +78,7 @@ static void store_halfword(struct psycho_ctx *const ctx, uint32_t vaddr,
 	psycho_bus_store_halfword(ctx, vaddr, halfword);
 }
 
-static void store_byte(struct psycho_ctx *const ctx, uint32_t vaddr,
-		       const uint8_t byte)
+static void store_byte(struct psycho_ctx *const ctx, u32 vaddr, const u8 byte)
 {
 	if (ctx->cpu.cop0[PSYCHO_CPU_COP0_SR] & CPU_SR_ISC)
 		return;
@@ -89,18 +87,32 @@ static void store_byte(struct psycho_ctx *const ctx, uint32_t vaddr,
 	psycho_bus_store_byte(ctx, vaddr, byte);
 }
 
-static void disasm_trace(struct psycho_ctx *const ctx)
+static void disasm_begin(struct psycho_ctx *const ctx)
 {
 	assert(ctx != NULL);
 
-	if (MODULE_LOG_LEVEL_ACTIVE(ctx, PSYCHO_LOG_LEVEL_TRACE)) {
-		char result[PSYCHO_DISASM_LEN_MAX];
-		size_t len;
-
-		psycho_disasm_instr(ctx, result, &len, ctx->cpu.pc);
-		LOG_TRACE_UNCHECKED(ctx, "[disasm] 0x%08X: %s", ctx->cpu.pc,
-				    result);
+	if (ctx->disasm.cfg.tracing) {
+		psycho_disasm_trace_begin(ctx, ctx->cpu.pc);
+		return;
 	}
+
+	if (MODULE_LOG_LEVEL_ACTIVE(ctx, PSYCHO_LOG_LEVEL_TRACE)) {
+		psycho_disasm_instr(ctx, ctx->cpu.pc, NULL);
+		LOG_TRACE_UNCHECKED(ctx, "[disasm] 0x%08X: %s",
+				    ctx->disasm.res.pc, ctx->disasm.res.str);
+	}
+}
+
+static void disasm_end(struct psycho_ctx *const ctx)
+{
+	assert(ctx != NULL);
+
+	if (!ctx->disasm.cfg.tracing)
+		return;
+
+	psycho_disasm_trace_end(ctx);
+	LOG_TRACE(ctx, "[disasm] 0x%08X: %s", ctx->disasm.res.pc,
+		  ctx->disasm.res.str);
 }
 
 static void branch_if(struct psycho_ctx *const ctx, const bool condition_met)
@@ -108,8 +120,7 @@ static void branch_if(struct psycho_ctx *const ctx, const bool condition_met)
 	assert(ctx != NULL);
 
 	if (condition_met)
-		ctx->cpu.next_pc =
-			calc_branch_addr(ctx->cpu.pc, ctx->cpu.instr);
+		ctx->cpu.next_pc = cpu_branch_addr(ctx->cpu.pc, ctx->cpu.instr);
 }
 
 void psycho_cpu_init(struct psycho_ctx *const ctx,
@@ -157,7 +168,7 @@ void psycho_cpu_step(struct psycho_ctx *const ctx)
 	ctx->cpu.delay_pc = ctx->cpu.next_pc;
 	ctx->cpu.next_pc = ctx->cpu.delay_pc + sizeof(ctx->cpu.instr);
 
-	disasm_trace(ctx);
+	disasm_begin(ctx);
 
 	switch (op) {
 	case CPU_INSTR_GROUP_SPECIAL:
@@ -171,7 +182,7 @@ void psycho_cpu_step(struct psycho_ctx *const ctx)
 			break;
 
 		case CPU_INSTR_SRA:
-			gpr[rd] = (int32_t)gpr[rt] >> shamt;
+			gpr[rd] = (s32)gpr[rt] >> shamt;
 			break;
 
 		case CPU_INSTR_JR:
@@ -193,8 +204,8 @@ void psycho_cpu_step(struct psycho_ctx *const ctx)
 			break;
 
 		case CPU_INSTR_DIV:
-			ctx->cpu.lo = (int32_t)gpr[rs] / (int32_t)gpr[rt];
-			ctx->cpu.hi = (int32_t)gpr[rs] % (int32_t)gpr[rt];
+			ctx->cpu.lo = (s32)gpr[rs] / (s32)gpr[rt];
+			ctx->cpu.hi = (s32)gpr[rs] % (s32)gpr[rt];
 
 			break;
 
@@ -222,7 +233,7 @@ void psycho_cpu_step(struct psycho_ctx *const ctx)
 			break;
 
 		case CPU_INSTR_SLT:
-			gpr[rd] = (int32_t)gpr[rs] < (int32_t)gpr[rt];
+			gpr[rd] = (s32)gpr[rs] < (s32)gpr[rt];
 			break;
 
 		case CPU_INSTR_SLTU:
@@ -231,34 +242,34 @@ void psycho_cpu_step(struct psycho_ctx *const ctx)
 
 		default:
 			illegal_instr(ctx);
-			return;
+			break;
 		}
 		break;
 
 	case CPU_INSTR_GROUP_REGIMM:
 		switch (rt) {
 		case CPU_INSTR_BLTZ:
-			branch_if(ctx, (int32_t)gpr[rs] < 0);
+			branch_if(ctx, (s32)gpr[rs] < 0);
 			break;
 
 		case CPU_INSTR_BGEZ:
-			branch_if(ctx, (int32_t)gpr[rs] >= 0);
+			branch_if(ctx, (s32)gpr[rs] >= 0);
 			break;
 
 		default:
 			illegal_instr(ctx);
-			return;
+			break;
 		}
 		break;
 
 	case CPU_INSTR_J:
-		ctx->cpu.next_pc = calc_jmp_addr(ctx->cpu.pc, ctx->cpu.instr);
+		ctx->cpu.next_pc = cpu_jmp_addr(ctx->cpu.pc, ctx->cpu.instr);
 		break;
 
 	case CPU_INSTR_JAL:
 		gpr[PSYCHO_CPU_REG_RA] =
 			ctx->cpu.pc + (sizeof(ctx->cpu.instr) * 2);
-		ctx->cpu.next_pc = calc_jmp_addr(ctx->cpu.pc, ctx->cpu.instr);
+		ctx->cpu.next_pc = cpu_jmp_addr(ctx->cpu.pc, ctx->cpu.instr);
 
 		break;
 
@@ -271,11 +282,11 @@ void psycho_cpu_step(struct psycho_ctx *const ctx)
 		break;
 
 	case CPU_INSTR_BLEZ:
-		branch_if(ctx, (int32_t)gpr[rs] <= 0);
+		branch_if(ctx, (s32)gpr[rs] <= 0);
 		break;
 
 	case CPU_INSTR_BGTZ:
-		branch_if(ctx, (int32_t)gpr[rs] > 0);
+		branch_if(ctx, (s32)gpr[rs] > 0);
 		break;
 
 	case CPU_INSTR_ADDI:
@@ -284,7 +295,7 @@ void psycho_cpu_step(struct psycho_ctx *const ctx)
 		break;
 
 	case CPU_INSTR_SLTI:
-		gpr[rt] = (int32_t)gpr[rs] < (int32_t)sextimm;
+		gpr[rt] = (s32)gpr[rs] < (s32)sextimm;
 		break;
 
 	case CPU_INSTR_SLTIU:
@@ -317,7 +328,7 @@ void psycho_cpu_step(struct psycho_ctx *const ctx)
 			switch (funct) {
 			default:
 				illegal_instr(ctx);
-				return;
+				break;
 			}
 		}
 		break;
@@ -348,6 +359,8 @@ void psycho_cpu_step(struct psycho_ctx *const ctx)
 
 	default:
 		illegal_instr(ctx);
-		return;
+		break;
 	}
+
+	disasm_end(ctx);
 }
