@@ -163,6 +163,13 @@ void psycho_cpu_step(struct psycho_ctx *const ctx)
 		ctx->cpu.next_pc = calc_jmp_addr(ctx->cpu.pc, ctx->cpu.instr);
 		break;
 
+	case CPU_INSTR_JAL:
+		gpr[PSYCHO_CPU_REG_RA] =
+			ctx->cpu.pc + (sizeof(ctx->cpu.instr) * 2);
+		ctx->cpu.next_pc = calc_jmp_addr(ctx->cpu.pc, ctx->cpu.instr);
+
+		break;
+
 	case CPU_INSTR_BNE:
 		branch_if(ctx, gpr[rs] != gpr[rt]);
 		break;
