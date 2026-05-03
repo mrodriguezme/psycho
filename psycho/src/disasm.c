@@ -180,6 +180,10 @@ void psycho_disasm_instr(struct psycho_ctx *const ctx, char *const dst,
 			FORMAT("or %s, %s, %s", gpr[rd], gpr[rs], gpr[rt]);
 			return;
 
+		case CPU_INSTR_SLT:
+			FORMAT("slt %s, %s, %s", gpr[rd], gpr[rs], gpr[rt]);
+			return;
+
 		case CPU_INSTR_SLTU:
 			FORMAT("sltu %s, %s, %s", gpr[rd], gpr[rs], gpr[rt]);
 			return;
