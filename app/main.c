@@ -157,8 +157,12 @@ int main(int argc, char **argv)
 	if (!load_bios_file(argv[1]))
 		return EXIT_FAILURE;
 
-	for (;;)
+	for (;;) {
+		if (m_ctx.cpu.pc == 0x80030000)
+			abort();
+
 		psycho_ctx_step(&m_ctx);
+	}
 
 	return EXIT_SUCCESS;
 }
