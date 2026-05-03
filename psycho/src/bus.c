@@ -80,3 +80,12 @@ void psycho_bus_store_halfword(struct psycho_ctx *const ctx,
 	LOG_WARN(ctx, "unknown halfword store: 0x%08X <- 0x%04X; ignoring",
 		 paddr, halfword);
 }
+
+void psycho_bus_store_byte(struct psycho_ctx *const ctx, const uint32_t paddr,
+			   const uint8_t byte)
+{
+	assert(ctx != NULL);
+
+	LOG_WARN(ctx, "unknown byte store: 0x%08X <- 0x%02X; ignoring", paddr,
+		 byte);
+}

@@ -40,6 +40,7 @@ enum psycho_cpu_instr_op {
 	CPU_INSTR_LUI = 0x0F,
 	CPU_INSTR_GROUP_COP0 = 0x10,
 	CPU_INSTR_LW = 0x23,
+	CPU_INSTR_SB = 0x28,
 	CPU_INSTR_SH = 0x29,
 	CPU_INSTR_SW = 0x2B
 };

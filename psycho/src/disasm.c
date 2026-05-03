@@ -192,6 +192,10 @@ void psycho_disasm_instr(struct psycho_ctx *const ctx, char *const dst,
 		FORMAT("lw %s, 0x%04X(%s)", gpr[rt], offset, gpr[base]);
 		return;
 
+	case CPU_INSTR_SB:
+		FORMAT("sb %s, 0x%04X(%s)", gpr[rt], offset, gpr[base]);
+		return;
+
 	case CPU_INSTR_SH:
 		FORMAT("sh %s, 0x%04X(%s)", gpr[rt], offset, gpr[base]);
 		return;

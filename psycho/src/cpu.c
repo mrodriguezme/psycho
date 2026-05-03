@@ -64,6 +64,13 @@ static void store_halfword(struct psycho_ctx *const ctx, uint32_t vaddr,
 	psycho_bus_store_halfword(ctx, vaddr, halfword);
 }
 
+static void store_byte(struct psycho_ctx *const ctx, uint32_t vaddr,
+		       const uint8_t byte)
+{
+	vaddr = cpu_vaddr_to_paddr(vaddr);
+	psycho_bus_store_byte(ctx, vaddr, byte);
+}
+
 static void disasm_trace(struct psycho_ctx *const ctx)
 {
 	assert(ctx != NULL);
@@ -208,6 +215,10 @@ void psycho_cpu_step(struct psycho_ctx *const ctx)
 
 	case CPU_INSTR_LW:
 		gpr[rt] = load_word(ctx, gpr[base] + offset);
+		break;
+
+	case CPU_INSTR_SB:
+		store_byte(ctx, gpr[base] + offset, gpr[rt] & UINT8_MAX);
 		break;
 
 	case CPU_INSTR_SH:
