@@ -23,6 +23,7 @@
 #include <assert.h>
 #include <stddef.h>
 
+#include "bus.h"
 #include "cpu.h"
 #include "log.h"
 
@@ -35,6 +36,7 @@ void psycho_ctx_init(struct psycho_ctx *const ctx,
 	assert(cfg != NULL);
 
 	psycho_log_init(ctx, &cfg->log);
+	psycho_bus_init(ctx);
 	psycho_cpu_init(ctx, &cfg->cpu);
 
 	psycho_ctx_reset(ctx);

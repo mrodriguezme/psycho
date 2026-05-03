@@ -36,6 +36,7 @@ enum {
 
 struct psycho_bus {
 	uint8_t bios[PSYCHO_BUS_BIOS_SIZE];
+	uint8_t *ram;
 };
 
 uint8_t *psycho_bus_bios_data_get(struct psycho_ctx *ctx);

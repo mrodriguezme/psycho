@@ -21,6 +21,7 @@
 // SOFTWARE.
 
 #include <assert.h>
+#include <stdlib.h>
 #include <string.h>
 
 #include "bus.h"
@@ -33,7 +34,11 @@ enum {
 
 	BIOS_PADDR_BEGIN	= 0x1FC00000,
 	BIOS_PADDR_END		= 0x1FC7FFFF,
-	BIOS_PADDR_MASK		= 0x000FFFFF
+	BIOS_PADDR_MASK		= 0x000FFFFF,
+
+	RAM_PADDR_BEGIN	= 0x00000000,
+	RAM_PADDR_END	= 0x001FFFFF,
+	RAM_PADDR_MASK	= 0x00FFFFFF
 
 	// clang-format on
 };
@@ -41,6 +46,13 @@ enum {
 uint8_t *psycho_bus_bios_data_get(struct psycho_ctx *const ctx)
 {
 	return ctx->bus.bios;
+}
+
+void psycho_bus_init(struct psycho_ctx *const ctx)
+{
+	assert(ctx != NULL);
+
+	ctx->bus.ram = malloc(RAM_PADDR_END + 1);
 }
 
 uint32_t psycho_bus_load_word(struct psycho_ctx *const ctx,
@@ -51,6 +63,11 @@ uint32_t psycho_bus_load_word(struct psycho_ctx *const ctx,
 	uint32_t word;
 
 	switch (paddr) {
+	case RAM_PADDR_BEGIN ... RAM_PADDR_END:
+		memcpy(&word, &ctx->bus.ram[paddr & RAM_PADDR_MASK],
+		       sizeof(uint32_t));
+		return word;
+
 	case BIOS_PADDR_BEGIN ... BIOS_PADDR_END:
 		memcpy(&word, &ctx->bus.bios[paddr & BIOS_PADDR_MASK],
 		       sizeof(uint32_t));
@@ -67,6 +84,16 @@ void psycho_bus_store_word(struct psycho_ctx *const ctx, const uint32_t paddr,
 			   const uint32_t word)
 {
 	assert(ctx != NULL);
+
+	switch (paddr) {
+	case RAM_PADDR_BEGIN ... RAM_PADDR_END:
+		memcpy(&ctx->bus.ram[paddr & RAM_PADDR_MASK], &word,
+		       sizeof(uint32_t));
+		return;
+
+	default:
+		break;
+	}
 
 	LOG_WARN(ctx, "unknown word store: 0x%08X <- 0x%08X; ignoring", paddr,
 		 word);
