@@ -51,6 +51,7 @@ enum psycho_cpu_instr_special {
 	CPU_INSTR_SLL = 0x00,
 	CPU_INSTR_JR = 0x08,
 	CPU_INSTR_ADDU = 0x21,
+	CPU_INSTR_AND = 0x24,
 	CPU_INSTR_OR = 0x25,
 	CPU_INSTR_SLTU = 0x2B
 };

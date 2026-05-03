@@ -135,6 +135,10 @@ void psycho_disasm_instr(struct psycho_ctx *const ctx, char *const dst,
 			FORMAT("addu %s, %s, %s", gpr[rd], gpr[rs], gpr[rt]);
 			return;
 
+		case CPU_INSTR_AND:
+			FORMAT("and %s, %s, %s", gpr[rd], gpr[rs], gpr[rt]);
+			return;
+
 		case CPU_INSTR_OR:
 			FORMAT("or %s, %s, %s", gpr[rd], gpr[rs], gpr[rt]);
 			return;
