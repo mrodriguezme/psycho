@@ -42,6 +42,8 @@ struct psycho_cpu {
 	uint32_t next_pc;
 	uint32_t delay_pc;
 	uint32_t instr;
+	uint32_t lo;
+	uint32_t hi;
 
 	struct psycho_cpu_cfg cfg;
 };
