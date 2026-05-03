@@ -28,6 +28,8 @@
 
 #define CPU_RESET_VECTOR (UINT32_C(0xBFC00000))
 
+#define CPU_SR_ISC	(1 << 16)
+
 enum psycho_cpu_instr_op {
 	CPU_INSTR_GROUP_SPECIAL = 0x00,
 	CPU_INSTR_J = 0x02,

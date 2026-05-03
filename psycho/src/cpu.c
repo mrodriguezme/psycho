@@ -62,6 +62,9 @@ PSYCHO_NODISCARD static uint8_t load_byte(struct psycho_ctx *const ctx,
 static void store_word(struct psycho_ctx *const ctx, uint32_t vaddr,
 		       const uint32_t word)
 {
+	if (ctx->cpu.cop0[PSYCHO_CPU_COP0_SR] & CPU_SR_ISC)
+		return;
+
 	vaddr = cpu_vaddr_to_paddr(vaddr);
 	psycho_bus_store_word(ctx, vaddr, word);
 }
@@ -69,6 +72,9 @@ static void store_word(struct psycho_ctx *const ctx, uint32_t vaddr,
 static void store_halfword(struct psycho_ctx *const ctx, uint32_t vaddr,
 			   const uint16_t halfword)
 {
+	if (ctx->cpu.cop0[PSYCHO_CPU_COP0_SR] & CPU_SR_ISC)
+		return;
+
 	vaddr = cpu_vaddr_to_paddr(vaddr);
 	psycho_bus_store_halfword(ctx, vaddr, halfword);
 }
@@ -76,6 +82,9 @@ static void store_halfword(struct psycho_ctx *const ctx, uint32_t vaddr,
 static void store_byte(struct psycho_ctx *const ctx, uint32_t vaddr,
 		       const uint8_t byte)
 {
+	if (ctx->cpu.cop0[PSYCHO_CPU_COP0_SR] & CPU_SR_ISC)
+		return;
+
 	vaddr = cpu_vaddr_to_paddr(vaddr);
 	psycho_bus_store_byte(ctx, vaddr, byte);
 }
