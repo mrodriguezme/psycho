@@ -56,6 +56,7 @@ enum psycho_cpu_instr_special {
 };
 
 enum psycho_cpu_instr_cop {
+	CPU_INSTR_MFC = 0x00,
 	CPU_INSTR_MTC = 0x04,
 };
 

@@ -188,6 +188,10 @@ void psycho_disasm_instr(struct psycho_ctx *const ctx, char *const dst,
 
 	case CPU_INSTR_GROUP_COP0:
 		switch (rs) {
+		case CPU_INSTR_MFC:
+			FORMAT("mfc0 %s, %s", gpr[rt], cop0[rd]);
+			return;
+
 		case CPU_INSTR_MTC:
 			FORMAT("mtc0 %s, %s", cop0[rd], gpr[rt]);
 			return;

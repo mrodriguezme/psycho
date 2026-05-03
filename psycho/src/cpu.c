@@ -217,6 +217,10 @@ void psycho_cpu_step(struct psycho_ctx *const ctx)
 
 	case CPU_INSTR_GROUP_COP0:
 		switch (rs) {
+		case CPU_INSTR_MFC:
+			gpr[rt] = ctx->cpu.cop0[rd];
+			break;
+
 		case CPU_INSTR_MTC:
 			ctx->cpu.cop0[rd] = gpr[rt];
 			break;
