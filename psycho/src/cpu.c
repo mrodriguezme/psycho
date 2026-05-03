@@ -189,6 +189,12 @@ void psycho_cpu_step(struct psycho_ctx *const ctx)
 			break;
 
 		case CPU_INSTR_DIV:
+			ctx->cpu.lo = (int32_t)gpr[rs] / (int32_t)gpr[rt];
+			ctx->cpu.hi = (int32_t)gpr[rs] % (int32_t)gpr[rt];
+
+			break;
+
+		case CPU_INSTR_DIVU:
 			ctx->cpu.lo = gpr[rs] / gpr[rt];
 			ctx->cpu.hi = gpr[rs] % gpr[rt];
 
