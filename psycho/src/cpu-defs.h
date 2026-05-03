@@ -61,6 +61,7 @@ enum psycho_cpu_instr_regimm {
 
 enum psycho_cpu_instr_special {
 	CPU_INSTR_SLL = 0x00,
+	CPU_INSTR_SRL = 0x02,
 	CPU_INSTR_SRA = 0x03,
 	CPU_INSTR_JR = 0x08,
 	CPU_INSTR_JALR = 0x09,

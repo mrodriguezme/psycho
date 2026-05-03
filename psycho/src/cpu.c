@@ -166,6 +166,10 @@ void psycho_cpu_step(struct psycho_ctx *const ctx)
 			gpr[rd] = gpr[rt] << shamt;
 			break;
 
+		case CPU_INSTR_SRL:
+			gpr[rd] = gpr[rt] >> shamt;
+			break;
+
 		case CPU_INSTR_SRA:
 			gpr[rd] = (int32_t)gpr[rt] >> shamt;
 			break;
