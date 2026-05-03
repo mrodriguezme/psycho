@@ -223,6 +223,10 @@ void psycho_cpu_step(struct psycho_ctx *const ctx)
 			branch_if(ctx, (int32_t)gpr[rs] < 0);
 			break;
 
+		case CPU_INSTR_BGEZ:
+			branch_if(ctx, (int32_t)gpr[rs] >= 0);
+			break;
+
 		default:
 			illegal_instr(ctx);
 			return;

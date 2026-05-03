@@ -56,6 +56,7 @@ enum psycho_cpu_instr_op {
 
 enum psycho_cpu_instr_regimm {
 	CPU_INSTR_BLTZ = 0x00,
+	CPU_INSTR_BGEZ = 0x01,
 };
 
 enum psycho_cpu_instr_special {

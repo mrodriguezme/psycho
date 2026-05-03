@@ -184,6 +184,10 @@ void psycho_disasm_instr(struct psycho_ctx *const ctx, char *const dst,
 			FORMAT("bltz %s, 0x%08X", gpr[rs], BRANCH_ADDR);
 			return;
 
+		case CPU_INSTR_BGEZ:
+			FORMAT("bgez %s, 0x%08X", gpr[rs], BRANCH_ADDR);
+			return;
+
 		default:
 			break;
 		}
