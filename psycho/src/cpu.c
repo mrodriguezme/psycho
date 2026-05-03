@@ -243,6 +243,10 @@ void psycho_cpu_step(struct psycho_ctx *const ctx)
 		gpr[rt] = gpr[rs] + sextimm;
 		break;
 
+	case CPU_INSTR_SLTI:
+		gpr[rt] = (int32_t)gpr[rs] < (int32_t)sextimm;
+		break;
+
 	case CPU_INSTR_ANDI:
 		gpr[rt] = zextimm & gpr[rs];
 		break;
