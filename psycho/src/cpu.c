@@ -184,6 +184,10 @@ void psycho_cpu_step(struct psycho_ctx *const ctx)
 
 			break;
 
+		case CPU_INSTR_MFHI:
+			gpr[rd] = ctx->cpu.hi;
+			break;
+
 		case CPU_INSTR_MFLO:
 			gpr[rd] = ctx->cpu.lo;
 			break;
