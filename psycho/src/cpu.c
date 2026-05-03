@@ -199,6 +199,18 @@ void psycho_cpu_step(struct psycho_ctx *const ctx)
 		}
 		break;
 
+	case CPU_INSTR_GROUP_REGIMM:
+		switch (rt) {
+		case CPU_INSTR_BLTZ:
+			branch_if(ctx, (int32_t)gpr[rs] < 0);
+			break;
+
+		default:
+			illegal_instr(ctx);
+			return;
+		}
+		break;
+
 	case CPU_INSTR_J:
 		ctx->cpu.next_pc = calc_jmp_addr(ctx->cpu.pc, ctx->cpu.instr);
 		break;

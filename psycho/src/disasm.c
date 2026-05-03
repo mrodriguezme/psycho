@@ -161,6 +161,18 @@ void psycho_disasm_instr(struct psycho_ctx *const ctx, char *const dst,
 		}
 		break;
 
+
+	case CPU_INSTR_GROUP_REGIMM:
+		switch (rt) {
+		case CPU_INSTR_BLTZ:
+			FORMAT("bltz %s, 0x%08X", gpr[rs], BRANCH_ADDR);
+			return;
+
+		default:
+			break;
+		}
+		break;
+
 	case CPU_INSTR_J:
 		FORMAT("j 0x%08X", calc_jmp_addr(pc, instr));
 		return;
