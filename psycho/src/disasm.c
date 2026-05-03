@@ -173,6 +173,10 @@ void psycho_disasm_instr(struct psycho_ctx *const ctx, char *const dst,
 		FORMAT("bne %s, %s, 0x%08X", gpr[rs], gpr[rt], BRANCH_ADDR);
 		return;
 
+	case CPU_INSTR_BLEZ:
+		FORMAT("blez %s, 0x%08X", gpr[rs], BRANCH_ADDR);
+		return;
+
 	case CPU_INSTR_BGTZ:
 		FORMAT("bgtz %s, 0x%08X", gpr[rs], BRANCH_ADDR);
 		return;

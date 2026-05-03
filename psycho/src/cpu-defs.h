@@ -36,6 +36,7 @@ enum psycho_cpu_instr_op {
 	CPU_INSTR_JAL = 0x03,
 	CPU_INSTR_BEQ = 0x04,
 	CPU_INSTR_BNE = 0x05,
+	CPU_INSTR_BLEZ = 0x06,
 	CPU_INSTR_BGTZ = 0x07,
 	CPU_INSTR_ADDI = 0x08,
 	CPU_INSTR_ADDIU = 0x09,
