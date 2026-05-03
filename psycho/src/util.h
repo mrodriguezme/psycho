@@ -30,6 +30,11 @@ PSYCHO_NODISCARD PSYCHO_ALWAYS_INLINE uint32_t zero_ext_16_32(const uint16_t val
 	return val;
 }
 
+PSYCHO_NODISCARD PSYCHO_ALWAYS_INLINE uint32_t zero_ext_8_32(const uint8_t val)
+{
+	return val;
+}
+
 PSYCHO_NODISCARD PSYCHO_ALWAYS_INLINE uint32_t sign_ext_8_32(const uint8_t val)
 {
 	return (int8_t)val;

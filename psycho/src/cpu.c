@@ -264,6 +264,10 @@ void psycho_cpu_step(struct psycho_ctx *const ctx)
 		gpr[rt] = load_word(ctx, gpr[base] + offset);
 		break;
 
+	case CPU_INSTR_LBU:
+		gpr[rt] = zero_ext_8_32(load_byte(ctx, gpr[base] + offset));
+		break;
+
 	case CPU_INSTR_SB:
 		store_byte(ctx, gpr[base] + offset, gpr[rt] & UINT8_MAX);
 		break;
