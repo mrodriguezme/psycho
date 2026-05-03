@@ -115,6 +115,7 @@ void psycho_disasm_instr(struct psycho_ctx *const ctx, char *const dst,
 #define imm (cpu_instr_imm(instr))
 #define offset (imm)
 #define base (rs)
+#define BRANCH_ADDR (calc_branch_addr(pc, instr))
 
 	const uint32_t instr = instr_get(ctx, pc);
 
@@ -165,13 +166,15 @@ void psycho_disasm_instr(struct psycho_ctx *const ctx, char *const dst,
 		return;
 
 	case CPU_INSTR_BEQ:
-		FORMAT("beq %s, %s, 0x%08X", gpr[rs], gpr[rt],
-		       calc_branch_addr(pc, instr));
+		FORMAT("beq %s, %s, 0x%08X", gpr[rs], gpr[rt], BRANCH_ADDR);
 		return;
 
 	case CPU_INSTR_BNE:
-		FORMAT("bne %s, %s, 0x%08X", gpr[rs], gpr[rt],
-		       calc_branch_addr(pc, instr));
+		FORMAT("bne %s, %s, 0x%08X", gpr[rs], gpr[rt], BRANCH_ADDR);
+		return;
+
+	case CPU_INSTR_BGTZ:
+		FORMAT("bgtz %s, 0x%08X", gpr[rs], BRANCH_ADDR);
 		return;
 
 	case CPU_INSTR_ADDI:

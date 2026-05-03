@@ -212,6 +212,10 @@ void psycho_cpu_step(struct psycho_ctx *const ctx)
 		branch_if(ctx, gpr[rs] != gpr[rt]);
 		break;
 
+	case CPU_INSTR_BGTZ:
+		branch_if(ctx, (int32_t)gpr[rs] > 0);
+		break;
+
 	case CPU_INSTR_ADDI:
 	case CPU_INSTR_ADDIU:
 		gpr[rt] = gpr[rs] + sextimm;
