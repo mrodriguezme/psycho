@@ -180,6 +180,10 @@ void psycho_cpu_step(struct psycho_ctx *const ctx)
 
 			break;
 
+		case CPU_INSTR_MFLO:
+			gpr[rd] = ctx->cpu.lo;
+			break;
+
 		case CPU_INSTR_DIV:
 			ctx->cpu.lo = gpr[rs] / gpr[rt];
 			ctx->cpu.hi = gpr[rs] % gpr[rt];

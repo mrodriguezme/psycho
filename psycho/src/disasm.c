@@ -140,6 +140,10 @@ void psycho_disasm_instr(struct psycho_ctx *const ctx, char *const dst,
 			FORMAT("jalr %s, %s", gpr[rd], gpr[rs]);
 			return;
 
+		case CPU_INSTR_MFLO:
+			FORMAT("mflo %s", gpr[rd]);
+			return;
+
 		case CPU_INSTR_DIV:
 			FORMAT("div %s, %s", gpr[rs], gpr[rt]);
 			return;
