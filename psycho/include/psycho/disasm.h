@@ -39,19 +39,46 @@ enum {
 	PSYCHO_DISASM_LEN_MAX = 512,
 };
 
+enum psycho_disasm_trace {
+	PSYCHO_DISASM_TRACE_GPR_RT,
+	PSYCHO_DISASM_TRACE_GPR_RD,
+	PSYCHO_DISASM_TRACE_CPU_LO,
+	PSYCHO_DISASM_TRACE_CPU_HI,
+	PSYCHO_DISASM_TRACE_COUNT
+};
+
 struct psycho_disasm_cfg {
 	bool tracing;
 };
 
+struct psycho_disasm_traces {
+	enum psycho_disasm_trace data[PSYCHO_DISASM_TRACE_COUNT];
+	size_t count;
+};
+
 struct psycho_disasm {
+	struct {
+		char str[PSYCHO_DISASM_LEN_MAX];
+		size_t len;
+		uint32_t instr;
+		uint32_t pc;
+	} res;
+
+	struct psycho_disasm_traces traces;
 	struct psycho_disasm_cfg cfg;
 };
 
 PSYCHO_NODISCARD const char *
 psycho_disasm_gpr_get(const enum psycho_cpu_gpr reg);
 
-void psycho_disasm_instr(struct psycho_ctx *ctx, char *dst, size_t *len,
-			 uint32_t pc);
+PSYCHO_NODISCARD const char *
+psycho_disasm_cop0_get(const enum psycho_cpu_cop0 reg);
+
+void psycho_disasm_instr(struct psycho_ctx *ctx, uint32_t pc,
+			 struct psycho_disasm_traces *traces);
+
+void psycho_disasm_set_tracing_state(struct psycho_ctx *ctx,
+				     const bool enabled);
 
 #ifdef __cplusplus
 }

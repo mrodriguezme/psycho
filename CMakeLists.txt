@@ -69,7 +69,6 @@ add_compiler_flags(
 	-Walloca
 	-Wbad-function-cast
 	-Wcast-qual
-	-Wc++-compat
 	-Wdate-time
 	-Wdisabled-optimization
 	-Wdouble-promotion
