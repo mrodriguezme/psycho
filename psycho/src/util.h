@@ -26,6 +26,8 @@
 #include "psycho/compiler.h"
 #include "types.h"
 
+#define ARRAY_SIZE(x) (sizeof(x) / sizeof((x)[0]))
+
 #define ZEXT_FUNC(width)                                                 \
 	PSYCHO_NODISCARD PSYCHO_ALWAYS_INLINE u32 zero_ext_##width##_32( \
 		const u##width val)                                      \

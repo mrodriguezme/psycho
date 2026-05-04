@@ -21,6 +21,7 @@
 // SOFTWARE.
 
 #include <assert.h>
+#include <stdarg.h>
 #include <stdio.h>
 #include <string.h>
 
@@ -33,11 +34,8 @@
 #include "types.h"
 
 enum {
-	TRACE_NUM_SPACES = 30,
+	TRACE_NUM_SPACES = 40,
 };
-
-#define append(str, len, args...) \
-	(len) += snprintf(str[len], PSYCHO_DISASM_LEN_MAX, args)
 
 static const char *const gpr[PSYCHO_CPU_GPR_COUNT] = {
 	// clang-format off
@@ -117,6 +115,24 @@ static const char *const cop0[PSYCHO_CPU_COP0_COUNT] = {
 	// clang-format on
 };
 
+__attribute__((format(printf, 3, 4))) static void
+append(char *const buf, size_t *const len, const char *const fmt, ...)
+{
+	const size_t rem = PSYCHO_DISASM_LEN_MAX - *len;
+
+	va_list ap;
+	va_start(ap, fmt);
+	const int written = vsnprintf(&buf[*len], rem, fmt, ap);
+	va_end(ap);
+
+	if (written) {
+		if ((size_t)written >= rem)
+			*len = PSYCHO_DISASM_LEN_MAX - 1;
+		else
+			*len += (size_t)written;
+	}
+}
+
 PSYCHO_NODISCARD static u32 instr_get(struct psycho_ctx *const ctx, u32 pc)
 {
 	pc = cpu_vaddr_to_paddr(pc);
@@ -127,7 +143,7 @@ static void trace_add(struct psycho_disasm_traces *const traces,
 		      const enum psycho_disasm_trace trace)
 {
 	if (traces) {
-		assert(traces->count < sizeof(traces->data));
+		assert(traces->count < ARRAY_SIZE(traces->data));
 		traces->data[traces->count++] = trace;
 	}
 }
@@ -164,7 +180,7 @@ void psycho_disasm_instr(struct psycho_ctx *const ctx, const u32 pc,
 	ctx->disasm.res.instr = instr;
 	ctx->disasm.res.pc = pc;
 
-#define fmt(args...) append(&ctx->disasm.res.str, ctx->disasm.res.len, args)
+#define fmt(args...) append(ctx->disasm.res.str, &ctx->disasm.res.len, args)
 
 #define op (cpu_instr_op(instr))
 #define rt (cpu_instr_rt(instr))
@@ -173,9 +189,10 @@ void psycho_disasm_instr(struct psycho_ctx *const ctx, const u32 pc,
 #define shamt (cpu_instr_shamt(instr))
 #define funct (cpu_instr_funct(instr))
 #define imm (cpu_instr_imm(instr))
-#define offset (imm)
+#define simm ((s16)imm)
+#define offset (simm)
 #define base (rs)
-#define BRANCH_ADDR (cpu_branch_addr(pc, instr))
+#define branch_addr (cpu_branch_addr(pc, instr))
 
 	switch (op) {
 	case CPU_INSTR_GROUP_SPECIAL:
@@ -204,6 +221,8 @@ void psycho_disasm_instr(struct psycho_ctx *const ctx, const u32 pc,
 
 		case CPU_INSTR_JALR:
 			fmt("jalr %s, %s", gpr[rd], gpr[rs]);
+			trace_add(traces, PSYCHO_DISASM_TRACE_GPR_RD);
+
 			return;
 
 		case CPU_INSTR_MFHI:
@@ -220,38 +239,58 @@ void psycho_disasm_instr(struct psycho_ctx *const ctx, const u32 pc,
 
 		case CPU_INSTR_DIV:
 			fmt("div %s, %s", gpr[rs], gpr[rt]);
+			trace_add(traces, PSYCHO_DISASM_TRACE_CPU_LO);
+			trace_add(traces, PSYCHO_DISASM_TRACE_CPU_HI);
+
 			return;
 
 		case CPU_INSTR_DIVU:
 			fmt("divu %s, %s", gpr[rs], gpr[rt]);
+			trace_add(traces, PSYCHO_DISASM_TRACE_CPU_LO);
+			trace_add(traces, PSYCHO_DISASM_TRACE_CPU_HI);
+
 			return;
 
 		case CPU_INSTR_ADD:
 			fmt("add %s, %s, %s", gpr[rd], gpr[rs], gpr[rt]);
+
+			trace_add(traces, PSYCHO_DISASM_TRACE_GPR_RD);
 			return;
 
 		case CPU_INSTR_ADDU:
 			fmt("addu %s, %s, %s", gpr[rd], gpr[rs], gpr[rt]);
+			trace_add(traces, PSYCHO_DISASM_TRACE_GPR_RD);
+
 			return;
 
 		case CPU_INSTR_SUBU:
 			fmt("subu %s, %s, %s", gpr[rd], gpr[rs], gpr[rt]);
+			trace_add(traces, PSYCHO_DISASM_TRACE_GPR_RD);
+
 			return;
 
 		case CPU_INSTR_AND:
 			fmt("and %s, %s, %s", gpr[rd], gpr[rs], gpr[rt]);
+			trace_add(traces, PSYCHO_DISASM_TRACE_GPR_RD);
+
 			return;
 
 		case CPU_INSTR_OR:
 			fmt("or %s, %s, %s", gpr[rd], gpr[rs], gpr[rt]);
+			trace_add(traces, PSYCHO_DISASM_TRACE_GPR_RD);
+
 			return;
 
 		case CPU_INSTR_SLT:
 			fmt("slt %s, %s, %s", gpr[rd], gpr[rs], gpr[rt]);
+			trace_add(traces, PSYCHO_DISASM_TRACE_GPR_RD);
+
 			return;
 
 		case CPU_INSTR_SLTU:
 			fmt("sltu %s, %s, %s", gpr[rd], gpr[rs], gpr[rt]);
+
+			trace_add(traces, PSYCHO_DISASM_TRACE_GPR_RD);
 			return;
 
 		default:
@@ -262,11 +301,11 @@ void psycho_disasm_instr(struct psycho_ctx *const ctx, const u32 pc,
 	case CPU_INSTR_GROUP_REGIMM:
 		switch (rt) {
 		case CPU_INSTR_BLTZ:
-			fmt("bltz %s, 0x%08X", gpr[rs], BRANCH_ADDR);
+			fmt("bltz %s, 0x%08X", gpr[rs], branch_addr);
 			return;
 
 		case CPU_INSTR_BGEZ:
-			fmt("bgez %s, 0x%08X", gpr[rs], BRANCH_ADDR);
+			fmt("bgez %s, 0x%08X", gpr[rs], branch_addr);
 			return;
 
 		default:
@@ -283,43 +322,55 @@ void psycho_disasm_instr(struct psycho_ctx *const ctx, const u32 pc,
 		return;
 
 	case CPU_INSTR_BEQ:
-		fmt("beq %s, %s, 0x%08X", gpr[rs], gpr[rt], BRANCH_ADDR);
+		fmt("beq %s, %s, 0x%08X", gpr[rs], gpr[rt], branch_addr);
 		return;
 
 	case CPU_INSTR_BNE:
-		fmt("bne %s, %s, 0x%08X", gpr[rs], gpr[rt], BRANCH_ADDR);
+		fmt("bne %s, %s, 0x%08X", gpr[rs], gpr[rt], branch_addr);
 		return;
 
 	case CPU_INSTR_BLEZ:
-		fmt("blez %s, 0x%08X", gpr[rs], BRANCH_ADDR);
+		fmt("blez %s, 0x%08X", gpr[rs], branch_addr);
 		return;
 
 	case CPU_INSTR_BGTZ:
-		fmt("bgtz %s, 0x%08X", gpr[rs], BRANCH_ADDR);
+		fmt("bgtz %s, 0x%08X", gpr[rs], branch_addr);
 		return;
 
 	case CPU_INSTR_ADDI:
-		fmt("addi %s, %s, 0x%04X", gpr[rs], gpr[rs], imm);
+		fmt("addi %s, %s, %d", gpr[rt], gpr[rs], simm);
+		trace_add(traces, PSYCHO_DISASM_TRACE_GPR_RT);
+
 		return;
 
 	case CPU_INSTR_ADDIU:
-		fmt("addiu %s, %s, 0x%04X", gpr[rt], gpr[rs], imm);
+		fmt("addiu %s, %s, %d", gpr[rt], gpr[rs], simm);
+		trace_add(traces, PSYCHO_DISASM_TRACE_GPR_RT);
+
 		return;
 
 	case CPU_INSTR_SLTI:
-		fmt("slti %s, %s, 0x%04X", gpr[rt], gpr[rs], imm);
+		fmt("slti %s, %s, %d", gpr[rt], gpr[rs], simm);
+		trace_add(traces, PSYCHO_DISASM_TRACE_GPR_RT);
+
 		return;
 
 	case CPU_INSTR_SLTIU:
-		fmt("sltiu %s, %s, 0x%04X", gpr[rt], gpr[rs], imm);
+		fmt("sltiu %s, %s, %d", gpr[rt], gpr[rs], simm);
+		trace_add(traces, PSYCHO_DISASM_TRACE_GPR_RT);
+
 		return;
 
 	case CPU_INSTR_ANDI:
 		fmt("andi %s, %s, 0x%04X", gpr[rt], gpr[rs], imm);
+		trace_add(traces, PSYCHO_DISASM_TRACE_GPR_RT);
+
 		return;
 
 	case CPU_INSTR_ORI:
 		fmt("ori %s, %s, 0x%04X", gpr[rt], gpr[rs], imm);
+		trace_add(traces, PSYCHO_DISASM_TRACE_GPR_RT);
+
 		return;
 
 	case CPU_INSTR_LUI:
@@ -332,6 +383,8 @@ void psycho_disasm_instr(struct psycho_ctx *const ctx, const u32 pc,
 		switch (rs) {
 		case CPU_INSTR_MFC:
 			fmt("mfc0 %s, %s", gpr[rt], cop0[rd]);
+			trace_add(traces, PSYCHO_DISASM_TRACE_GPR_RT);
+
 			return;
 
 		case CPU_INSTR_MTC:
@@ -344,27 +397,33 @@ void psycho_disasm_instr(struct psycho_ctx *const ctx, const u32 pc,
 		break;
 
 	case CPU_INSTR_LB:
-		fmt("lb %s, 0x%04X(%s)", gpr[rt], offset, gpr[base]);
+		fmt("lb %s, %d(%s)", gpr[rt], offset, gpr[base]);
+		trace_add(traces, PSYCHO_DISASM_TRACE_GPR_RT);
+
 		return;
 
 	case CPU_INSTR_LW:
-		fmt("lw %s, 0x%04X(%s)", gpr[rt], offset, gpr[base]);
+		fmt("lw %s, %d(%s)", gpr[rt], offset, gpr[base]);
+		trace_add(traces, PSYCHO_DISASM_TRACE_GPR_RT);
+
 		return;
 
 	case CPU_INSTR_LBU:
-		fmt("lbu %s, 0x%04X(%s)", gpr[rt], offset, gpr[base]);
+		fmt("lbu %s, %d(%s)", gpr[rt], offset, gpr[base]);
+		trace_add(traces, PSYCHO_DISASM_TRACE_GPR_RT);
+
 		return;
 
 	case CPU_INSTR_SB:
-		fmt("sb %s, 0x%04X(%s)", gpr[rt], offset, gpr[base]);
+		fmt("sb %s, %d(%s)", gpr[rt], offset, gpr[base]);
 		return;
 
 	case CPU_INSTR_SH:
-		fmt("sh %s, 0x%04X(%s)", gpr[rt], offset, gpr[base]);
+		fmt("sh %s, %d(%s)", gpr[rt], offset, gpr[base]);
 		return;
 
 	case CPU_INSTR_SW:
-		fmt("sw %s, 0x%04X(%s)", gpr[rt], offset, gpr[base]);
+		fmt("sw %s, %d(%s)", gpr[rt], offset, gpr[base]);
 		return;
 
 	default:
@@ -391,30 +450,52 @@ void psycho_disasm_trace_begin(struct psycho_ctx *const ctx, const u32 pc)
 	memset(&ctx->disasm.traces, 0, sizeof(ctx->disasm.traces));
 	psycho_disasm_instr(ctx, pc, &ctx->disasm.traces);
 
-	if (ctx->disasm.traces.count) {
-		memset(&ctx->disasm.res.str[ctx->disasm.res.len], ' ',
-		       TRACE_NUM_SPACES);
+	if (!ctx->disasm.traces.count)
+		return;
 
-		ctx->disasm.res.len += TRACE_NUM_SPACES;
-		append(&ctx->disasm.res.str, ctx->disasm.res.len, "; ");
+	if (ctx->disasm.res.len < TRACE_NUM_SPACES) {
+		const size_t pad = TRACE_NUM_SPACES - ctx->disasm.res.len;
+
+		memset(&ctx->disasm.res.str[ctx->disasm.res.len], ' ', pad);
+		ctx->disasm.res.len += pad;
 	}
+	append(ctx->disasm.res.str, &ctx->disasm.res.len, "; ");
 }
 
 void psycho_disasm_trace_end(struct psycho_ctx *const ctx)
 {
-#define fmt(args...) append(&ctx->disasm.res.str, ctx->disasm.res.len, args)
+#define fmt(args...) append(ctx->disasm.res.str, &ctx->disasm.res.len, args)
 #define rt (cpu_instr_rt(ctx->disasm.res.instr))
+#define rd (cpu_instr_rd(ctx->disasm.res.instr))
 
 	for (size_t trace = 0; trace < ctx->disasm.traces.count; ++trace) {
+		if (trace)
+			fmt(", ");
+
 		switch (ctx->disasm.traces.data[trace]) {
 		case PSYCHO_DISASM_TRACE_GPR_RT:
 			fmt("%s=0x%08X", gpr[rt], ctx->cpu.gpr[rt]);
 			break;
 
-		default:
+		case PSYCHO_DISASM_TRACE_GPR_RD:
+			fmt("%s=0x%08X", gpr[rd], ctx->cpu.gpr[rd]);
 			break;
+
+		case PSYCHO_DISASM_TRACE_CPU_LO:
+			fmt("LO=0x%08X", ctx->cpu.lo);
+			break;
+
+		case PSYCHO_DISASM_TRACE_CPU_HI:
+			fmt("HI=0x%08X", ctx->cpu.hi);
+			break;
+
+		case PSYCHO_DISASM_TRACE_COUNT:
+		default:
+			assert(false);
 		}
 	}
 
 #undef fmt
+#undef rt
+#undef rd
 }

@@ -42,6 +42,8 @@ enum {
 enum psycho_disasm_trace {
 	PSYCHO_DISASM_TRACE_GPR_RT,
 	PSYCHO_DISASM_TRACE_GPR_RD,
+	PSYCHO_DISASM_TRACE_CPU_LO,
+	PSYCHO_DISASM_TRACE_CPU_HI,
 	PSYCHO_DISASM_TRACE_COUNT
 };
 
@@ -50,7 +52,7 @@ struct psycho_disasm_cfg {
 };
 
 struct psycho_disasm_traces {
-	enum psycho_disasm_trace data[2];
+	enum psycho_disasm_trace data[PSYCHO_DISASM_TRACE_COUNT];
 	size_t count;
 };
 
