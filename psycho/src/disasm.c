@@ -442,7 +442,7 @@ void psycho_disasm_instr(struct psycho_ctx *const ctx, const u32 pc,
 #undef imm
 #undef offset
 #undef base
-#undef branch
+#undef branch_addr
 }
 
 void psycho_disasm_trace_begin(struct psycho_ctx *const ctx, const u32 pc)

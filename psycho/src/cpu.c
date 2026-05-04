@@ -87,7 +87,7 @@ static void store_byte(struct psycho_ctx *const ctx, u32 vaddr, const u8 byte)
 	psycho_bus_store_byte(ctx, vaddr, byte);
 }
 
-static void disasm_begin(struct psycho_ctx *const ctx)
+static void disasm_capture(struct psycho_ctx *const ctx)
 {
 	assert(ctx != NULL);
 
@@ -103,7 +103,7 @@ static void disasm_begin(struct psycho_ctx *const ctx)
 	}
 }
 
-static void disasm_end(struct psycho_ctx *const ctx)
+static void disasm_emit(struct psycho_ctx *const ctx)
 {
 	assert(ctx != NULL);
 
@@ -168,7 +168,7 @@ void psycho_cpu_step(struct psycho_ctx *const ctx)
 	ctx->cpu.delay_pc = ctx->cpu.next_pc;
 	ctx->cpu.next_pc = ctx->cpu.delay_pc + sizeof(ctx->cpu.instr);
 
-	disasm_begin(ctx);
+	disasm_capture(ctx);
 
 	switch (op) {
 	case CPU_INSTR_GROUP_SPECIAL:
@@ -362,5 +362,5 @@ void psycho_cpu_step(struct psycho_ctx *const ctx)
 		break;
 	}
 
-	disasm_end(ctx);
+	disasm_emit(ctx);
 }
