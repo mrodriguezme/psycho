@@ -82,8 +82,23 @@ static const struct psycho_bios_func a0_funcs[] = {
 static const struct psycho_bios_func b0_funcs[] = {
 	// clang-format off
 
+	[0x00]	= {
+		.prototype	= "void alloc_kernel_memory(size_t size=%d)",
+		.ret		= PSYCHO_BIOS_FUNC_RET_VOID
+	},
+
+	[0x18]	= {
+		.prototype	= "void *ResetEntryInt(void)",
+		.ret		= PSYCHO_BIOS_FUNC_RET_VOID_PTR
+	},
+
 	[0x3D]	= {
 		.prototype	= "void putchar(char c=%c)",
+		.ret		= PSYCHO_BIOS_FUNC_RET_VOID
+	},
+
+	[0x47]	= {
+		.prototype	= "void AddDrv()",
 		.ret		= PSYCHO_BIOS_FUNC_RET_VOID
 	}
 
@@ -92,6 +107,41 @@ static const struct psycho_bios_func b0_funcs[] = {
 
 static const struct psycho_bios_func c0_funcs[] = {
 	// clang-format off
+
+	[0x00]	= {
+		.prototype	= "void EnqueueTimerAndVblankIrqs(int prio=%d)",
+		.ret		= PSYCHO_BIOS_FUNC_RET_VOID
+	},
+
+	[0x01]	= {
+		.prototype	= "void EnqueueSyscallHandler(int prio=%d)",
+		.ret		= PSYCHO_BIOS_FUNC_RET_VOID
+	},
+
+	[0x07]	= {
+		.prototype	= "void InstallExceptionHandlers(void)",
+		.ret		= PSYCHO_BIOS_FUNC_RET_VOID
+	},
+
+	[0x08]	= {
+		.prototype	= "void SysInitMemory(void *addr=%p, size_t size=%d)",
+		.ret		= PSYCHO_BIOS_FUNC_RET_VOID
+	},
+
+	[0x0C]	= {
+		.prototype	= "void InitDefInt(int prio=%d)",
+		.ret		= PSYCHO_BIOS_FUNC_RET_VOID
+	},
+
+	[0x12]	= {
+		.prototype	= "void InstallDevices(int ttyflag=%d)",
+		.ret		= PSYCHO_BIOS_FUNC_RET_VOID
+	},
+
+	[0x1C]	= {
+		.prototype	= "void AdjustA0Table(void)",
+		.ret		= PSYCHO_BIOS_FUNC_RET_VOID
+	},
 
 	// clang-format on
 };
