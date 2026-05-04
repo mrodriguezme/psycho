@@ -23,6 +23,7 @@
 #include <assert.h>
 #include <stddef.h>
 
+#include "bios-trace.h"
 #include "bus.h"
 #include "cpu.h"
 #include "disasm.h"
@@ -37,6 +38,7 @@ void psycho_ctx_init(struct psycho_ctx *const ctx,
 	assert(cfg != NULL);
 
 	psycho_log_init(ctx, &cfg->log);
+	psycho_bios_trace_init(ctx, &cfg->bios_trace);
 	psycho_disasm_init(ctx, &cfg->disasm);
 	psycho_bus_init(ctx);
 	psycho_cpu_init(ctx, &cfg->cpu);
@@ -57,5 +59,7 @@ void psycho_ctx_step(struct psycho_ctx *const ctx)
 {
 	assert(ctx != NULL);
 
+	psycho_bios_trace_begin(ctx);
 	psycho_cpu_step(ctx);
+	psycho_bios_trace_end(ctx);
 }

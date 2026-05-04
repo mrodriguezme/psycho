@@ -39,3 +39,5 @@ void psycho_bus_store_halfword(struct psycho_ctx *ctx, const u32 paddr,
 
 void psycho_bus_store_byte(struct psycho_ctx *ctx, const u32 paddr,
 			   const u8 byte);
+
+void *psycho_bus_get_mem_area(struct psycho_ctx *ctx, const u32 paddr);

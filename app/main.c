@@ -140,6 +140,10 @@ int main(int argc, char **argv)
 			.illegal_instr	= illegal_instr_cb
 		},
 
+		.bios_trace	= {
+			.deref_ptrs = true
+		},
+
 		.disasm	= {
 			.tracing	= true
 		},
@@ -150,6 +154,7 @@ int main(int argc, char **argv)
 				[PSYCHO_LOG_MODULE_CTX]	= PSYCHO_LOG_LEVEL_TRACE,
 				[PSYCHO_LOG_MODULE_CPU]	= PSYCHO_LOG_LEVEL_TRACE,
 				[PSYCHO_LOG_MODULE_BUS]	= PSYCHO_LOG_LEVEL_TRACE,
+				[PSYCHO_LOG_MODULE_BIOS] = PSYCHO_LOG_LEVEL_TRACE
 			}
 		}
 

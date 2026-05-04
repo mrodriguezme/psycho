@@ -142,3 +142,17 @@ void psycho_bus_store_byte(struct psycho_ctx *const ctx, const u32 paddr,
 	LOG_WARN(ctx, "unknown byte store: 0x%08X <- 0x%02X; ignoring", paddr,
 		 byte);
 }
+
+void *psycho_bus_get_mem_area(struct psycho_ctx *const ctx, const u32 paddr)
+{
+	switch (paddr) {
+	case RAM_PADDR_BEGIN ... RAM_PADDR_END:
+		return &ctx->bus.ram[paddr & RAM_PADDR_MASK];
+
+	case BIOS_PADDR_BEGIN ... BIOS_PADDR_END:
+		return &ctx->bus.bios[paddr & BIOS_PADDR_MASK];
+
+	default:
+		return NULL;
+	}
+}

@@ -22,36 +22,61 @@
 
 #pragma once
 
+#include <stdbool.h>
+#include <stddef.h>
+#include <stdint.h>
+
 #ifdef __cplusplus
 extern "C" {
 #endif // __cplusplus
 
-#include "cpu.h"
-#include "bios-trace.h"
-#include "bus.h"
-#include "disasm.h"
-#include "log.h"
+struct psycho_ctx;
 
-struct psycho_ctx {
-	struct psycho_cpu cpu;
-	struct psycho_bios_trace bios_trace;
-	struct psycho_bus bus;
-	struct psycho_disasm disasm;
-	struct psycho_log log;
+enum {
+	PSYCHO_BIOS_TRACE_STACK_MAX = 10,
+	PSYCHO_BIOS_TRACE_RESULT_LEN_MAX = 512,
 };
 
-struct psycho_ctx_cfg {
-	struct psycho_cpu_cfg cpu;
-	struct psycho_bios_trace_cfg bios_trace;
-	struct psycho_disasm_cfg disasm;
-	struct psycho_log_cfg log;
+enum psycho_bios_func_ret {
+	PSYCHO_BIOS_FUNC_RET_INT,
+	PSYCHO_BIOS_FUNC_RET_CHAR,
+	PSYCHO_BIOS_FUNC_RET_VOID,
+	PSYCHO_BIOS_FUNC_RET_VOID_PTR
 };
 
-void psycho_ctx_init(struct psycho_ctx *ctx, const struct psycho_ctx_cfg *cfg);
+struct psycho_bios_func {
+	const char *const prototype;
+	const enum psycho_bios_func_ret ret;
+};
 
-void psycho_ctx_reset(struct psycho_ctx *ctx);
+struct psycho_bios_frame {
+	const struct psycho_bios_func *func;
+	uint32_t a0;
+	uint32_t a1;
+	uint32_t a2;
+	uint32_t a3;
+	uint32_t sp;
+	uint32_t ra;
 
-void psycho_ctx_step(struct psycho_ctx *ctx);
+	struct {
+		char result[PSYCHO_BIOS_TRACE_RESULT_LEN_MAX];
+		size_t len;
+	};
+};
+
+struct psycho_bios_trace_cfg {
+	void (*tty_stdout_msg_cb)(struct psycho_ctx *, const char *msg);
+	bool deref_ptrs;
+};
+
+struct psycho_bios_trace {
+	struct {
+		struct psycho_bios_frame frames[PSYCHO_BIOS_TRACE_STACK_MAX];
+		size_t top;
+	} stack;
+
+	struct psycho_bios_trace_cfg cfg;
+};
 
 #ifdef __cplusplus
 }

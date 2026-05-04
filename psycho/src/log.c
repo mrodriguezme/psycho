@@ -63,9 +63,10 @@ psycho_log_msg(struct psycho_ctx *const ctx,
 	static const char *const module_str[PSYCHO_LOG_MODULE_COUNT] = {
 		// clang-format off
 
-		[PSYCHO_LOG_MODULE_CTX]	= "ctx",
-		[PSYCHO_LOG_MODULE_CPU]	= "cpu",
-		[PSYCHO_LOG_MODULE_BUS]	= "bus"
+		[PSYCHO_LOG_MODULE_CTX]		= "ctx",
+		[PSYCHO_LOG_MODULE_CPU]		= "cpu",
+		[PSYCHO_LOG_MODULE_BUS]		= "bus",
+		[PSYCHO_LOG_MODULE_BIOS]	= "bios"
 
 		// clang-format on
 	};

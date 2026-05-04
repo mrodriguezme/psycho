@@ -22,37 +22,10 @@
 
 #pragma once
 
-#ifdef __cplusplus
-extern "C" {
-#endif // __cplusplus
+#include "psycho/ctx.h"
 
-#include "cpu.h"
-#include "bios-trace.h"
-#include "bus.h"
-#include "disasm.h"
-#include "log.h"
+void psycho_bios_trace_init(struct psycho_ctx *const ctx,
+			    const struct psycho_bios_trace_cfg *const cfg);
 
-struct psycho_ctx {
-	struct psycho_cpu cpu;
-	struct psycho_bios_trace bios_trace;
-	struct psycho_bus bus;
-	struct psycho_disasm disasm;
-	struct psycho_log log;
-};
-
-struct psycho_ctx_cfg {
-	struct psycho_cpu_cfg cpu;
-	struct psycho_bios_trace_cfg bios_trace;
-	struct psycho_disasm_cfg disasm;
-	struct psycho_log_cfg log;
-};
-
-void psycho_ctx_init(struct psycho_ctx *ctx, const struct psycho_ctx_cfg *cfg);
-
-void psycho_ctx_reset(struct psycho_ctx *ctx);
-
-void psycho_ctx_step(struct psycho_ctx *ctx);
-
-#ifdef __cplusplus
-}
-#endif // __cplusplus
+void psycho_bios_trace_begin(struct psycho_ctx *ctx);
+void psycho_bios_trace_end(struct psycho_ctx *ctx);
