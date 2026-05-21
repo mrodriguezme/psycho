@@ -22,7 +22,9 @@
 
 #pragma once
 
+#include <stdarg.h>
 #include <stdbool.h>
+
 #include "psycho/str.h"
 
 void psycho_str_init(struct psycho_str *str, char *src, size_t src_len_max)
@@ -30,9 +32,13 @@ void psycho_str_init(struct psycho_str *str, char *src, size_t src_len_max)
 
 void psycho_str_reset(struct psycho_str *str) __attribute__((nonnull));
 
-void psycho_str_append(struct psycho_str *const str, bool *truncated,
-		       const char *const fmt, ...)
+void psycho_str_append(struct psycho_str *str, bool *truncated, const char *fmt,
+		       ...)
 	__attribute__((format(printf, 3, 4), nonnull(1, 3)));
+
+void psycho_str_vappend(struct psycho_str *str, bool *truncated,
+			const char *fmt, va_list args)
+	__attribute__((format(printf, 3, 0), nonnull(1, 3)));
 
 void psycho_str_pad(struct psycho_str *str, const char c, const size_t count,
 		    bool *truncated) __attribute__((nonnull(1)));

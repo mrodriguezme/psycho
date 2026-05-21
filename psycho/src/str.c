@@ -41,8 +41,9 @@ void psycho_str_init(struct psycho_str *const str, char *const src,
 
 void psycho_str_reset(struct psycho_str *const str)
 {
-	memset(str->str, 0, sizeof(*str->str));
+	memset(str->str, 0, str->len_max);
 	str->len = 0;
+	str->str[0] = '\0';
 }
 
 void psycho_str_append(struct psycho_str *const str, bool *const truncated,
@@ -51,12 +52,26 @@ void psycho_str_append(struct psycho_str *const str, bool *const truncated,
 	assert(str->len_max > 0);
 	assert(str->len < str->len_max);
 
-	const size_t rem = str->len_max - str->len;
-
 	va_list args;
 	va_start(args, fmt);
-	const int ret = vsnprintf(&str->str[str->len], rem, fmt, args);
+	psycho_str_vappend(str, truncated, fmt, args);
 	va_end(args);
+}
+
+void psycho_str_vappend(struct psycho_str *const str, bool *const truncated,
+			const char *const fmt, va_list args)
+{
+	assert(str->len_max > 0);
+	assert(str->len < str->len_max);
+
+	const size_t rem = str->len_max - str->len;
+
+	va_list args_copy;
+	va_copy(args_copy, args);
+
+	const int ret = vsnprintf(&str->str[str->len], rem, fmt, args_copy);
+
+	va_end(args_copy);
 
 	assert(ret >= 0);
 
@@ -68,11 +83,10 @@ void psycho_str_append(struct psycho_str *const str, bool *const truncated,
 
 		if (truncated)
 			*truncated = true;
-
 		return;
 	}
 
-	str->len += ret;
+	str->len += (size_t)ret;
 
 	if (truncated)
 		*truncated = false;
