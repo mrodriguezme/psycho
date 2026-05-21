@@ -33,6 +33,7 @@ target_sources(
 	include/psycho/ctx.h
 	include/psycho/disasm.h
 	include/psycho/log.h
+	include/psycho/str.h
 	src/bios-trace.c
 	src/bios-trace.h
 	src/bus.c
@@ -44,6 +45,8 @@ target_sources(
 	src/disasm.c
 	src/log.c
 	src/log.h
+	src/str.c
+	src/str.h
 	src/types.h
 	src/util.h
 )

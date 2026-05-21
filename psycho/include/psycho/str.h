@@ -22,68 +22,16 @@
 
 #pragma once
 
-#include <stdbool.h>
 #include <stddef.h>
-#include <stdint.h>
 
 #ifdef __cplusplus
 extern "C" {
 #endif // __cplusplus
 
-struct psycho_ctx;
-
-enum {
-	PSYCHO_BIOS_TRACE_STACK_MAX = 10,
-	PSYCHO_BIOS_TRACE_RESULT_LEN_MAX = 512,
-	PSYCHO_BIOS_TTY_STDOUT_RESULT_LEN_MAX = 512,
-};
-
-enum psycho_bios_func_ret {
-	PSYCHO_BIOS_FUNC_RET_INT,
-	PSYCHO_BIOS_FUNC_RET_CHAR,
-	PSYCHO_BIOS_FUNC_RET_VOID,
-	PSYCHO_BIOS_FUNC_RET_VOID_PTR
-};
-
-struct psycho_bios_frame {
-	const struct psycho_bios_func *func;
-	uint32_t a0;
-	uint32_t a1;
-	uint32_t a2;
-	uint32_t a3;
-	uint32_t sp;
-	uint32_t ra;
-
-	struct {
-		char result[PSYCHO_BIOS_TRACE_RESULT_LEN_MAX];
-		size_t len;
-	};
-};
-
-struct psycho_bios_func {
-	const char *const prototype;
-	const enum psycho_bios_func_ret ret;
-	void (*hook_cb)(struct psycho_ctx *ctx,
-			const struct psycho_bios_frame *frame);
-};
-
-struct psycho_bios_trace_cfg {
-	void (*stdout_line)(struct psycho_ctx *, const char *msg);
-	bool deref_ptrs;
-};
-
-struct psycho_bios_trace {
-	struct {
-		struct psycho_bios_frame frames[PSYCHO_BIOS_TRACE_STACK_MAX];
-		size_t top;
-	} stack;
-
-	struct {
-		char data[PSYCHO_BIOS_TTY_STDOUT_RESULT_LEN_MAX];
-		size_t len;
-	} stdout;
-
-	struct psycho_bios_trace_cfg cfg;
+struct psycho_str {
+	char *str;
+	size_t len;
+	size_t len_max;
 };
 
 #ifdef __cplusplus

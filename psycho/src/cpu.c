@@ -112,7 +112,7 @@ static void disasm_emit(struct psycho_ctx *const ctx)
 
 	psycho_disasm_trace_end(ctx);
 	LOG_TRACE(ctx, "[disasm] 0x%08X: %s", ctx->disasm.res.pc,
-		  ctx->disasm.res.str);
+		  ctx->disasm.res.str.str);
 }
 
 static void branch_if(struct psycho_ctx *const ctx, const bool condition_met)

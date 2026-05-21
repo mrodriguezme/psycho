@@ -23,64 +23,16 @@
 #pragma once
 
 #include <stdbool.h>
-#include <stddef.h>
-#include <stdint.h>
+#include "psycho/str.h"
 
-#include "compiler.h"
-#include "cpu-defs.h"
-#include "str.h"
+void psycho_str_init(struct psycho_str *str, char *src, size_t src_len_max)
+	__attribute__((nonnull(1, 2)));
 
-#ifdef __cplusplus
-extern "C" {
-#endif // __cplusplus
+void psycho_str_reset(struct psycho_str *str) __attribute__((nonnull));
 
-struct psycho_ctx;
+void psycho_str_append(struct psycho_str *const str, bool *truncated,
+		       const char *const fmt, ...)
+	__attribute__((format(printf, 3, 4), nonnull(1, 3)));
 
-enum {
-	PSYCHO_DISASM_LEN_MAX = 512,
-};
-
-enum psycho_disasm_trace {
-	PSYCHO_DISASM_TRACE_GPR_RT,
-	PSYCHO_DISASM_TRACE_GPR_RD,
-	PSYCHO_DISASM_TRACE_CPU_LO,
-	PSYCHO_DISASM_TRACE_CPU_HI,
-	PSYCHO_DISASM_TRACE_COUNT
-};
-
-struct psycho_disasm_cfg {
-	bool tracing;
-};
-
-struct psycho_disasm_traces {
-	enum psycho_disasm_trace data[PSYCHO_DISASM_TRACE_COUNT];
-	size_t count;
-};
-
-struct psycho_disasm {
-	struct {
-		char result[PSYCHO_DISASM_LEN_MAX];
-		struct psycho_str str;
-		uint32_t instr;
-		uint32_t pc;
-	} res;
-
-	struct psycho_disasm_traces traces;
-	struct psycho_disasm_cfg cfg;
-};
-
-PSYCHO_NODISCARD const char *
-psycho_disasm_gpr_get(const enum psycho_cpu_gpr reg);
-
-PSYCHO_NODISCARD const char *
-psycho_disasm_cop0_get(const enum psycho_cpu_cop0 reg);
-
-void psycho_disasm_instr(struct psycho_ctx *ctx, uint32_t pc,
-			 struct psycho_disasm_traces *traces);
-
-void psycho_disasm_set_tracing_state(struct psycho_ctx *ctx,
-				     const bool enabled);
-
-#ifdef __cplusplus
-}
-#endif // __cplusplus
+void psycho_str_pad(struct psycho_str *str, const char c, const size_t count,
+		    bool *truncated) __attribute__((nonnull(1)));

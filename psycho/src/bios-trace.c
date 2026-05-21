@@ -23,10 +23,11 @@
 #include <assert.h>
 #include <ctype.h>
 #include <stdio.h>
+#include <string.h>
 
 #include "psycho/cpu-defs.h"
-#include "bus.h"
 #include "bios-trace.h"
+#include "bus.h"
 #include "cpu-defs.h"
 #include "log.h"
 #include "types.h"
@@ -37,6 +38,9 @@ LOG_MODULE(PSYCHO_LOG_MODULE_BIOS);
 enum {
 	JR_RA = 0x03E00008,
 };
+
+static void on_putchar(struct psycho_ctx *ctx,
+		       const struct psycho_bios_frame *frame);
 
 static const struct psycho_bios_func a0_funcs[] = {
 	// clang-format off
@@ -94,7 +98,8 @@ static const struct psycho_bios_func b0_funcs[] = {
 
 	[0x3D]	= {
 		.prototype	= "void putchar(char c=%c)",
-		.ret		= PSYCHO_BIOS_FUNC_RET_VOID
+		.ret		= PSYCHO_BIOS_FUNC_RET_VOID,
+		.hook_cb	= on_putchar
 	},
 
 	[0x47]	= {
@@ -189,13 +194,33 @@ PSYCHO_NODISCARD static const char *escape_seq(const char c)
 	switch (c) {
 	case '\n':
 		return "\\n";
+	case '\r':
+		return "\\r";
+	case '\t':
+		return "\\t";
+	case '\v':
+		return "\\v";
+	case '\f':
+		return "\\f";
+	case '\b':
+		return "\\b";
+	case '\a':
+		return "\\a";
+	case '\\':
+		return "\\\\";
+	case '\'':
+		return "\\\'";
+	case '\"':
+		return "\\\"";
+	case '\0':
+		return "\\0";
 
 	default:
 		return NULL;
 	}
 }
 
-static size_t process_char(char *dst, char c)
+PSYCHO_NODISCARD static size_t process_char(char *dst, char c)
 {
 	unsigned char uc = (unsigned char)c;
 
@@ -210,8 +235,8 @@ static size_t process_char(char *dst, char c)
 	return (size_t)sprintf(dst, "'\\x%02X'", uc);
 }
 
-static size_t process_str(struct psycho_ctx *const ctx, char *const dst,
-			  u32 ptr)
+PSYCHO_NODISCARD static size_t process_str(struct psycho_ctx *const ctx,
+					   char *const dst, u32 ptr)
 {
 	if (!ctx->bios_trace.cfg.deref_ptrs)
 		goto end;
@@ -226,6 +251,61 @@ static size_t process_str(struct psycho_ctx *const ctx, char *const dst,
 
 end:
 	return sprintf(dst, "0x%08X", ptr);
+}
+
+static void on_putchar(struct psycho_ctx *const ctx,
+		       const struct psycho_bios_frame *const frame)
+{
+	assert(ctx != NULL);
+	assert(frame != NULL);
+	assert(ctx->bios_trace.stdout.len <
+	       sizeof(ctx->bios_trace.stdout.data));
+
+	const char c = frame->a0;
+
+#define append(args...)                                                   \
+	ctx->bios_trace.stdout.len += sprintf(                            \
+		&ctx->bios_trace.stdout.data[ctx->bios_trace.stdout.len], \
+		args)
+
+	const char *esc_seq = escape_seq(c);
+
+	if (!esc_seq) {
+		append("%c", c);
+		return;
+	}
+
+	append("%s", esc_seq);
+
+	if (c == '\n') {
+		char rendered[sizeof(ctx->bios_trace.stdout.data) * 4];
+		char *dst = rendered;
+
+		for (size_t i = 0; i < ctx->bios_trace.stdout.len; i++) {
+			char ch = ctx->bios_trace.stdout.data[i];
+
+			const char *esc = escape_seq(ch);
+			if (esc) {
+				dst += sprintf(dst, "%s", esc);
+			} else if (isprint((unsigned char)ch)) {
+				*dst++ = ch;
+			} else {
+				dst += sprintf(dst, "\\x%02X",
+					       (unsigned char)ch);
+			}
+		}
+
+		*dst = '\0';
+
+		LOG_INFO(ctx, "[stdout] %s", rendered);
+
+		if (ctx->bios_trace.cfg.stdout_line)
+			ctx->bios_trace.cfg.stdout_line(
+				ctx, ctx->bios_trace.stdout.data);
+
+		memset(&ctx->bios_trace.stdout, 0,
+		       sizeof(ctx->bios_trace.stdout));
+	}
 }
 
 static void process_prototype(struct psycho_ctx *const ctx,
@@ -319,6 +399,9 @@ void psycho_bios_trace_begin(struct psycho_ctx *const ctx)
 	frame->a3 = ctx->cpu.gpr[PSYCHO_CPU_REG_A3];
 	frame->sp = ctx->cpu.gpr[PSYCHO_CPU_REG_SP];
 	frame->ra = ctx->cpu.gpr[PSYCHO_CPU_REG_RA];
+
+	if (frame->func->hook_cb)
+		frame->func->hook_cb(ctx, frame);
 
 	process_prototype(ctx, frame);
 }

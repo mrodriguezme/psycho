@@ -31,6 +31,7 @@
 #include "bus.h"
 #include "cpu-defs.h"
 #include "disasm.h"
+#include "str.h"
 #include "types.h"
 
 enum {
@@ -115,24 +116,6 @@ static const char *const cop0[PSYCHO_CPU_COP0_COUNT] = {
 	// clang-format on
 };
 
-__attribute__((format(printf, 3, 4))) static void
-append(char *const buf, size_t *const len, const char *const fmt, ...)
-{
-	const size_t rem = PSYCHO_DISASM_LEN_MAX - *len;
-
-	va_list ap;
-	va_start(ap, fmt);
-	const int written = vsnprintf(&buf[*len], rem, fmt, ap);
-	va_end(ap);
-
-	if (written) {
-		if ((size_t)written >= rem)
-			*len = PSYCHO_DISASM_LEN_MAX - 1;
-		else
-			*len += (size_t)written;
-	}
-}
-
 PSYCHO_NODISCARD static u32 instr_get(struct psycho_ctx *const ctx, u32 pc)
 {
 	pc = cpu_vaddr_to_paddr(pc);
@@ -166,6 +149,9 @@ void psycho_disasm_init(struct psycho_ctx *const ctx,
 			const struct psycho_disasm_cfg *const cfg)
 {
 	ctx->disasm.cfg = *cfg;
+
+	psycho_str_init(&ctx->disasm.res.str, ctx->disasm.res.result,
+			sizeof(ctx->disasm.res.result));
 }
 
 void psycho_disasm_instr(struct psycho_ctx *const ctx, const u32 pc,
@@ -173,14 +159,19 @@ void psycho_disasm_instr(struct psycho_ctx *const ctx, const u32 pc,
 {
 	assert(ctx != NULL);
 
-	memset(&ctx->disasm.res, 0, sizeof(ctx->disasm.res));
+	psycho_str_reset(&ctx->disasm.res.str);
 
 	const u32 instr = instr_get(ctx, pc);
 
 	ctx->disasm.res.instr = instr;
 	ctx->disasm.res.pc = pc;
 
-#define fmt(args...) append(ctx->disasm.res.str, &ctx->disasm.res.len, args)
+#define fmt(args...)                                                       \
+	({                                                                 \
+		bool truncated;                                            \
+		psycho_str_append(&ctx->disasm.res.str, &truncated, args); \
+		assert(!truncated);                                        \
+	})
 
 #define op (cpu_instr_op(instr))
 #define rt (cpu_instr_rt(instr))
@@ -453,18 +444,24 @@ void psycho_disasm_trace_begin(struct psycho_ctx *const ctx, const u32 pc)
 	if (!ctx->disasm.traces.count)
 		return;
 
-	if (ctx->disasm.res.len < TRACE_NUM_SPACES) {
-		const size_t pad = TRACE_NUM_SPACES - ctx->disasm.res.len;
+	bool truncated;
 
-		memset(&ctx->disasm.res.str[ctx->disasm.res.len], ' ', pad);
-		ctx->disasm.res.len += pad;
-	}
-	append(ctx->disasm.res.str, &ctx->disasm.res.len, "; ");
+	psycho_str_pad(&ctx->disasm.res.str, ' ', TRACE_NUM_SPACES, &truncated);
+	assert(!truncated);
+
+	psycho_str_append(&ctx->disasm.res.str, &truncated, "; ");
+	assert(!truncated);
 }
 
 void psycho_disasm_trace_end(struct psycho_ctx *const ctx)
 {
-#define fmt(args...) append(ctx->disasm.res.str, &ctx->disasm.res.len, args)
+#define fmt(args...)                                                       \
+	({                                                                 \
+		bool truncated;                                            \
+		psycho_str_append(&ctx->disasm.res.str, &truncated, args); \
+		assert(!truncated);                                        \
+	})
+
 #define rt (cpu_instr_rt(ctx->disasm.res.instr))
 #define rd (cpu_instr_rd(ctx->disasm.res.instr))
 

@@ -22,7 +22,10 @@
 
 #pragma once
 
+#include <stdbool.h>
+#include <stddef.h>
 #include <stdint.h>
+
 #include "psycho/compiler.h"
 #include "types.h"
 

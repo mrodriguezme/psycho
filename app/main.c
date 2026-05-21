@@ -66,6 +66,10 @@ static void illegal_instr_cb(struct psycho_ctx *const ctx, const uint32_t instr)
 	abort();
 }
 
+static void on_stdout_line(struct psycho_ctx *const ctx, const char *const msg)
+{
+}
+
 static bool get_file_size(const char *const file, size_t *const file_size)
 {
 	struct stat st;
@@ -141,7 +145,8 @@ int main(int argc, char **argv)
 		},
 
 		.bios_trace	= {
-			.deref_ptrs = true
+			.stdout_line	= on_stdout_line,
+			.deref_ptrs	= true
 		},
 
 		.disasm	= {
