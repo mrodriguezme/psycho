@@ -409,32 +409,24 @@ psycho_bios_trace_end(struct psycho_ctx *const ctx)
 
 	const u32 v0 = ctx->cpu.gpr[PSYCHO_CPU_REG_V0];
 
-	const char *fmt;
-	bool ret = true;
-
 	switch (frame->func->ret) {
 	case PSYCHO_BIOS_FUNC_RET_CHAR:
-		fmt = "bios call: %s -> '%c'";
-		break;
+		LOG_DBG(ctx, "bios call: %s -> '%c'", frame->str.str, (char)v0);
+		return;
 
 	case PSYCHO_BIOS_FUNC_RET_VOID_PTR:
-		fmt = "bios call: %s -> 0x%08X";
-		break;
+		LOG_DBG(ctx, "bios call: %s -> 0x%08X", frame->str.str, v0);
+		return;
 
 	case PSYCHO_BIOS_FUNC_RET_INT:
-		fmt = "bios call: %s -> %d";
-		break;
+		LOG_DBG(ctx, "bios call: %s -> %u", frame->str.str, v0);
+		return;
 
 	case PSYCHO_BIOS_FUNC_RET_VOID:
+		LOG_DBG(ctx, "bios call: %s", frame->str.str);
+		return;
+
 	default:
-		fmt = "bios call: %s";
-		ret = false;
-
-		break;
+		__builtin_unreachable();
 	}
-
-	if (ret)
-		LOG_DBG(ctx, fmt, frame->str.str, v0);
-	else
-		LOG_DBG(ctx, fmt, frame->str.str);
 }
