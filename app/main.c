@@ -54,7 +54,7 @@ static void log_cb(struct psycho_ctx *const ctx,
 
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wformat-nonliteral"
-	printf(color_str[msg->level], msg->msg);
+	printf(color_str[msg->level], msg->str.str);
 #pragma GCC diagnostic pop
 }
 

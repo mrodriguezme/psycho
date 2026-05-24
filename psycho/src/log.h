@@ -54,6 +54,7 @@ log_enabled(const struct psycho_ctx *const ctx,
 
 void psycho_log_init(struct psycho_ctx *ctx, const struct psycho_log_cfg *cfg);
 
-void psycho_log_msg(struct psycho_ctx *const ctx,
-		    const enum psycho_log_module module,
-		    const enum psycho_log_level level, const char *fmt, ...);
+__attribute__((format(printf, 4, 5))) void
+psycho_log_msg(struct psycho_ctx *const ctx,
+	       const enum psycho_log_module module,
+	       const enum psycho_log_level level, const char *fmt, ...);

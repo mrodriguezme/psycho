@@ -23,6 +23,7 @@
 #pragma once
 
 #include <stddef.h>
+#include "str.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -53,8 +54,7 @@ enum psycho_log_module {
 };
 
 struct psycho_log_msg_data {
-	const char *const msg;
-	const size_t len;
+	const struct psycho_str str;
 	const enum psycho_log_module module;
 	const enum psycho_log_level level;
 };

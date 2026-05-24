@@ -26,6 +26,7 @@
 #include <stdio.h>
 
 #include "log.h"
+#include "str.h"
 
 void psycho_log_init(struct psycho_ctx *const ctx,
 		     const struct psycho_log_cfg *const cfg)
@@ -36,10 +37,10 @@ void psycho_log_init(struct psycho_ctx *const ctx,
 	ctx->log.cfg = *cfg;
 }
 
-__attribute__((format(printf, 4, 5))) void
-psycho_log_msg(struct psycho_ctx *const ctx,
-	       const enum psycho_log_module module,
-	       const enum psycho_log_level level, const char *const fmt, ...)
+void psycho_log_msg(struct psycho_ctx *const ctx,
+		    const enum psycho_log_module module,
+		    const enum psycho_log_level level, const char *const fmt,
+		    ...)
 {
 	assert(ctx != NULL);
 	assert(ctx->log.cfg.log_cb != NULL);
@@ -72,20 +73,22 @@ psycho_log_msg(struct psycho_ctx *const ctx,
 	};
 
 	char msg[PSYCHO_LOG_MSG_LEN_MAX];
+	struct psycho_str str;
 
-	int len = snprintf(msg, sizeof(msg), "[%s/%s] ", level_str[level],
-			   module_str[module]);
+	psycho_str_init(&str, msg, sizeof(msg));
+
+	psycho_str_append(&str, NULL, "[%s/%s] ", level_str[level],
+			  module_str[module]);
 
 	va_list args;
 	va_start(args, fmt);
-	len += vsnprintf(&msg[len], sizeof(msg) - len, fmt, args);
+	psycho_str_vappend(&str, NULL, fmt, args);
 	va_end(args);
 
 	const struct psycho_log_msg_data msg_data = {
 		// clang-format off
 
-		.msg	= msg,
-		.len	= len,
+		.str	= str,
 		.module	= module,
 		.level	= level
 

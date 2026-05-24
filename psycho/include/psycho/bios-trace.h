@@ -26,6 +26,8 @@
 #include <stddef.h>
 #include <stdint.h>
 
+#include "str.h"
+
 #ifdef __cplusplus
 extern "C" {
 #endif // __cplusplus
@@ -53,10 +55,11 @@ struct psycho_bios_frame {
 	uint32_t a3;
 	uint32_t sp;
 	uint32_t ra;
+	uint32_t arg_pos;
 
 	struct {
-		char result[PSYCHO_BIOS_TRACE_RESULT_LEN_MAX];
-		size_t len;
+		char m_str[PSYCHO_BIOS_TRACE_RESULT_LEN_MAX];
+		struct psycho_str str;
 	};
 };
 
@@ -77,11 +80,6 @@ struct psycho_bios_trace {
 		struct psycho_bios_frame frames[PSYCHO_BIOS_TRACE_STACK_MAX];
 		size_t top;
 	} stack;
-
-	struct {
-		char data[PSYCHO_BIOS_TTY_STDOUT_RESULT_LEN_MAX];
-		size_t len;
-	} stdout;
 
 	struct psycho_bios_trace_cfg cfg;
 };

@@ -99,7 +99,8 @@ static void disasm_capture(struct psycho_ctx *const ctx)
 	if (MODULE_LOG_LEVEL_ACTIVE(ctx, PSYCHO_LOG_LEVEL_TRACE)) {
 		psycho_disasm_instr(ctx, ctx->cpu.pc, NULL);
 		LOG_TRACE_UNCHECKED(ctx, "[disasm] 0x%08X: %s",
-				    ctx->disasm.res.pc, ctx->disasm.res.str);
+				    ctx->disasm.res.pc,
+				    ctx->disasm.res.str.str);
 	}
 }
 

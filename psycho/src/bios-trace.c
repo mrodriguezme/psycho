@@ -21,9 +21,9 @@
 // SOFTWARE.
 
 #include <assert.h>
-#include <ctype.h>
 #include <stdio.h>
 #include <string.h>
+#include <inttypes.h>
 
 #include "psycho/cpu-defs.h"
 #include "bios-trace.h"
@@ -32,6 +32,7 @@
 #include "log.h"
 #include "types.h"
 #include "util.h"
+#include "str.h"
 
 LOG_MODULE(PSYCHO_LOG_MODULE_BIOS);
 
@@ -51,7 +52,7 @@ static const struct psycho_bios_func a0_funcs[] = {
 	},
 
 	[0x25]	= {
-		.prototype	= "char toupper(char c)",
+		.prototype	= "char toupper(char c=%c)",
 		.ret		= PSYCHO_BIOS_FUNC_RET_CHAR
 	},
 
@@ -161,6 +162,24 @@ func_get(const struct psycho_bios_func *const arr, const size_t arr_elems,
 	return arr[func].prototype ? &arr[func] : NULL;
 }
 
+static void frame_init(struct psycho_ctx *const ctx,
+		       struct psycho_bios_frame *const frame,
+		       const struct psycho_bios_func *const func)
+{
+	frame->func = func;
+	frame->arg_pos = 0;
+
+	frame->a0 = ctx->cpu.gpr[PSYCHO_CPU_REG_A0];
+	frame->a1 = ctx->cpu.gpr[PSYCHO_CPU_REG_A1];
+	frame->a2 = ctx->cpu.gpr[PSYCHO_CPU_REG_A2];
+	frame->a3 = ctx->cpu.gpr[PSYCHO_CPU_REG_A3];
+
+	frame->sp = ctx->cpu.gpr[PSYCHO_CPU_REG_SP];
+	frame->ra = ctx->cpu.gpr[PSYCHO_CPU_REG_RA];
+
+	psycho_str_init(&frame->str, frame->m_str, sizeof(frame->m_str));
+}
+
 PSYCHO_NODISCARD static struct psycho_bios_frame *
 stack_emplace(struct psycho_ctx *const ctx)
 {
@@ -180,13 +199,13 @@ stack_pop(struct psycho_ctx *const ctx)
 }
 
 PSYCHO_NODISCARD static u32 get_arg(struct psycho_ctx *const ctx,
-				    const struct psycho_bios_frame *const frame,
-				    const u32 idx)
+				    struct psycho_bios_frame *const frame)
 {
-	if (idx <= PSYCHO_CPU_REG_A3)
-		return (&frame->a0)[idx];
+	if (frame->arg_pos <= PSYCHO_CPU_REG_A3)
+		return (&frame->a0)[frame->arg_pos++];
 
-	return psycho_bus_load_word(ctx, frame->sp + 16 + (idx - 4) * 4);
+	return psycho_bus_load_word(ctx, frame->sp + 16 +
+						 (frame->arg_pos++ - 4) * 4);
 }
 
 PSYCHO_NODISCARD static const char *escape_seq(const char c)
@@ -220,37 +239,49 @@ PSYCHO_NODISCARD static const char *escape_seq(const char c)
 	}
 }
 
-PSYCHO_NODISCARD static size_t process_char(char *dst, char c)
+static void process_char(struct psycho_ctx *const ctx,
+			 struct psycho_bios_frame *const frame)
 {
-	unsigned char uc = (unsigned char)c;
+	const char c = get_arg(ctx, frame);
 
-	const char *esc = escape_seq(uc);
+	const char *const esc_seq = escape_seq(c);
 
-	if (esc)
-		return (size_t)sprintf(dst, "'%s'", esc);
-
-	if (isprint(uc))
-		return (size_t)sprintf(dst, "'%c'", uc);
-
-	return (size_t)sprintf(dst, "'\\x%02X'", uc);
+	if (esc_seq)
+		psycho_str_append(&frame->str, NULL, "'%s'", esc_seq);
+	else
+		psycho_str_append(&frame->str, NULL, "'%c'", c);
 }
 
-PSYCHO_NODISCARD static size_t process_str(struct psycho_ctx *const ctx,
-					   char *const dst, u32 ptr)
+static void process_int(struct psycho_ctx *const ctx,
+			struct psycho_bios_frame *const frame)
 {
+	psycho_str_append(&frame->str, NULL, "%" PRIu32, get_arg(ctx, frame));
+}
+
+static void process_str(struct psycho_ctx *const ctx,
+			struct psycho_bios_frame *const frame)
+{
+	const u32 ptr = get_arg(ctx, frame);
+
 	if (!ctx->bios_trace.cfg.deref_ptrs)
 		goto end;
 
-	ptr = cpu_vaddr_to_paddr(ptr);
-	u8 *area = psycho_bus_get_mem_area(ctx, ptr);
+	u8 *const area = psycho_bus_get_mem_area(ctx, cpu_vaddr_to_paddr(ptr));
 
 	if (!area)
 		goto end;
 
-	return sprintf(dst, "\"%s\"", area);
+	psycho_str_append(&frame->str, NULL, "\"%s\"", area);
+	return;
 
 end:
-	return sprintf(dst, "0x%08X", ptr);
+	psycho_str_append(&frame->str, NULL, "0x%08X", ptr);
+}
+
+static void process_ptr(struct psycho_ctx *const ctx,
+			struct psycho_bios_frame *const frame)
+{
+	psycho_str_append(&frame->str, NULL, "0x%08X", get_arg(ctx, frame));
 }
 
 static void on_putchar(struct psycho_ctx *const ctx,
@@ -258,53 +289,12 @@ static void on_putchar(struct psycho_ctx *const ctx,
 {
 	assert(ctx != NULL);
 	assert(frame != NULL);
-	assert(ctx->bios_trace.stdout.len <
-	       sizeof(ctx->bios_trace.stdout.data));
 
 	const char c = frame->a0;
 
-#define append(args...)                                                   \
-	ctx->bios_trace.stdout.len += sprintf(                            \
-		&ctx->bios_trace.stdout.data[ctx->bios_trace.stdout.len], \
-		args)
-
-	const char *esc_seq = escape_seq(c);
-
-	if (!esc_seq) {
-		append("%c", c);
-		return;
-	}
-
-	append("%s", esc_seq);
+	const char *const esc_seq = escape_seq(c);
 
 	if (c == '\n') {
-		char rendered[sizeof(ctx->bios_trace.stdout.data) * 4];
-		char *dst = rendered;
-
-		for (size_t i = 0; i < ctx->bios_trace.stdout.len; i++) {
-			char ch = ctx->bios_trace.stdout.data[i];
-
-			const char *esc = escape_seq(ch);
-			if (esc) {
-				dst += sprintf(dst, "%s", esc);
-			} else if (isprint((unsigned char)ch)) {
-				*dst++ = ch;
-			} else {
-				dst += sprintf(dst, "\\x%02X",
-					       (unsigned char)ch);
-			}
-		}
-
-		*dst = '\0';
-
-		LOG_INFO(ctx, "[stdout] %s", rendered);
-
-		if (ctx->bios_trace.cfg.stdout_line)
-			ctx->bios_trace.cfg.stdout_line(
-				ctx, ctx->bios_trace.stdout.data);
-
-		memset(&ctx->bios_trace.stdout, 0,
-		       sizeof(ctx->bios_trace.stdout));
 	}
 }
 
@@ -313,16 +303,15 @@ static void process_prototype(struct psycho_ctx *const ctx,
 {
 	assert(ctx != NULL);
 
+#define append(args...) psycho_str_append(&frame->str, NULL, args)
+
 #define SPECIFIER_LEN (2)
 
 	const char *src = frame->func->prototype;
-	char *dst = frame->result;
-
-	u32 idx = 0;
 
 	while (*src) {
 		if (*src != '%') {
-			*dst++ = *src++;
+			append("%c", *src++);
 			continue;
 		}
 
@@ -330,31 +319,27 @@ static void process_prototype(struct psycho_ctx *const ctx,
 
 		switch (next) {
 		case 'c':
-			dst += process_char(dst, get_arg(ctx, frame, idx++));
+			process_char(ctx, frame);
 			break;
 
 		case 'd':
-			dst += sprintf(dst, "%u", get_arg(ctx, frame, idx++));
+			process_int(ctx, frame);
 			break;
 
 		case 'p':
-			dst += sprintf(dst, "0x%08X",
-				       get_arg(ctx, frame, idx++));
+			process_ptr(ctx, frame);
 			break;
 
 		case 's':
-			dst += process_str(ctx, dst,
-					   get_arg(ctx, frame, idx++));
+			process_str(ctx, frame);
 			break;
 
 		default:
-			*dst++ = *src++;
+			append("%c", *src++);
 			break;
 		}
 		src += SPECIFIER_LEN;
 	}
-
-	*dst = '\0';
 
 #undef SPECIFIER_LEN
 }
@@ -382,23 +367,19 @@ void psycho_bios_trace_begin(struct psycho_ctx *const ctx)
 		return;
 
 	if (func_data == NULL) {
-		LOG_TRACE(ctx,
-			  "Unimplemented BIOS call: 0x%02X:0x%08X; ignoring",
-			  ctx->cpu.pc, func);
+		LOG_WARN(ctx,
+			 "Unimplemented BIOS call: 0x%02X:0x%08X; ignoring",
+			 ctx->cpu.pc, func);
 		return;
 	}
 
-	struct psycho_bios_frame *frame = stack_emplace(ctx);
-	if (!frame)
+	struct psycho_bios_frame *const frame = stack_emplace(ctx);
+	if (!frame) {
+		LOG_WARN(ctx, "BIOS call stack is too deep for us to handle");
 		return;
+	}
 
-	frame->func = func_data;
-	frame->a0 = ctx->cpu.gpr[PSYCHO_CPU_REG_A0];
-	frame->a1 = ctx->cpu.gpr[PSYCHO_CPU_REG_A1];
-	frame->a2 = ctx->cpu.gpr[PSYCHO_CPU_REG_A2];
-	frame->a3 = ctx->cpu.gpr[PSYCHO_CPU_REG_A3];
-	frame->sp = ctx->cpu.gpr[PSYCHO_CPU_REG_SP];
-	frame->ra = ctx->cpu.gpr[PSYCHO_CPU_REG_RA];
+	frame_init(ctx, frame, func_data);
 
 	if (frame->func->hook_cb)
 		frame->func->hook_cb(ctx, frame);
@@ -413,8 +394,9 @@ void psycho_bios_trace_end(struct psycho_ctx *const ctx)
 	if (ctx->cpu.instr != JR_RA)
 		return;
 
-	struct psycho_bios_frame *frame = stack_pop(ctx);
+	struct psycho_bios_frame *const frame = stack_pop(ctx);
 	if (!frame)
+		// Not in a BIOS call
 		return;
 
 	const u32 v0 = ctx->cpu.gpr[PSYCHO_CPU_REG_V0];
@@ -444,7 +426,7 @@ void psycho_bios_trace_end(struct psycho_ctx *const ctx)
 	}
 
 	if (ret)
-		LOG_DBG(ctx, fmt, frame->result, v0);
+		LOG_DBG(ctx, fmt, frame->str.str, v0);
 	else
-		LOG_DBG(ctx, fmt, frame->result);
+		LOG_DBG(ctx, fmt, frame->str.str);
 }

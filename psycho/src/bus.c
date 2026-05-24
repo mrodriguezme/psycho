@@ -74,7 +74,8 @@ u32 psycho_bus_load_word(struct psycho_ctx *const ctx, const u32 paddr)
 
 	default:
 		LOG_WARN(ctx,
-			 "unknown word load: 0x%08X; returning 0xFFFF'FFFF");
+			 "unknown word load: 0x%08X; returning 0xFFFF'FFFF",
+			 paddr);
 		return UINT32_MAX;
 	}
 }
