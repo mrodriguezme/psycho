@@ -303,7 +303,7 @@ static void on_putchar(struct psycho_ctx *const ctx,
 	psycho_str_append(&ctx->bios_trace.tty_str_log, NULL, "%s", esc_seq);
 
 	if (c == '\n') {
-		LOG_TRACE(ctx, "[stdout] %s", ctx->bios_trace.tty_str_log.str);
+		LOG_INFO(ctx, "[stdout] %s", ctx->bios_trace.tty_str_log.str);
 
 		if (ctx->bios_trace.cfg.stdout_line)
 			ctx->bios_trace.cfg.stdout_line(
