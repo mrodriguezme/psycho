@@ -47,11 +47,12 @@ struct psycho_ctx_cfg {
 	struct psycho_log_cfg log;
 };
 
-void psycho_ctx_init(struct psycho_ctx *ctx, const struct psycho_ctx_cfg *cfg);
+void psycho_ctx_init(struct psycho_ctx *ctx, const struct psycho_ctx_cfg *cfg)
+	__attribute__((nonnull));
 
-void psycho_ctx_reset(struct psycho_ctx *ctx);
+void psycho_ctx_reset(struct psycho_ctx *ctx) __attribute__((nonnull));
 
-void psycho_ctx_step(struct psycho_ctx *ctx);
+void psycho_ctx_step(struct psycho_ctx *ctx) __attribute__((nonnull));
 
 #ifdef __cplusplus
 }

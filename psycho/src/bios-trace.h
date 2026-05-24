@@ -25,7 +25,8 @@
 #include "psycho/ctx.h"
 
 void psycho_bios_trace_init(struct psycho_ctx *const ctx,
-			    const struct psycho_bios_trace_cfg *const cfg);
+			    const struct psycho_bios_trace_cfg *const cfg)
+	__attribute__((nonnull));
 
-void psycho_bios_trace_begin(struct psycho_ctx *ctx);
-void psycho_bios_trace_end(struct psycho_ctx *ctx);
+void psycho_bios_trace_begin(struct psycho_ctx *ctx) __attribute__((nonnull));
+void psycho_bios_trace_end(struct psycho_ctx *ctx) __attribute__((nonnull));

@@ -31,9 +31,6 @@
 void psycho_log_init(struct psycho_ctx *const ctx,
 		     const struct psycho_log_cfg *const cfg)
 {
-	assert(ctx != NULL);
-	assert(cfg != NULL);
-
 	ctx->log.cfg = *cfg;
 }
 
@@ -42,7 +39,6 @@ void psycho_log_msg(struct psycho_ctx *const ctx,
 		    const enum psycho_log_level level, const char *const fmt,
 		    ...)
 {
-	assert(ctx != NULL);
 	assert(ctx->log.cfg.log_cb != NULL);
 
 	assert(module < PSYCHO_LOG_MODULE_COUNT);

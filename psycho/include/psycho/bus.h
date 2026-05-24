@@ -23,6 +23,7 @@
 #pragma once
 
 #include <stdint.h>
+#include "compiler.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -39,7 +40,8 @@ struct psycho_bus {
 	uint8_t *ram;
 };
 
-uint8_t *psycho_bus_bios_data_get(struct psycho_ctx *ctx);
+PSYCHO_NODISCARD uint8_t *psycho_bus_bios_data_get(struct psycho_ctx *ctx)
+	__attribute__((nonnull));
 
 #ifdef __cplusplus
 }

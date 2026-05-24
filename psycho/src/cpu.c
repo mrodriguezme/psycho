@@ -33,33 +33,30 @@
 
 LOG_MODULE(PSYCHO_LOG_MODULE_CPU);
 
-static void illegal_instr(struct psycho_ctx *const ctx)
+__attribute__((nonnull)) static void illegal_instr(struct psycho_ctx *const ctx)
 {
-	assert(ctx != NULL);
-
 	LOG_ERR(ctx, "illegal instruction trapped (pc=0x%08X, instr=0x%08X)",
 		ctx->cpu.pc, ctx->cpu.instr);
 
 	ctx->cpu.cfg.illegal_instr(ctx, ctx->cpu.instr);
 }
 
-PSYCHO_NODISCARD static u32 load_word(struct psycho_ctx *const ctx, u32 vaddr)
+PSYCHO_NODISCARD __attribute__((nonnull)) static u32
+load_word(struct psycho_ctx *const ctx, u32 vaddr)
 {
-	assert(ctx != NULL);
-
 	vaddr = cpu_vaddr_to_paddr(vaddr);
 	return psycho_bus_load_word(ctx, vaddr);
 }
 
-PSYCHO_NODISCARD static u8 load_byte(struct psycho_ctx *const ctx, u32 vaddr)
+PSYCHO_NODISCARD __attribute__((nonnull)) static u8
+load_byte(struct psycho_ctx *const ctx, u32 vaddr)
 {
-	assert(ctx != NULL);
-
 	vaddr = cpu_vaddr_to_paddr(vaddr);
 	return psycho_bus_load_byte(ctx, vaddr);
 }
 
-static void store_word(struct psycho_ctx *const ctx, u32 vaddr, const u32 word)
+__attribute__((nonnull)) static void store_word(struct psycho_ctx *const ctx,
+						u32 vaddr, const u32 word)
 {
 	if (ctx->cpu.cop0[PSYCHO_CPU_COP0_SR] & CPU_SR_ISC)
 		return;
@@ -68,8 +65,8 @@ static void store_word(struct psycho_ctx *const ctx, u32 vaddr, const u32 word)
 	psycho_bus_store_word(ctx, vaddr, word);
 }
 
-static void store_halfword(struct psycho_ctx *const ctx, u32 vaddr,
-			   const u16 halfword)
+__attribute__((nonnull)) static void
+store_halfword(struct psycho_ctx *const ctx, u32 vaddr, const u16 halfword)
 {
 	if (ctx->cpu.cop0[PSYCHO_CPU_COP0_SR] & CPU_SR_ISC)
 		return;
@@ -78,7 +75,8 @@ static void store_halfword(struct psycho_ctx *const ctx, u32 vaddr,
 	psycho_bus_store_halfword(ctx, vaddr, halfword);
 }
 
-static void store_byte(struct psycho_ctx *const ctx, u32 vaddr, const u8 byte)
+__attribute__((nonnull)) static void store_byte(struct psycho_ctx *const ctx,
+						u32 vaddr, const u8 byte)
 {
 	if (ctx->cpu.cop0[PSYCHO_CPU_COP0_SR] & CPU_SR_ISC)
 		return;
@@ -87,10 +85,9 @@ static void store_byte(struct psycho_ctx *const ctx, u32 vaddr, const u8 byte)
 	psycho_bus_store_byte(ctx, vaddr, byte);
 }
 
-static void disasm_capture(struct psycho_ctx *const ctx)
+__attribute__((nonnull)) static void
+disasm_capture(struct psycho_ctx *const ctx)
 {
-	assert(ctx != NULL);
-
 	if (ctx->disasm.cfg.tracing) {
 		psycho_disasm_trace_begin(ctx, ctx->cpu.pc);
 		return;
@@ -104,10 +101,8 @@ static void disasm_capture(struct psycho_ctx *const ctx)
 	}
 }
 
-static void disasm_emit(struct psycho_ctx *const ctx)
+__attribute__((nonnull)) static void disasm_emit(struct psycho_ctx *const ctx)
 {
-	assert(ctx != NULL);
-
 	if (!ctx->disasm.cfg.tracing)
 		return;
 
@@ -116,10 +111,9 @@ static void disasm_emit(struct psycho_ctx *const ctx)
 		  ctx->disasm.res.str.str);
 }
 
-static void branch_if(struct psycho_ctx *const ctx, const bool condition_met)
+__attribute__((nonnull)) static void branch_if(struct psycho_ctx *const ctx,
+					       const bool condition_met)
 {
-	assert(ctx != NULL);
-
 	if (condition_met)
 		ctx->cpu.next_pc = cpu_branch_addr(ctx->cpu.pc, ctx->cpu.instr);
 }
@@ -127,17 +121,12 @@ static void branch_if(struct psycho_ctx *const ctx, const bool condition_met)
 void psycho_cpu_init(struct psycho_ctx *const ctx,
 		     const struct psycho_cpu_cfg *const cfg)
 {
-	assert(ctx != NULL);
-	assert(cfg != NULL);
-
 	ctx->cpu.cfg = *cfg;
 	LOG_INFO(ctx, "initialized");
 }
 
 void psycho_cpu_reset(struct psycho_ctx *const ctx)
 {
-	assert(ctx != NULL);
-
 	memset(ctx->cpu.gpr, 0, sizeof(ctx->cpu.gpr));
 
 	ctx->cpu.delay_pc = CPU_RESET_VECTOR;
@@ -160,8 +149,6 @@ void psycho_cpu_step(struct psycho_ctx *const ctx)
 #define sextimm (sign_ext_16_32(cpu_instr_imm(ctx->cpu.instr)))
 #define offset (sextimm)
 #define gpr (ctx->cpu.gpr)
-
-	assert(ctx != NULL);
 
 	ctx->cpu.pc = ctx->cpu.delay_pc;
 	ctx->cpu.instr = load_word(ctx, ctx->cpu.pc);

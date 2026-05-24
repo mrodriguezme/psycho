@@ -152,7 +152,7 @@ static const struct psycho_bios_func c0_funcs[] = {
 	// clang-format on
 };
 
-PSYCHO_NODISCARD static const struct psycho_bios_func *
+PSYCHO_NODISCARD __attribute__((nonnull)) static const struct psycho_bios_func *
 func_get(const struct psycho_bios_func *const arr, const size_t arr_elems,
 	 const u32 func)
 {
@@ -162,9 +162,9 @@ func_get(const struct psycho_bios_func *const arr, const size_t arr_elems,
 	return arr[func].prototype ? &arr[func] : NULL;
 }
 
-static void frame_init(struct psycho_ctx *const ctx,
-		       struct psycho_bios_frame *const frame,
-		       const struct psycho_bios_func *const func)
+__attribute__((nonnull)) static void
+frame_init(struct psycho_ctx *const ctx, struct psycho_bios_frame *const frame,
+	   const struct psycho_bios_func *const func)
 {
 	frame->func = func;
 	frame->arg_pos = 0;
@@ -180,7 +180,7 @@ static void frame_init(struct psycho_ctx *const ctx,
 	psycho_str_init(&frame->str);
 }
 
-PSYCHO_NODISCARD static struct psycho_bios_frame *
+PSYCHO_NODISCARD __attribute__((nonnull)) static struct psycho_bios_frame *
 stack_emplace(struct psycho_ctx *const ctx)
 {
 	if (ctx->bios_trace.stack.top >= PSYCHO_BIOS_TRACE_STACK_MAX)
@@ -189,7 +189,7 @@ stack_emplace(struct psycho_ctx *const ctx)
 	return &ctx->bios_trace.stack.frames[ctx->bios_trace.stack.top++];
 }
 
-PSYCHO_NODISCARD static struct psycho_bios_frame *
+PSYCHO_NODISCARD __attribute__((nonnull)) static struct psycho_bios_frame *
 stack_pop(struct psycho_ctx *const ctx)
 {
 	if (!ctx->bios_trace.stack.top)
@@ -198,8 +198,8 @@ stack_pop(struct psycho_ctx *const ctx)
 	return &ctx->bios_trace.stack.frames[--ctx->bios_trace.stack.top];
 }
 
-PSYCHO_NODISCARD static u32 get_arg(struct psycho_ctx *const ctx,
-				    struct psycho_bios_frame *const frame)
+PSYCHO_NODISCARD __attribute__((nonnull)) static u32
+get_arg(struct psycho_ctx *const ctx, struct psycho_bios_frame *const frame)
 {
 	if (frame->arg_pos <= PSYCHO_CPU_REG_A3)
 		return (&frame->a0)[frame->arg_pos++];
@@ -239,8 +239,9 @@ PSYCHO_NODISCARD static const char *escape_seq(const char c)
 	}
 }
 
-static void process_char(struct psycho_ctx *const ctx,
-			 struct psycho_bios_frame *const frame)
+__attribute__((nonnull)) static void
+process_char(struct psycho_ctx *const ctx,
+	     struct psycho_bios_frame *const frame)
 {
 	const char c = get_arg(ctx, frame);
 
@@ -252,14 +253,14 @@ static void process_char(struct psycho_ctx *const ctx,
 		psycho_str_append(&frame->str, NULL, "'%c'", c);
 }
 
-static void process_int(struct psycho_ctx *const ctx,
-			struct psycho_bios_frame *const frame)
+__attribute__((nonnull)) static void
+process_int(struct psycho_ctx *const ctx, struct psycho_bios_frame *const frame)
 {
 	psycho_str_append(&frame->str, NULL, "%" PRIu32, get_arg(ctx, frame));
 }
 
-static void process_str(struct psycho_ctx *const ctx,
-			struct psycho_bios_frame *const frame)
+__attribute__((nonnull)) static void
+process_str(struct psycho_ctx *const ctx, struct psycho_bios_frame *const frame)
 {
 	const u32 ptr = get_arg(ctx, frame);
 
@@ -278,18 +279,16 @@ end:
 	psycho_str_append(&frame->str, NULL, "0x%08X", ptr);
 }
 
-static void process_ptr(struct psycho_ctx *const ctx,
-			struct psycho_bios_frame *const frame)
+__attribute__((nonnull)) static void
+process_ptr(struct psycho_ctx *const ctx, struct psycho_bios_frame *const frame)
 {
 	psycho_str_append(&frame->str, NULL, "0x%08X", get_arg(ctx, frame));
 }
 
-static void on_putchar(struct psycho_ctx *const ctx,
-		       const struct psycho_bios_frame *const frame)
+__attribute__((nonnull)) static void
+on_putchar(struct psycho_ctx *const ctx,
+	   const struct psycho_bios_frame *const frame)
 {
-	assert(ctx != NULL);
-	assert(frame != NULL);
-
 	const char c = frame->a0;
 	const char *const esc_seq = escape_seq(c);
 
@@ -314,20 +313,15 @@ static void on_putchar(struct psycho_ctx *const ctx,
 	}
 }
 
-static void process_prototype(struct psycho_ctx *const ctx,
-			      struct psycho_bios_frame *const frame)
+__attribute__((nonnull)) static void
+process_prototype(struct psycho_ctx *const ctx,
+		  struct psycho_bios_frame *const frame)
 {
-	assert(ctx != NULL);
-
-#define append(args...) psycho_str_append(&frame->str, NULL, args)
-
-#define SPECIFIER_LEN (2)
-
 	const char *src = frame->func->prototype;
 
 	while (*src) {
 		if (*src != '%') {
-			append("%c", *src++);
+			psycho_str_append(&frame->str, NULL, "%c", *src++);
 			continue;
 		}
 
@@ -351,23 +345,23 @@ static void process_prototype(struct psycho_ctx *const ctx,
 			break;
 
 		default:
-			append("%c", *src++);
+			psycho_str_append(&frame->str, NULL, "%c", *src++);
 			break;
 		}
-		src += SPECIFIER_LEN;
+		src += (sizeof("%%") - 1);
 	}
-
-#undef SPECIFIER_LEN
 }
 
-void psycho_bios_trace_init(struct psycho_ctx *const ctx,
-			    const struct psycho_bios_trace_cfg *const cfg)
+__attribute__((nonnull)) void
+psycho_bios_trace_init(struct psycho_ctx *const ctx,
+		       const struct psycho_bios_trace_cfg *const cfg)
 {
 	ctx->bios_trace.cfg = *cfg;
 	LOG_INFO(ctx, "initialized");
 }
 
-void psycho_bios_trace_begin(struct psycho_ctx *const ctx)
+__attribute__((nonnull)) void
+psycho_bios_trace_begin(struct psycho_ctx *const ctx)
 {
 	const u32 func = ctx->cpu.gpr[PSYCHO_CPU_REG_T1];
 
@@ -403,10 +397,9 @@ void psycho_bios_trace_begin(struct psycho_ctx *const ctx)
 	process_prototype(ctx, frame);
 }
 
-void psycho_bios_trace_end(struct psycho_ctx *const ctx)
+__attribute__((nonnull)) void
+psycho_bios_trace_end(struct psycho_ctx *const ctx)
 {
-	assert(ctx != NULL);
-
 	if (ctx->cpu.instr != JR_RA)
 		return;
 

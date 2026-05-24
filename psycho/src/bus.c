@@ -50,15 +50,11 @@ u8 *psycho_bus_bios_data_get(struct psycho_ctx *const ctx)
 
 void psycho_bus_init(struct psycho_ctx *const ctx)
 {
-	assert(ctx != NULL);
-
 	ctx->bus.ram = malloc(RAM_PADDR_END + 1);
 }
 
 u32 psycho_bus_load_word(struct psycho_ctx *const ctx, const u32 paddr)
 {
-	assert(ctx != NULL);
-
 	u32 word;
 
 	switch (paddr) {
@@ -82,8 +78,6 @@ u32 psycho_bus_load_word(struct psycho_ctx *const ctx, const u32 paddr)
 
 u8 psycho_bus_load_byte(struct psycho_ctx *const ctx, const u32 paddr)
 {
-	assert(ctx != NULL);
-
 	switch (paddr) {
 	case RAM_PADDR_BEGIN ... RAM_PADDR_END:
 		return ctx->bus.ram[paddr & RAM_PADDR_MASK];
@@ -101,8 +95,6 @@ u8 psycho_bus_load_byte(struct psycho_ctx *const ctx, const u32 paddr)
 void psycho_bus_store_word(struct psycho_ctx *const ctx, const u32 paddr,
 			   const u32 word)
 {
-	assert(ctx != NULL);
-
 	switch (paddr) {
 	case RAM_PADDR_BEGIN ... RAM_PADDR_END:
 		memcpy(&ctx->bus.ram[paddr & RAM_PADDR_MASK], &word,
@@ -120,8 +112,6 @@ void psycho_bus_store_word(struct psycho_ctx *const ctx, const u32 paddr,
 void psycho_bus_store_halfword(struct psycho_ctx *const ctx, const u32 paddr,
 			       const u16 halfword)
 {
-	assert(ctx != NULL);
-
 	LOG_WARN(ctx, "unknown halfword store: 0x%08X <- 0x%04X; ignoring",
 		 paddr, halfword);
 }
@@ -129,8 +119,6 @@ void psycho_bus_store_halfword(struct psycho_ctx *const ctx, const u32 paddr,
 void psycho_bus_store_byte(struct psycho_ctx *const ctx, const u32 paddr,
 			   const u8 byte)
 {
-	assert(ctx != NULL);
-
 	switch (paddr) {
 	case RAM_PADDR_BEGIN ... RAM_PADDR_END:
 		ctx->bus.ram[paddr & RAM_PADDR_MASK] = byte;

@@ -27,7 +27,7 @@
 
 #include "psycho/str.h"
 
-void psycho_str_init(struct psycho_str *str) __attribute__((nonnull(1)));
+void psycho_str_init(struct psycho_str *str) __attribute__((nonnull));
 
 void psycho_str_reset(struct psycho_str *str) __attribute__((nonnull));
 

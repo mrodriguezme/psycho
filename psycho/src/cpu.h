@@ -24,8 +24,9 @@
 
 #include "psycho/ctx.h"
 
-void psycho_cpu_init(struct psycho_ctx *ctx, const struct psycho_cpu_cfg *cfg);
+void psycho_cpu_init(struct psycho_ctx *ctx, const struct psycho_cpu_cfg *cfg)
+	__attribute__((nonnull));
 
-void psycho_cpu_reset(struct psycho_ctx *ctx);
+void psycho_cpu_reset(struct psycho_ctx *ctx) __attribute__((nonnull));
 
-void psycho_cpu_step(struct psycho_ctx *ctx);
+void psycho_cpu_step(struct psycho_ctx *ctx) __attribute__((nonnull));

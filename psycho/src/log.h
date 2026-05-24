@@ -44,7 +44,7 @@
 #define LOG_TRACE_UNCHECKED(ctx, args...) \
 	psycho_log_msg((ctx), m_log_module, PSYCHO_LOG_LEVEL_TRACE, args)
 
-PSYCHO_NODISCARD PSYCHO_ALWAYS_INLINE bool
+PSYCHO_NODISCARD PSYCHO_ALWAYS_INLINE __attribute__((nonnull)) bool
 log_enabled(const struct psycho_ctx *const ctx,
 	    const enum psycho_log_module module,
 	    const enum psycho_log_level level)
@@ -52,9 +52,11 @@ log_enabled(const struct psycho_ctx *const ctx,
 	return (ctx->log.cfg.log_cb) && ctx->log.cfg.modules[module] >= level;
 }
 
-void psycho_log_init(struct psycho_ctx *ctx, const struct psycho_log_cfg *cfg);
+void psycho_log_init(struct psycho_ctx *ctx, const struct psycho_log_cfg *cfg)
+	__attribute__((nonnull));
 
 __attribute__((format(printf, 4, 5))) void
 psycho_log_msg(struct psycho_ctx *const ctx,
 	       const enum psycho_log_module module,
-	       const enum psycho_log_level level, const char *fmt, ...);
+	       const enum psycho_log_level level, const char *fmt, ...)
+	__attribute__((nonnull));

@@ -71,10 +71,11 @@ PSYCHO_NODISCARD const char *
 psycho_disasm_cop0_get(const enum psycho_cpu_cop0 reg);
 
 void psycho_disasm_instr(struct psycho_ctx *ctx, uint32_t pc,
-			 struct psycho_disasm_traces *traces);
+			 struct psycho_disasm_traces *traces)
+	__attribute__((nonnull(1)));
 
-void psycho_disasm_set_tracing_state(struct psycho_ctx *ctx,
-				     const bool enabled);
+void psycho_disasm_set_tracing_state(struct psycho_ctx *ctx, const bool enabled)
+	__attribute__((nonnull));
 
 #ifdef __cplusplus
 }

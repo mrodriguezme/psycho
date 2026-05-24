@@ -116,7 +116,8 @@ static const char *const cop0[PSYCHO_CPU_COP0_COUNT] = {
 	// clang-format on
 };
 
-PSYCHO_NODISCARD static u32 instr_get(struct psycho_ctx *const ctx, u32 pc)
+PSYCHO_NODISCARD __attribute__((nonnull)) static u32
+instr_get(struct psycho_ctx *const ctx, u32 pc)
 {
 	pc = cpu_vaddr_to_paddr(pc);
 	return psycho_bus_load_word(ctx, pc);
@@ -154,8 +155,6 @@ void psycho_disasm_init(struct psycho_ctx *const ctx,
 void psycho_disasm_instr(struct psycho_ctx *const ctx, const u32 pc,
 			 struct psycho_disasm_traces *traces)
 {
-	assert(ctx != NULL);
-
 	psycho_str_init(&ctx->disasm.res.str);
 
 	const u32 instr = instr_get(ctx, pc);
