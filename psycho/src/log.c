@@ -72,10 +72,8 @@ void psycho_log_msg(struct psycho_ctx *const ctx,
 		// clang-format on
 	};
 
-	char msg[PSYCHO_LOG_MSG_LEN_MAX];
 	struct psycho_str str;
-
-	psycho_str_init(&str, msg, sizeof(msg));
+	psycho_str_init(&str);
 
 	psycho_str_append(&str, NULL, "[%s/%s] ", level_str[level],
 			  module_str[module]);

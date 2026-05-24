@@ -36,10 +36,6 @@ extern "C" {
 
 struct psycho_ctx;
 
-enum {
-	PSYCHO_DISASM_LEN_MAX = 512,
-};
-
 enum psycho_disasm_trace {
 	PSYCHO_DISASM_TRACE_GPR_RT,
 	PSYCHO_DISASM_TRACE_GPR_RD,
@@ -59,7 +55,6 @@ struct psycho_disasm_traces {
 
 struct psycho_disasm {
 	struct {
-		char result[PSYCHO_DISASM_LEN_MAX];
 		struct psycho_str str;
 		uint32_t instr;
 		uint32_t pc;

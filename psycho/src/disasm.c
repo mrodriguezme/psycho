@@ -149,9 +149,6 @@ void psycho_disasm_init(struct psycho_ctx *const ctx,
 			const struct psycho_disasm_cfg *const cfg)
 {
 	ctx->disasm.cfg = *cfg;
-
-	psycho_str_init(&ctx->disasm.res.str, ctx->disasm.res.result,
-			sizeof(ctx->disasm.res.result));
 }
 
 void psycho_disasm_instr(struct psycho_ctx *const ctx, const u32 pc,
@@ -159,7 +156,7 @@ void psycho_disasm_instr(struct psycho_ctx *const ctx, const u32 pc,
 {
 	assert(ctx != NULL);
 
-	psycho_str_reset(&ctx->disasm.res.str);
+	psycho_str_init(&ctx->disasm.res.str);
 
 	const u32 instr = instr_get(ctx, pc);
 

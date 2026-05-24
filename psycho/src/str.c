@@ -27,21 +27,9 @@
 
 #include "str.h"
 
-void psycho_str_init(struct psycho_str *const str, char *const src,
-		     const size_t src_len_max)
+void psycho_str_init(struct psycho_str *const str)
 {
-	assert(src_len_max > 0);
-
 	memset(str, 0, sizeof(*str));
-	memset(src, 0, src_len_max);
-
-	str->str = src;
-	str->len_max = src_len_max;
-}
-
-void psycho_str_reset(struct psycho_str *const str)
-{
-	memset(str->str, 0, str->len_max);
 	str->len = 0;
 	str->str[0] = '\0';
 }
@@ -49,8 +37,7 @@ void psycho_str_reset(struct psycho_str *const str)
 void psycho_str_append(struct psycho_str *const str, bool *const truncated,
 		       const char *const fmt, ...)
 {
-	assert(str->len_max > 0);
-	assert(str->len < str->len_max);
+	assert(str->len < sizeof(str->str));
 
 	va_list args;
 	va_start(args, fmt);
@@ -61,10 +48,9 @@ void psycho_str_append(struct psycho_str *const str, bool *const truncated,
 void psycho_str_vappend(struct psycho_str *const str, bool *const truncated,
 			const char *const fmt, va_list args)
 {
-	assert(str->len_max > 0);
-	assert(str->len < str->len_max);
+	assert(str->len < sizeof(str->str));
 
-	const size_t rem = str->len_max - str->len;
+	const size_t rem = sizeof(str->str) - str->len;
 
 	va_list args_copy;
 	va_copy(args_copy, args);
@@ -79,10 +65,11 @@ void psycho_str_vappend(struct psycho_str *const str, bool *const truncated,
 		return;
 
 	if ((size_t)ret >= rem) {
-		str->len = str->len_max - 1;
+		str->len = sizeof(str->str) - 1;
 
 		if (truncated)
 			*truncated = true;
+
 		return;
 	}
 
@@ -95,7 +82,7 @@ void psycho_str_vappend(struct psycho_str *const str, bool *const truncated,
 void psycho_str_pad(struct psycho_str *const str, const char c,
 		    const size_t count, bool *const truncated)
 {
-	assert(str->len < str->len_max);
+	assert(str->len < sizeof(str->str));
 
 	if (str->len >= count) {
 		if (truncated)
@@ -105,7 +92,7 @@ void psycho_str_pad(struct psycho_str *const str, const char c,
 	}
 
 	const size_t needed = count - str->len;
-	const size_t rem = str->len_max - str->len - 1;
+	const size_t rem = sizeof(str->str) - str->len - 1;
 
 	const size_t written = (needed > rem) ? rem : needed;
 	memset(&str->str[str->len], c, written);

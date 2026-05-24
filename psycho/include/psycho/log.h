@@ -31,10 +31,6 @@ extern "C" {
 
 struct psycho_ctx;
 
-enum {
-	PSYCHO_LOG_MSG_LEN_MAX = 512,
-};
-
 enum psycho_log_level {
 	PSYCHO_LOG_LEVEL_OFF,
 	PSYCHO_LOG_LEVEL_INFO,

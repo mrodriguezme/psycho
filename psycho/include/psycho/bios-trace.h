@@ -36,8 +36,6 @@ struct psycho_ctx;
 
 enum {
 	PSYCHO_BIOS_TRACE_STACK_MAX = 10,
-	PSYCHO_BIOS_TRACE_RESULT_LEN_MAX = 512,
-	PSYCHO_BIOS_TTY_STDOUT_RESULT_LEN_MAX = 512,
 };
 
 enum psycho_bios_func_ret {
@@ -49,6 +47,8 @@ enum psycho_bios_func_ret {
 
 struct psycho_bios_frame {
 	const struct psycho_bios_func *func;
+	struct psycho_str str;
+
 	uint32_t a0;
 	uint32_t a1;
 	uint32_t a2;
@@ -56,11 +56,6 @@ struct psycho_bios_frame {
 	uint32_t sp;
 	uint32_t ra;
 	uint32_t arg_pos;
-
-	struct {
-		char m_str[PSYCHO_BIOS_TRACE_RESULT_LEN_MAX];
-		struct psycho_str str;
-	};
 };
 
 struct psycho_bios_func {
@@ -71,7 +66,7 @@ struct psycho_bios_func {
 };
 
 struct psycho_bios_trace_cfg {
-	void (*stdout_line)(struct psycho_ctx *, const char *msg);
+	void (*stdout_line)(struct psycho_ctx *ctx, struct psycho_str *str);
 	bool deref_ptrs;
 };
 
@@ -80,6 +75,9 @@ struct psycho_bios_trace {
 		struct psycho_bios_frame frames[PSYCHO_BIOS_TRACE_STACK_MAX];
 		size_t top;
 	} stack;
+
+	struct psycho_str tty_str;
+	struct psycho_str tty_str_log;
 
 	struct psycho_bios_trace_cfg cfg;
 };

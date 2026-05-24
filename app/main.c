@@ -66,7 +66,8 @@ static void illegal_instr_cb(struct psycho_ctx *const ctx, const uint32_t instr)
 	abort();
 }
 
-static void on_stdout_line(struct psycho_ctx *const ctx, const char *const msg)
+static void on_stdout_line(struct psycho_ctx *const ctx,
+			   struct psycho_str *const str)
 {
 }
 

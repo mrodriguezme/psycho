@@ -28,10 +28,13 @@
 extern "C" {
 #endif // __cplusplus
 
+enum {
+	PSYCHO_STR_LEN_MAX = 512,
+};
+
 struct psycho_str {
-	char *str;
+	char str[PSYCHO_STR_LEN_MAX];
 	size_t len;
-	size_t len_max;
 };
 
 #ifdef __cplusplus

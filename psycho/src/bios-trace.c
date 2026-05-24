@@ -177,7 +177,7 @@ static void frame_init(struct psycho_ctx *const ctx,
 	frame->sp = ctx->cpu.gpr[PSYCHO_CPU_REG_SP];
 	frame->ra = ctx->cpu.gpr[PSYCHO_CPU_REG_RA];
 
-	psycho_str_init(&frame->str, frame->m_str, sizeof(frame->m_str));
+	psycho_str_init(&frame->str);
 }
 
 PSYCHO_NODISCARD static struct psycho_bios_frame *
@@ -291,10 +291,26 @@ static void on_putchar(struct psycho_ctx *const ctx,
 	assert(frame != NULL);
 
 	const char c = frame->a0;
-
 	const char *const esc_seq = escape_seq(c);
 
+	psycho_str_append(&ctx->bios_trace.tty_str, NULL, "%c", c);
+
+	if (!esc_seq) {
+		psycho_str_append(&ctx->bios_trace.tty_str_log, NULL, "%c", c);
+		return;
+	}
+
+	psycho_str_append(&ctx->bios_trace.tty_str_log, NULL, "%s", esc_seq);
+
 	if (c == '\n') {
+		LOG_TRACE(ctx, "[stdout] %s", ctx->bios_trace.tty_str_log.str);
+
+		if (ctx->bios_trace.cfg.stdout_line)
+			ctx->bios_trace.cfg.stdout_line(
+				ctx, &ctx->bios_trace.tty_str);
+
+		psycho_str_init(&ctx->bios_trace.tty_str);
+		psycho_str_init(&ctx->bios_trace.tty_str_log);
 	}
 }
 
@@ -396,7 +412,6 @@ void psycho_bios_trace_end(struct psycho_ctx *const ctx)
 
 	struct psycho_bios_frame *const frame = stack_pop(ctx);
 	if (!frame)
-		// Not in a BIOS call
 		return;
 
 	const u32 v0 = ctx->cpu.gpr[PSYCHO_CPU_REG_V0];
