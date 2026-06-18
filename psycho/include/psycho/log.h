@@ -29,40 +29,35 @@
 extern "C" {
 #endif // __cplusplus
 
-struct psycho_ctx;
+struct p_ctx;
 
-enum psycho_log_level {
-	PSYCHO_LOG_LEVEL_OFF,
-	PSYCHO_LOG_LEVEL_INFO,
-	PSYCHO_LOG_LEVEL_WARN,
-	PSYCHO_LOG_LEVEL_ERR,
-	PSYCHO_LOG_LEVEL_DBG,
-	PSYCHO_LOG_LEVEL_TRACE,
-	PSYCHO_LOG_LEVEL_COUNT
+enum p_log_lvl {
+	P_LOG_OFF,
+	P_LOG_INFO,
+	P_LOG_WARN,
+	P_LOG_ERR,
+	P_LOG_DBG,
+	P_LOG_TRACE,
+	P_LOG_COUNT
 };
 
-enum psycho_log_module {
-	PSYCHO_LOG_MODULE_CTX,
-	PSYCHO_LOG_MODULE_CPU,
-	PSYCHO_LOG_MODULE_BUS,
-	PSYCHO_LOG_MODULE_BIOS,
-	PSYCHO_LOG_MODULE_COUNT,
+enum p_log_mod {
+	P_LOG_CTX,
+	P_LOG_CPU,
+	P_LOG_BUS,
+	P_LOG_BIOS,
+	P_LOG_MOD_COUNT,
 };
 
-struct psycho_log_msg_data {
-	const struct psycho_str str;
-	const enum psycho_log_module module;
-	const enum psycho_log_level level;
+struct p_log_msg {
+	const struct p_str str;
+	const enum p_log_mod mod;
+	const enum p_log_lvl lvl;
 };
 
-struct psycho_log_cfg {
-	void (*log_cb)(struct psycho_ctx *ctx,
-		       const struct psycho_log_msg_data *msg);
-	enum psycho_log_level modules[PSYCHO_LOG_MODULE_COUNT];
-};
-
-struct psycho_log {
-	struct psycho_log_cfg cfg;
+struct p_log_cfg {
+	void (*log_cb)(struct p_ctx *ctx, const struct p_log_msg *msg);
+	enum p_log_lvl mod[P_LOG_MOD_COUNT];
 };
 
 #ifdef __cplusplus

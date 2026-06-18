@@ -22,64 +22,59 @@
 
 #pragma once
 
-#include <stdbool.h>
-#include <stddef.h>
-#include <stdint.h>
-
-#include "str.h"
-
 #ifdef __cplusplus
 extern "C" {
 #endif // __cplusplus
 
-struct psycho_ctx;
-
-enum {
-	PSYCHO_BIOS_TRACE_STACK_MAX = 10,
+enum p_cpu_gpr {
+	P_ZERO,
+	P_AT,
+	P_V0,
+	P_V1,
+	P_A0,
+	P_A1,
+	P_A2,
+	P_A3,
+	P_T0,
+	P_T1,
+	P_T2,
+	P_T3,
+	P_T4,
+	P_T5,
+	P_T6,
+	P_T7,
+	P_S0,
+	P_S1,
+	P_S2,
+	P_S3,
+	P_S4,
+	P_S5,
+	P_S6,
+	P_S7,
+	P_T8,
+	P_T9,
+	P_K0,
+	P_K1,
+	P_GP,
+	P_SP,
+	P_FP,
+	P_RA,
+	P_GPR_COUNT
 };
 
-enum psycho_bios_func_ret {
-	PSYCHO_BIOS_FUNC_RET_INT,
-	PSYCHO_BIOS_FUNC_RET_CHAR,
-	PSYCHO_BIOS_FUNC_RET_VOID,
-	PSYCHO_BIOS_FUNC_RET_VOID_PTR
-};
-
-struct psycho_bios_frame {
-	const struct psycho_bios_func *func;
-	struct psycho_str str;
-
-	uint32_t a0;
-	uint32_t a1;
-	uint32_t a2;
-	uint32_t a3;
-	uint32_t sp;
-	uint32_t ra;
-	uint32_t arg_pos;
-};
-
-struct psycho_bios_func {
-	const char *const prototype;
-	const enum psycho_bios_func_ret ret;
-	void (*hook_cb)(struct psycho_ctx *ctx,
-			const struct psycho_bios_frame *frame);
-};
-
-struct psycho_bios_trace_cfg {
-	void (*stdout_line)(struct psycho_ctx *ctx, struct psycho_str *str);
-	bool deref_ptrs;
-};
-
-struct psycho_bios_trace {
-	struct {
-		struct psycho_bios_frame frames[PSYCHO_BIOS_TRACE_STACK_MAX];
-		size_t top;
-	} stack;
-
-	struct psycho_str tty_str;
-	struct psycho_str tty_str_log;
-
-	struct psycho_bios_trace_cfg cfg;
+enum p_cpu_cop0 {
+	P_BPC = 3,
+	P_BDA = 5,
+	P_TAR = 6,
+	P_DCIC = 7,
+	P_BADVADDR = 8,
+	P_BDAM = 9,
+	P_BPCM = 11,
+	P_SR = 12,
+	P_CAUSE = 13,
+	P_EPC = 14,
+	P_PRID = 15,
+	P_COP0_COUNT = 32,
 };
 
 #ifdef __cplusplus

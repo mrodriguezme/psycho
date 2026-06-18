@@ -15,6 +15,10 @@
         "CMAKE_EXPORT_COMPILE_COMMANDS": {
           "type": "BOOL",
           "value": "ON"
+        },
+        "PSYCHO_USING_CMAKE_PRESET": {
+          "type": "BOOL",
+          "value": "ON"
         }
       }
     },
@@ -69,9 +73,9 @@
       }
     },
     {
-      "name": "clang-dbg",
+      "name": "clang_dbg",
       "hidden": false,
-      "binaryDir": "${sourceDir}/build-clang-dbg",
+      "binaryDir": "${sourceDir}/build_clang_dbg",
       "displayName": "Build with clang in Debug mode",
       "description": "Build the project with clang in Debug mode",
       "inherits": [
@@ -80,9 +84,9 @@
       ]
     },
     {
-      "name": "clang-rel",
+      "name": "clang_rel",
       "hidden": false,
-      "binaryDir": "${sourceDir}/build-clang-rel",
+      "binaryDir": "${sourceDir}/build_clang_rel",
       "displayName": "Build with clang in Release mode",
       "description": "Build the project with clang in Release mode",
       "inherits": [
@@ -91,9 +95,9 @@
       ]
     },
     {
-      "name": "gcc-dbg",
+      "name": "gcc_dbg",
       "hidden": false,
-      "binaryDir": "${sourceDir}/build-gcc-dbg",
+      "binaryDir": "${sourceDir}/build_gcc_dbg",
       "displayName": "Build with gcc in Debug mode",
       "description": "Build the project with gcc in Debug mode",
       "inherits": [
@@ -102,9 +106,9 @@
       ]
     },
     {
-      "name": "gcc-rel",
+      "name": "gcc_rel",
       "hidden": false,
-      "binaryDir": "${sourceDir}/build-gcc-rel",
+      "binaryDir": "${sourceDir}/build_gcc_rel",
       "displayName": "Build with gcc in Release mode",
       "description": "Build the project with gcc in Release mode",
       "inherits": [

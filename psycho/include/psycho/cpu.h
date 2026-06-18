@@ -22,30 +22,28 @@
 
 #pragma once
 
-#include <stdint.h>
-#include "cpu-defs.h"
+#include "cpu_defs.h"
+#include "types.h"
 
 #ifdef __cplusplus
 extern "C" {
 #endif // __cplusplus
 
-struct psycho_ctx;
+struct p_ctx;
 
-struct psycho_cpu_cfg {
-	void (*illegal_instr)(struct psycho_ctx *ctx, const uint32_t instr);
+struct p_cpu_cfg {
+	void (*illegal_instr)(struct p_ctx *ctx, const u32 instr);
 };
 
-struct psycho_cpu {
-	uint32_t gpr[PSYCHO_CPU_GPR_COUNT];
-	uint32_t cop0[PSYCHO_CPU_COP0_COUNT];
-	uint32_t pc;
-	uint32_t next_pc;
-	uint32_t delay_pc;
-	uint32_t instr;
-	uint32_t lo;
-	uint32_t hi;
-
-	struct psycho_cpu_cfg cfg;
+struct p_cpu {
+	u32 gpr[P_GPR_COUNT];
+	u32 cop0[P_COP0_COUNT];
+	u32 pc;
+	u32 npc;
+	u32 dly_pc;
+	u32 instr;
+	u32 lo;
+	u32 hi;
 };
 
 #ifdef __cplusplus

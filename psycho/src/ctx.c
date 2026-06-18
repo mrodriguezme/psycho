@@ -23,36 +23,36 @@
 #include <assert.h>
 #include <stddef.h>
 
-#include "bios-trace.h"
+#include "bios_trace.h"
 #include "bus.h"
 #include "cpu.h"
-#include "disasm.h"
 #include "log.h"
 
-LOG_MODULE(PSYCHO_LOG_MODULE_CTX);
+LOG_MOD(P_LOG_CTX);
 
-void psycho_ctx_init(struct psycho_ctx *const ctx,
-		     const struct psycho_ctx_cfg *const cfg)
+struct p_ctx_cfg *p_ctx_cfg_get(struct p_ctx *const ctx)
 {
-	psycho_log_init(ctx, &cfg->log);
-	psycho_bios_trace_init(ctx, &cfg->bios_trace);
-	psycho_disasm_init(ctx, &cfg->disasm);
-	psycho_bus_init(ctx);
-	psycho_cpu_init(ctx, &cfg->cpu);
+	return &ctx->cfg;
+}
 
-	psycho_ctx_reset(ctx);
+void p_ctx_init(struct p_ctx *const ctx)
+{
+	p_bios_trace_init(ctx);
+	p_bus_init(ctx);
+
+	p_ctx_rst(ctx);
 	LOG_INFO(ctx, "initialized");
 }
 
-void psycho_ctx_reset(struct psycho_ctx *const ctx)
+void p_ctx_rst(struct p_ctx *const ctx)
 {
-	psycho_cpu_reset(ctx);
+	p_cpu_rst(ctx);
 	LOG_INFO(ctx, "reset");
 }
 
-void psycho_ctx_step(struct psycho_ctx *const ctx)
+void p_ctx_step(struct p_ctx *const ctx)
 {
-	psycho_bios_trace_begin(ctx);
-	psycho_cpu_step(ctx);
-	psycho_bios_trace_end(ctx);
+	p_bios_trace_begin(ctx);
+	p_cpu_step(ctx);
+	p_bios_trace_end(ctx);
 }

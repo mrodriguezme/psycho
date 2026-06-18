@@ -22,61 +22,8 @@
 
 #pragma once
 
-#ifdef __cplusplus
-extern "C" {
-#endif // __cplusplus
+#include "psycho/ctx.h"
 
-enum psycho_cpu_gpr {
-	PSYCHO_CPU_REG_ZERO,
-	PSYCHO_CPU_REG_AT,
-	PSYCHO_CPU_REG_V0,
-	PSYCHO_CPU_REG_V1,
-	PSYCHO_CPU_REG_A0,
-	PSYCHO_CPU_REG_A1,
-	PSYCHO_CPU_REG_A2,
-	PSYCHO_CPU_REG_A3,
-	PSYCHO_CPU_REG_T0,
-	PSYCHO_CPU_REG_T1,
-	PSYCHO_CPU_REG_T2,
-	PSYCHO_CPU_REG_T3,
-	PSYCHO_CPU_REG_T4,
-	PSYCHO_CPU_REG_T5,
-	PSYCHO_CPU_REG_T6,
-	PSYCHO_CPU_REG_T7,
-	PSYCHO_CPU_REG_S0,
-	PSYCHO_CPU_REG_S1,
-	PSYCHO_CPU_REG_S2,
-	PSYCHO_CPU_REG_S3,
-	PSYCHO_CPU_REG_S4,
-	PSYCHO_CPU_REG_S5,
-	PSYCHO_CPU_REG_S6,
-	PSYCHO_CPU_REG_S7,
-	PSYCHO_CPU_REG_T8,
-	PSYCHO_CPU_REG_T9,
-	PSYCHO_CPU_REG_K0,
-	PSYCHO_CPU_REG_K1,
-	PSYCHO_CPU_REG_GP,
-	PSYCHO_CPU_REG_SP,
-	PSYCHO_CPU_REG_FP,
-	PSYCHO_CPU_REG_RA,
-	PSYCHO_CPU_GPR_COUNT
-};
-
-enum psycho_cpu_cop0 {
-	PSYCHO_CPU_COP0_BPC = 3,
-	PSYCHO_CPU_COP0_BDA = 5,
-	PSYCHO_CPU_COP0_TAR = 6,
-	PSYCHO_CPU_COP0_DCIC = 7,
-	PSYCHO_CPU_COP0_BADVADDR = 8,
-	PSYCHO_CPU_COP0_BDAM = 9,
-	PSYCHO_CPU_COP0_BPCM = 11,
-	PSYCHO_CPU_COP0_SR = 12,
-	PSYCHO_CPU_COP0_CAUSE = 13,
-	PSYCHO_CPU_COP0_EPC = 14,
-	PSYCHO_CPU_COP0_PRID = 15,
-	PSYCHO_CPU_COP0_COUNT = 32,
-};
-
-#ifdef __cplusplus
-}
-#endif // __cplusplus
+void p_bios_trace_init(struct p_ctx *ctx) __attribute__((nonnull));
+void p_bios_trace_begin(struct p_ctx *ctx) __attribute__((nonnull));
+void p_bios_trace_end(struct p_ctx *ctx) __attribute__((nonnull));

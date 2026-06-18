@@ -24,57 +24,57 @@
 
 #include <stdbool.h>
 #include <stddef.h>
-#include <stdint.h>
 
 #include "compiler.h"
-#include "cpu-defs.h"
+#include "cpu_defs.h"
 #include "str.h"
+#include "types.h"
 
 #ifdef __cplusplus
 extern "C" {
 #endif // __cplusplus
 
-struct psycho_ctx;
+struct p_ctx;
 
-enum psycho_disasm_trace {
-	PSYCHO_DISASM_TRACE_GPR_RT,
-	PSYCHO_DISASM_TRACE_GPR_RD,
-	PSYCHO_DISASM_TRACE_CPU_LO,
-	PSYCHO_DISASM_TRACE_CPU_HI,
-	PSYCHO_DISASM_TRACE_COUNT
+enum {
+	P_DISASM_TRACE_LEN_MAX = 512,
 };
 
-struct psycho_disasm_cfg {
+enum p_disasm_trace {
+	P_DISASM_TRACE_GPR_RT,
+	P_DISASM_TRACE_GPR_RD,
+	P_DISASM_TRACE_CPU_LO,
+	P_DISASM_TRACE_CPU_HI,
+	P_DISASM_TRACE_COUNT
+};
+
+struct p_disasm_cfg {
 	bool tracing;
 };
 
-struct psycho_disasm_traces {
-	enum psycho_disasm_trace data[PSYCHO_DISASM_TRACE_COUNT];
+struct p_disasm_traces {
+	enum p_disasm_trace data[P_DISASM_TRACE_COUNT];
 	size_t count;
 };
 
-struct psycho_disasm {
+struct p_disasm {
 	struct {
-		struct psycho_str str;
-		uint32_t instr;
-		uint32_t pc;
+		char str_buf[P_DISASM_TRACE_LEN_MAX];
+		struct p_str str;
+		u32 instr;
+		u32 pc;
 	} res;
 
-	struct psycho_disasm_traces traces;
-	struct psycho_disasm_cfg cfg;
+	struct p_disasm_traces traces;
 };
 
-PSYCHO_NODISCARD const char *
-psycho_disasm_gpr_get(const enum psycho_cpu_gpr reg);
+P_NODISCARD const char *p_gpr_get(const enum p_cpu_gpr reg);
+P_NODISCARD const char *p_cop0_get(const enum p_cpu_cop0 reg);
 
-PSYCHO_NODISCARD const char *
-psycho_disasm_cop0_get(const enum psycho_cpu_cop0 reg);
-
-void psycho_disasm_instr(struct psycho_ctx *ctx, uint32_t pc,
-			 struct psycho_disasm_traces *traces)
+void p_disasm_instr(struct p_ctx *ctx, u32 pc, struct p_disasm_traces *traces)
 	__attribute__((nonnull(1)));
 
-void psycho_disasm_set_tracing_state(struct psycho_ctx *ctx, const bool enabled)
+void p_disasm_set_tracing_state(struct p_ctx *ctx, const bool enabled)
 	__attribute__((nonnull));
 
 #ifdef __cplusplus

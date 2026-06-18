@@ -28,65 +28,56 @@
 #include "log.h"
 #include "str.h"
 
-void psycho_log_init(struct psycho_ctx *const ctx,
-		     const struct psycho_log_cfg *const cfg)
+void p_log_msg(struct p_ctx *const ctx, const enum p_log_mod mod,
+	       const enum p_log_lvl lvl, const char *const fmt, ...)
 {
-	ctx->log.cfg = *cfg;
-}
+	assert(ctx->cfg.log.log_cb != NULL);
 
-void psycho_log_msg(struct psycho_ctx *const ctx,
-		    const enum psycho_log_module module,
-		    const enum psycho_log_level level, const char *const fmt,
-		    ...)
-{
-	assert(ctx->log.cfg.log_cb != NULL);
+	assert(mod < P_LOG_MOD_COUNT);
+	assert((lvl > P_LOG_OFF) && (lvl < P_LOG_COUNT));
 
-	assert(module < PSYCHO_LOG_MODULE_COUNT);
-	assert((level > PSYCHO_LOG_LEVEL_OFF) &&
-	       (level < PSYCHO_LOG_LEVEL_COUNT));
-
-	static const char *const level_str[PSYCHO_LOG_LEVEL_COUNT] = {
+	static const char *const lvl_str[P_LOG_COUNT] = {
 		// clang-format off
 
-		[PSYCHO_LOG_LEVEL_INFO]		= "info",
-		[PSYCHO_LOG_LEVEL_WARN]		= "warn",
-		[PSYCHO_LOG_LEVEL_ERR]		= "error",
-		[PSYCHO_LOG_LEVEL_DBG]		= "debug",
-		[PSYCHO_LOG_LEVEL_TRACE]	= "trace"
+		[P_LOG_INFO]	= "info",
+		[P_LOG_WARN]	= "warn",
+		[P_LOG_ERR]	= "err",
+		[P_LOG_DBG]	= "dbg",
+		[P_LOG_TRACE]	= "trace"
 
 		// clang-format on
 	};
 
-	static const char *const module_str[PSYCHO_LOG_MODULE_COUNT] = {
+	static const char *const mod_str[P_LOG_MOD_COUNT] = {
 		// clang-format off
 
-		[PSYCHO_LOG_MODULE_CTX]		= "ctx",
-		[PSYCHO_LOG_MODULE_CPU]		= "cpu",
-		[PSYCHO_LOG_MODULE_BUS]		= "bus",
-		[PSYCHO_LOG_MODULE_BIOS]	= "bios"
+		[P_LOG_CTX]	= "ctx",
+		[P_LOG_CPU]	= "cpu",
+		[P_LOG_BUS]	= "bus",
+		[P_LOG_BIOS]	= "bios"
 
 		// clang-format on
 	};
 
-	struct psycho_str str;
-	psycho_str_init(&str);
+	char buf[512];
+	struct p_str str;
+	p_str_init_fixed(&str, buf, sizeof(buf));
 
-	psycho_str_append(&str, NULL, "[%s/%s] ", level_str[level],
-			  module_str[module]);
+	p_str_append(&str, NULL, "[%s/%s] ", lvl_str[lvl], mod_str[mod]);
 
 	va_list args;
 	va_start(args, fmt);
-	psycho_str_vappend(&str, NULL, fmt, args);
+	p_str_vappend(&str, NULL, fmt, args);
 	va_end(args);
 
-	const struct psycho_log_msg_data msg_data = {
+	const struct p_log_msg msg = {
 		// clang-format off
 
 		.str	= str,
-		.module	= module,
-		.level	= level
+		.mod	= mod,
+		.lvl	= lvl
 
 		// clang-format on
 	};
-	ctx->log.cfg.log_cb(ctx, &msg_data);
+	ctx->cfg.log.log_cb(ctx, &msg);
 }

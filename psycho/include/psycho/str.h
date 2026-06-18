@@ -22,19 +22,18 @@
 
 #pragma once
 
+#include <stdbool.h>
 #include <stddef.h>
 
 #ifdef __cplusplus
 extern "C" {
 #endif // __cplusplus
 
-enum {
-	PSYCHO_STR_LEN_MAX = 512,
-};
-
-struct psycho_str {
-	char str[PSYCHO_STR_LEN_MAX];
+struct p_str {
+	char *ptr;
 	size_t len;
+	size_t cap;
+	bool fixed;
 };
 
 #ifdef __cplusplus

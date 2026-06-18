@@ -20,5 +20,5 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-add_executable(psycho-testbed main.c)
-target_link_libraries(psycho-testbed PRIVATE psycho_cfg_base_c psycho)
+add_executable(psycho_testbed main.c)
+target_link_libraries(psycho_testbed PRIVATE psycho_cfg_base_c psycho)

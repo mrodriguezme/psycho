@@ -31,34 +31,33 @@
 #include "ansi-color-codes.h"
 #include "psycho/ctx.h"
 
-static struct psycho_ctx m_ctx;
+static struct p_ctx m_ctx;
 static const char *prog_name;
 
-static void log_cb(struct psycho_ctx *const ctx,
-		   const struct psycho_log_msg_data *const msg)
+static void log_cb(struct p_ctx *const ctx, const struct p_log_msg *const msg)
 {
 	assert(ctx != NULL);
 	assert(msg != NULL);
 
-	static const char *const color_str[PSYCHO_LOG_LEVEL_COUNT] = {
+	static const char *const color_str[P_LOG_COUNT] = {
 		// clang-format off
 
-		[PSYCHO_LOG_LEVEL_INFO]		= BHWHT "%s\n" CRESET,
-		[PSYCHO_LOG_LEVEL_WARN]		= BHYEL "%s\n" CRESET,
-		[PSYCHO_LOG_LEVEL_ERR]		= BHRED "%s\n" CRESET,
-		[PSYCHO_LOG_LEVEL_DBG]		= BHCYN "%s\n" CRESET,
-		[PSYCHO_LOG_LEVEL_TRACE]	= BHMAG "%s\n" CRESET
+		[P_LOG_INFO]	= BHWHT "%s\n" CRESET,
+		[P_LOG_WARN]	= BHYEL "%s\n" CRESET,
+		[P_LOG_ERR]	= BHRED "%s\n" CRESET,
+		[P_LOG_DBG]	= BHCYN "%s\n" CRESET,
+		[P_LOG_TRACE]	= BHMAG "%s\n" CRESET
 
 		// clang-format on
 	};
 
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wformat-nonliteral"
-	printf(color_str[msg->level], msg->str.str);
+	printf(color_str[msg->lvl], msg->str.ptr);
 #pragma GCC diagnostic pop
 }
 
-static void illegal_instr_cb(struct psycho_ctx *const ctx, const uint32_t instr)
+static void illegal_instr_cb(struct p_ctx *const ctx, const uint32_t instr)
 {
 	assert(ctx != NULL);
 
@@ -66,8 +65,7 @@ static void illegal_instr_cb(struct psycho_ctx *const ctx, const uint32_t instr)
 	abort();
 }
 
-static void on_stdout_line(struct psycho_ctx *const ctx,
-			   struct psycho_str *const str)
+static void on_stdout_line(struct p_ctx *const ctx, struct p_str *const str)
 {
 }
 
@@ -95,10 +93,10 @@ static bool load_bios_file(const char *const bios_file)
 	if (!get_file_size(bios_file, &file_size))
 		return false;
 
-	if (file_size != PSYCHO_BUS_BIOS_SIZE) {
+	if (file_size != P_BUS_BIOS_SIZE) {
 		fprintf(stderr,
 			"%s: bios file size is not correct (expected %d bytes, got %zu)\n",
-			prog_name, PSYCHO_BUS_BIOS_SIZE, file_size);
+			prog_name, P_BUS_BIOS_SIZE, file_size);
 		return false;
 	}
 
@@ -110,7 +108,7 @@ static bool load_bios_file(const char *const bios_file)
 		return false;
 	}
 
-	uint8_t *dst = psycho_bus_bios_data_get(&m_ctx);
+	uint8_t *dst = p_bios_data_get(&m_ctx);
 	const size_t bytes_read =
 		fread(dst, sizeof(uint8_t), file_size, handle);
 
@@ -138,36 +136,22 @@ int main(int argc, char **argv)
 
 	prog_name = argv[0];
 
-	const struct psycho_ctx_cfg cfg = {
-		// clang-format off
+	struct p_ctx_cfg *const cfg = p_ctx_cfg_get(&m_ctx);
 
-		.cpu	= {
-			.illegal_instr	= illegal_instr_cb
-		},
+	cfg->cpu.illegal_instr = illegal_instr_cb;
 
-		.bios_trace	= {
-			.stdout_line	= on_stdout_line,
-			.deref_ptrs	= true
-		},
+	cfg->log.log_cb = log_cb;
+	cfg->log.mod[P_LOG_CTX] = P_LOG_TRACE;
+	cfg->log.mod[P_LOG_CPU] = P_LOG_TRACE;
+	cfg->log.mod[P_LOG_BUS] = P_LOG_TRACE;
+	cfg->log.mod[P_LOG_BIOS] = P_LOG_TRACE;
 
-		.disasm	= {
-			.tracing	= true
-		},
+	cfg->bios_trace.stdout_line = on_stdout_line;
+	cfg->bios_trace.deref_ptrs = false;
 
-		.log	= {
-			.log_cb		= log_cb,
-			.modules	= {
-				[PSYCHO_LOG_MODULE_CTX]	= PSYCHO_LOG_LEVEL_TRACE,
-				[PSYCHO_LOG_MODULE_CPU]	= PSYCHO_LOG_LEVEL_TRACE,
-				[PSYCHO_LOG_MODULE_BUS]	= PSYCHO_LOG_LEVEL_TRACE,
-				[PSYCHO_LOG_MODULE_BIOS] = PSYCHO_LOG_LEVEL_TRACE
-			}
-		}
+	cfg->disasm.tracing = true;
 
-		// clang-format on
-	};
-
-	psycho_ctx_init(&m_ctx, &cfg);
+	p_ctx_init(&m_ctx);
 
 	if (!load_bios_file(argv[1]))
 		return EXIT_FAILURE;
@@ -176,7 +160,7 @@ int main(int argc, char **argv)
 		if (m_ctx.cpu.pc == 0x80030000)
 			abort();
 
-		psycho_ctx_step(&m_ctx);
+		p_ctx_step(&m_ctx);
 	}
 
 	return EXIT_SUCCESS;

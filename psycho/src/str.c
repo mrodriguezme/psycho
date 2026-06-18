@@ -27,35 +27,35 @@
 
 #include "str.h"
 
-void psycho_str_init(struct psycho_str *const str)
+void p_str_init_fixed(struct p_str *str, char *const ptr, const size_t cap)
 {
 	memset(str, 0, sizeof(*str));
+
+	str->ptr = ptr;
+	str->ptr[0] = '\0';
+
+	str->cap = cap;
 	str->len = 0;
-	str->str[0] = '\0';
 }
 
-void psycho_str_append(struct psycho_str *const str, bool *const truncated,
-		       const char *const fmt, ...)
+void p_str_append(struct p_str *const str, bool *const truncated,
+		  const char *const fmt, ...)
 {
-	assert(str->len < sizeof(str->str));
-
 	va_list args;
 	va_start(args, fmt);
-	psycho_str_vappend(str, truncated, fmt, args);
+	p_str_vappend(str, truncated, fmt, args);
 	va_end(args);
 }
 
-void psycho_str_vappend(struct psycho_str *const str, bool *const truncated,
-			const char *const fmt, va_list args)
+void p_str_vappend(struct p_str *const str, bool *const truncated,
+		   const char *const fmt, va_list args)
 {
-	assert(str->len < sizeof(str->str));
-
-	const size_t rem = sizeof(str->str) - str->len;
+	const size_t rem = str->cap - str->len;
 
 	va_list args_copy;
 	va_copy(args_copy, args);
 
-	const int ret = vsnprintf(&str->str[str->len], rem, fmt, args_copy);
+	const int ret = vsnprintf(&str->ptr[str->len], rem, fmt, args_copy);
 
 	va_end(args_copy);
 
@@ -65,7 +65,7 @@ void psycho_str_vappend(struct psycho_str *const str, bool *const truncated,
 		return;
 
 	if ((size_t)ret >= rem) {
-		str->len = sizeof(str->str) - 1;
+		str->len = str->cap - 1;
 
 		if (truncated)
 			*truncated = true;
@@ -79,11 +79,9 @@ void psycho_str_vappend(struct psycho_str *const str, bool *const truncated,
 		*truncated = false;
 }
 
-void psycho_str_pad(struct psycho_str *const str, const char c,
-		    const size_t count, bool *const truncated)
+void p_str_pad(struct p_str *const str, const char c, const size_t count,
+	       bool *const truncated)
 {
-	assert(str->len < sizeof(str->str));
-
 	if (str->len >= count) {
 		if (truncated)
 			*truncated = false;
@@ -92,13 +90,13 @@ void psycho_str_pad(struct psycho_str *const str, const char c,
 	}
 
 	const size_t needed = count - str->len;
-	const size_t rem = sizeof(str->str) - str->len - 1;
+	const size_t rem = str->cap - str->len - 1;
 
 	const size_t written = (needed > rem) ? rem : needed;
-	memset(&str->str[str->len], c, written);
+	memset(&str->ptr[str->len], c, written);
 
 	str->len += written;
-	str->str[str->len] = '\0';
+	str->ptr[str->len] = '\0';
 
 	if (truncated)
 		*truncated = (written != needed);

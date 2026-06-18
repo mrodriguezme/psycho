@@ -22,11 +22,74 @@
 
 #pragma once
 
-#include "psycho/ctx.h"
+#include <stdbool.h>
+#include <stddef.h>
 
-void psycho_bios_trace_init(struct psycho_ctx *const ctx,
-			    const struct psycho_bios_trace_cfg *const cfg)
-	__attribute__((nonnull));
+#include "str.h"
+#include "types.h"
 
-void psycho_bios_trace_begin(struct psycho_ctx *ctx) __attribute__((nonnull));
-void psycho_bios_trace_end(struct psycho_ctx *ctx) __attribute__((nonnull));
+#ifdef __cplusplus
+extern "C" {
+#endif // __cplusplus
+
+struct p_ctx;
+
+enum {
+	// clang-format off
+
+	P_BIOS_TRACE_STACK_MAX		= 10,
+	P_BIOS_TRACE_TTY_STR_LEN_MAX	= 512
+
+	// clang-format on
+};
+
+enum p_bios_fn_ret {
+	P_BIOS_FN_RET_INT,
+	P_BIOS_FN_RET_CHAR,
+	P_BIOS_FN_RET_VOID,
+	P_BIOS_FN_RET_VOID_PTR
+};
+
+struct p_bios_frame {
+	const struct p_bios_fn *fn;
+	struct p_str str;
+	char str_buf[512];
+
+	u32 a0;
+	u32 a1;
+	u32 a2;
+	u32 a3;
+	u32 sp;
+	u32 ra;
+	u32 arg_pos;
+};
+
+struct p_bios_fn {
+	const char *const prototype;
+	const enum p_bios_fn_ret ret;
+	void (*hook_cb)(struct p_ctx *ctx, const struct p_bios_frame *frame);
+};
+
+struct p_bios_trace_cfg {
+	void (*stdout_line)(struct p_ctx *ctx, struct p_str *str);
+	bool deref_ptrs;
+};
+
+struct p_tty_str {
+	char buf[P_BIOS_TRACE_TTY_STR_LEN_MAX];
+	struct p_str str;
+};
+
+struct p_bios_trace {
+	struct {
+		struct p_bios_frame frames[P_BIOS_TRACE_STACK_MAX];
+		size_t top;
+	} stack;
+
+	struct p_tty_str tty_orig;
+	struct p_tty_str tty_log;
+};
+
+#ifdef __cplusplus
+}
+#endif // __cplusplus

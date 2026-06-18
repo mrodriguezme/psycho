@@ -26,8 +26,13 @@
 extern "C" {
 #endif // __cplusplus
 
-#define PSYCHO_NODISCARD __attribute__((warn_unused_result))
-#define PSYCHO_ALWAYS_INLINE __attribute__((always_inline)) static inline
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wunused-macros"
+
+#define P_NODISCARD __attribute__((warn_unused_result))
+#define P_ALWAYS_INLINE __attribute__((always_inline)) static inline
+
+#pragma GCC diagnostic pop
 
 #ifdef __cplusplus
 }

@@ -36,10 +36,11 @@ project(
 	LANGUAGES C
 )
 
-if (CMAKE_CONFIGURATION_TYPES)
+if (NOT PSYCHO_USING_CMAKE_PRESET)
 	message(FATAL_ERROR
-		"This project does not support multi-config generators; please "
-		"use a single-config generator such as Ninja or Unix Makefiles."
+		"You must use a CMake preset to configure this project; run "
+		"\"cmake --list-presets\" to list the available presets, then "
+		"run \"cmake --preset <name>\" to select it."
 	)
 endif()
 
@@ -150,8 +151,6 @@ if (CMAKE_BUILD_TYPE STREQUAL "Debug")
 	add_compiler_flags(-Og)
 elseif (CMAKE_BUILD_TYPE STREQUAL "Release")
 	add_compiler_flags(-Ofast)
-else()
-	message(FATAL_ERROR "CMAKE_BUILD_TYPE must be either Debug or Release.")
 endif()
 
 if ((CMAKE_C_COMPILER_ID STREQUAL "AppleClang") OR
@@ -159,12 +158,6 @@ if ((CMAKE_C_COMPILER_ID STREQUAL "AppleClang") OR
 	add_compiler_flags(-glldb)
 elseif (CMAKE_C_COMPILER_ID STREQUAL "GNU")
 	add_compiler_flags(-ggdb3)
-else()
-	message(
-		FATAL_ERROR
-		"Your C compiler is not supported by this project; please use "
-		"either clang or gcc."
-	)
 endif()
 
 add_subdirectory(psycho)

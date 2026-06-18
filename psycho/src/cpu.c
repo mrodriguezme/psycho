@@ -25,206 +25,203 @@
 
 #include "bus.h"
 #include "cpu.h"
-#include "cpu-defs.h"
+#include "cpu_defs.h"
 #include "disasm.h"
 #include "log.h"
 #include "util.h"
-#include "types.h"
 
-LOG_MODULE(PSYCHO_LOG_MODULE_CPU);
+LOG_MOD(P_LOG_CPU);
 
-__attribute__((nonnull)) static void illegal_instr(struct psycho_ctx *const ctx)
+__attribute__((nonnull)) static void illegal_instr(struct p_ctx *const ctx)
 {
 	LOG_ERR(ctx, "illegal instruction trapped (pc=0x%08X, instr=0x%08X)",
 		ctx->cpu.pc, ctx->cpu.instr);
 
-	ctx->cpu.cfg.illegal_instr(ctx, ctx->cpu.instr);
+	ctx->cfg.cpu.illegal_instr(ctx, ctx->cpu.instr);
 }
 
-PSYCHO_NODISCARD __attribute__((nonnull)) static u32
-load_word(struct psycho_ctx *const ctx, u32 vaddr)
+P_NODISCARD __attribute__((nonnull)) static u32
+load_word(struct p_ctx *const ctx, u32 vaddr)
 {
-	vaddr = cpu_vaddr_to_paddr(vaddr);
-	return psycho_bus_load_word(ctx, vaddr);
+	vaddr = vaddr_to_paddr(vaddr);
+	return p_load_word(ctx, vaddr);
 }
 
-PSYCHO_NODISCARD __attribute__((nonnull)) static u8
-load_byte(struct psycho_ctx *const ctx, u32 vaddr)
+P_NODISCARD __attribute__((nonnull)) static u8
+load_byte(struct p_ctx *const ctx, u32 vaddr)
 {
-	vaddr = cpu_vaddr_to_paddr(vaddr);
-	return psycho_bus_load_byte(ctx, vaddr);
+	vaddr = vaddr_to_paddr(vaddr);
+	return p_load_byte(ctx, vaddr);
 }
 
-__attribute__((nonnull)) static void store_word(struct psycho_ctx *const ctx,
+__attribute__((nonnull)) static void store_word(struct p_ctx *const ctx,
 						u32 vaddr, const u32 word)
 {
-	if (ctx->cpu.cop0[PSYCHO_CPU_COP0_SR] & CPU_SR_ISC)
+	if (ctx->cpu.cop0[P_SR] & SR_ISC)
 		return;
 
-	vaddr = cpu_vaddr_to_paddr(vaddr);
-	psycho_bus_store_word(ctx, vaddr, word);
+	vaddr = vaddr_to_paddr(vaddr);
+	p_store_word(ctx, vaddr, word);
 }
 
 __attribute__((nonnull)) static void
-store_halfword(struct psycho_ctx *const ctx, u32 vaddr, const u16 halfword)
+store_halfword(struct p_ctx *const ctx, u32 vaddr, const u16 halfword)
 {
-	if (ctx->cpu.cop0[PSYCHO_CPU_COP0_SR] & CPU_SR_ISC)
+	if (ctx->cpu.cop0[P_SR] & SR_ISC)
 		return;
 
-	vaddr = cpu_vaddr_to_paddr(vaddr);
-	psycho_bus_store_halfword(ctx, vaddr, halfword);
+	vaddr = vaddr_to_paddr(vaddr);
+	p_store_halfword(ctx, vaddr, halfword);
 }
 
-__attribute__((nonnull)) static void store_byte(struct psycho_ctx *const ctx,
+__attribute__((nonnull)) static void store_byte(struct p_ctx *const ctx,
 						u32 vaddr, const u8 byte)
 {
-	if (ctx->cpu.cop0[PSYCHO_CPU_COP0_SR] & CPU_SR_ISC)
+	if (ctx->cpu.cop0[P_SR] & SR_ISC)
 		return;
 
-	vaddr = cpu_vaddr_to_paddr(vaddr);
-	psycho_bus_store_byte(ctx, vaddr, byte);
+	vaddr = vaddr_to_paddr(vaddr);
+	p_store_byte(ctx, vaddr, byte);
 }
 
-__attribute__((nonnull)) static void
-disasm_capture(struct psycho_ctx *const ctx)
+__attribute__((nonnull)) static void disasm_capture(struct p_ctx *const ctx)
 {
-	if (ctx->disasm.cfg.tracing) {
-		psycho_disasm_trace_begin(ctx, ctx->cpu.pc);
+	if (ctx->cfg.disasm.tracing) {
+		p_disasm_trace_begin(ctx, ctx->cpu.pc);
 		return;
 	}
 
-	if (MODULE_LOG_LEVEL_ACTIVE(ctx, PSYCHO_LOG_LEVEL_TRACE)) {
-		psycho_disasm_instr(ctx, ctx->cpu.pc, NULL);
+	if (MOD_LOG_LVL_ACTIVE(ctx, P_LOG_TRACE)) {
+		p_disasm_instr(ctx, ctx->cpu.pc, NULL);
 		LOG_TRACE_UNCHECKED(ctx, "[disasm] 0x%08X: %s",
 				    ctx->disasm.res.pc,
-				    ctx->disasm.res.str.str);
+				    ctx->disasm.res.str.ptr);
 	}
 }
 
-__attribute__((nonnull)) static void disasm_emit(struct psycho_ctx *const ctx)
+__attribute__((nonnull)) static void disasm_emit(struct p_ctx *const ctx)
 {
-	if (!ctx->disasm.cfg.tracing)
+	if (!ctx->cfg.disasm.tracing)
 		return;
 
-	psycho_disasm_trace_end(ctx);
+	p_disasm_trace_end(ctx);
 	LOG_TRACE(ctx, "[disasm] 0x%08X: %s", ctx->disasm.res.pc,
-		  ctx->disasm.res.str.str);
+		  ctx->disasm.res.str.ptr);
 }
 
-__attribute__((nonnull)) static void branch_if(struct psycho_ctx *const ctx,
-					       const bool condition_met)
+__attribute__((nonnull)) static void branch_if(struct p_ctx *const ctx,
+					       const bool cond)
 {
-	if (condition_met)
-		ctx->cpu.next_pc = cpu_branch_addr(ctx->cpu.pc, ctx->cpu.instr);
+	if (cond)
+		ctx->cpu.npc = branch_addr(ctx->cpu.pc, ctx->cpu.instr);
 }
 
-void psycho_cpu_init(struct psycho_ctx *const ctx,
-		     const struct psycho_cpu_cfg *const cfg)
-{
-	ctx->cpu.cfg = *cfg;
-	LOG_INFO(ctx, "initialized");
-}
-
-void psycho_cpu_reset(struct psycho_ctx *const ctx)
+void p_cpu_rst(struct p_ctx *const ctx)
 {
 	memset(ctx->cpu.gpr, 0, sizeof(ctx->cpu.gpr));
 
-	ctx->cpu.delay_pc = CPU_RESET_VECTOR;
-	ctx->cpu.pc = CPU_RESET_VECTOR;
-	ctx->cpu.next_pc = CPU_RESET_VECTOR + sizeof(ctx->cpu.instr);
+	ctx->cpu.dly_pc = RST_VECTOR;
+	ctx->cpu.pc = RST_VECTOR;
+	ctx->cpu.npc = RST_VECTOR + sizeof(ctx->cpu.instr);
 
 	LOG_INFO(ctx, "reset");
 }
 
-void psycho_cpu_step(struct psycho_ctx *const ctx)
+void p_cpu_step(struct p_ctx *const ctx)
 {
-#define op (cpu_instr_op(ctx->cpu.instr))
-#define rt (cpu_instr_rt(ctx->cpu.instr))
-#define rs (cpu_instr_rs(ctx->cpu.instr))
-#define rd (cpu_instr_rd(ctx->cpu.instr))
-#define shamt (cpu_instr_shamt(ctx->cpu.instr))
-#define funct (cpu_instr_funct(ctx->cpu.instr))
-#define base (rs)
-#define zextimm (zero_ext_16_32(cpu_instr_imm(ctx->cpu.instr)))
-#define sextimm (sign_ext_16_32(cpu_instr_imm(ctx->cpu.instr)))
-#define offset (sextimm)
 #define gpr (ctx->cpu.gpr)
+#define pc (ctx->cpu.pc)
+#define npc (ctx->cpu.npc)
+#define hi (ctx->cpu.hi)
+#define lo (ctx->cpu.lo)
+#define instr (ctx->cpu.instr)
 
-	ctx->cpu.pc = ctx->cpu.delay_pc;
-	ctx->cpu.instr = load_word(ctx, ctx->cpu.pc);
+#define op (instr_op(instr))
+#define rt (instr_rt(instr))
+#define rs (instr_rs(instr))
+#define rd (instr_rd(instr))
+#define shamt (instr_shamt(instr))
+#define funct (instr_funct(instr))
+#define base (rs)
+#define zextimm (zext_16_32(instr_imm(instr)))
+#define sextimm (sext_16_32(instr_imm(instr)))
+#define offset (sextimm)
 
-	ctx->cpu.delay_pc = ctx->cpu.next_pc;
-	ctx->cpu.next_pc = ctx->cpu.delay_pc + sizeof(ctx->cpu.instr);
+	pc = ctx->cpu.dly_pc;
+	instr = load_word(ctx, pc);
+
+	ctx->cpu.dly_pc = npc;
+	npc = ctx->cpu.dly_pc + sizeof(instr);
 
 	disasm_capture(ctx);
 
 	switch (op) {
-	case CPU_INSTR_GROUP_SPECIAL:
+	case GRP_SPECIAL:
 		switch (funct) {
-		case CPU_INSTR_SLL:
+		case SLL:
 			gpr[rd] = gpr[rt] << shamt;
 			break;
 
-		case CPU_INSTR_SRL:
+		case SRL:
 			gpr[rd] = gpr[rt] >> shamt;
 			break;
 
-		case CPU_INSTR_SRA:
+		case SRA:
 			gpr[rd] = (s32)gpr[rt] >> shamt;
 			break;
 
-		case CPU_INSTR_JR:
-			ctx->cpu.next_pc = gpr[rs];
+		case JR:
+			npc = gpr[rs];
 			break;
 
-		case CPU_INSTR_JALR:
-			gpr[rd] = ctx->cpu.pc + (sizeof(ctx->cpu.instr) * 2);
-			ctx->cpu.next_pc = gpr[rs];
-
-			break;
-
-		case CPU_INSTR_MFHI:
-			gpr[rd] = ctx->cpu.hi;
-			break;
-
-		case CPU_INSTR_MFLO:
-			gpr[rd] = ctx->cpu.lo;
-			break;
-
-		case CPU_INSTR_DIV:
-			ctx->cpu.lo = (s32)gpr[rs] / (s32)gpr[rt];
-			ctx->cpu.hi = (s32)gpr[rs] % (s32)gpr[rt];
+		case JALR:
+			gpr[rd] = pc + (sizeof(instr) * 2);
+			npc = gpr[rs];
 
 			break;
 
-		case CPU_INSTR_DIVU:
-			ctx->cpu.lo = gpr[rs] / gpr[rt];
-			ctx->cpu.hi = gpr[rs] % gpr[rt];
+		case MFHI:
+			gpr[rd] = hi;
+			break;
+
+		case MFLO:
+			gpr[rd] = lo;
+			break;
+
+		case DIV:
+			lo = (s32)gpr[rs] / (s32)gpr[rt];
+			hi = (s32)gpr[rs] % (s32)gpr[rt];
 
 			break;
 
-		case CPU_INSTR_ADD:
-		case CPU_INSTR_ADDU:
+		case DIVU:
+			lo = gpr[rs] / gpr[rt];
+			hi = gpr[rs] % gpr[rt];
+
+			break;
+
+		case ADD:
+		case ADDU:
 			gpr[rd] = gpr[rs] + gpr[rt];
 			break;
 
-		case CPU_INSTR_SUBU:
+		case SUBU:
 			gpr[rd] = gpr[rs] - gpr[rt];
 			break;
 
-		case CPU_INSTR_AND:
+		case AND:
 			gpr[rd] = gpr[rs] & gpr[rt];
 			break;
 
-		case CPU_INSTR_OR:
+		case OR:
 			gpr[rd] = gpr[rs] | gpr[rt];
 			break;
 
-		case CPU_INSTR_SLT:
+		case SLT:
 			gpr[rd] = (s32)gpr[rs] < (s32)gpr[rt];
 			break;
 
-		case CPU_INSTR_SLTU:
+		case SLTU:
 			gpr[rd] = gpr[rs] < gpr[rt];
 			break;
 
@@ -234,13 +231,13 @@ void psycho_cpu_step(struct psycho_ctx *const ctx)
 		}
 		break;
 
-	case CPU_INSTR_GROUP_REGIMM:
+	case GRP_REGIMM:
 		switch (rt) {
-		case CPU_INSTR_BLTZ:
+		case BLTZ:
 			branch_if(ctx, (s32)gpr[rs] < 0);
 			break;
 
-		case CPU_INSTR_BGEZ:
+		case BGEZ:
 			branch_if(ctx, (s32)gpr[rs] >= 0);
 			break;
 
@@ -250,65 +247,64 @@ void psycho_cpu_step(struct psycho_ctx *const ctx)
 		}
 		break;
 
-	case CPU_INSTR_J:
-		ctx->cpu.next_pc = cpu_jmp_addr(ctx->cpu.pc, ctx->cpu.instr);
+	case J:
+		npc = jmp_addr(pc, instr);
 		break;
 
-	case CPU_INSTR_JAL:
-		gpr[PSYCHO_CPU_REG_RA] =
-			ctx->cpu.pc + (sizeof(ctx->cpu.instr) * 2);
-		ctx->cpu.next_pc = cpu_jmp_addr(ctx->cpu.pc, ctx->cpu.instr);
+	case JAL:
+		gpr[P_RA] = pc + (sizeof(instr) * 2);
+		npc = jmp_addr(pc, instr);
 
 		break;
 
-	case CPU_INSTR_BEQ:
+	case BEQ:
 		branch_if(ctx, gpr[rs] == gpr[rt]);
 		break;
 
-	case CPU_INSTR_BNE:
+	case BNE:
 		branch_if(ctx, gpr[rs] != gpr[rt]);
 		break;
 
-	case CPU_INSTR_BLEZ:
+	case BLEZ:
 		branch_if(ctx, (s32)gpr[rs] <= 0);
 		break;
 
-	case CPU_INSTR_BGTZ:
+	case BGTZ:
 		branch_if(ctx, (s32)gpr[rs] > 0);
 		break;
 
-	case CPU_INSTR_ADDI:
-	case CPU_INSTR_ADDIU:
+	case ADDI:
+	case ADDIU:
 		gpr[rt] = gpr[rs] + sextimm;
 		break;
 
-	case CPU_INSTR_SLTI:
+	case SLTI:
 		gpr[rt] = (s32)gpr[rs] < (s32)sextimm;
 		break;
 
-	case CPU_INSTR_SLTIU:
+	case SLTIU:
 		gpr[rt] = gpr[rs] < sextimm;
 		break;
 
-	case CPU_INSTR_ANDI:
+	case ANDI:
 		gpr[rt] = zextimm & gpr[rs];
 		break;
 
-	case CPU_INSTR_ORI:
+	case ORI:
 		gpr[rt] = zextimm | gpr[rs];
 		break;
 
-	case CPU_INSTR_LUI:
+	case LUI:
 		gpr[rt] = zextimm << 16;
 		break;
 
-	case CPU_INSTR_GROUP_COP0:
+	case GRP_COP0:
 		switch (rs) {
-		case CPU_INSTR_MFC:
+		case MFC:
 			gpr[rt] = ctx->cpu.cop0[rd];
 			break;
 
-		case CPU_INSTR_MTC:
+		case MTC:
 			ctx->cpu.cop0[rd] = gpr[rt];
 			break;
 
@@ -321,27 +317,27 @@ void psycho_cpu_step(struct psycho_ctx *const ctx)
 		}
 		break;
 
-	case CPU_INSTR_LB:
-		gpr[rt] = sign_ext_8_32(load_byte(ctx, gpr[base] + offset));
+	case LB:
+		gpr[rt] = sext_8_32(load_byte(ctx, gpr[base] + offset));
 		break;
 
-	case CPU_INSTR_LW:
+	case LW:
 		gpr[rt] = load_word(ctx, gpr[base] + offset);
 		break;
 
-	case CPU_INSTR_LBU:
-		gpr[rt] = zero_ext_8_32(load_byte(ctx, gpr[base] + offset));
+	case LBU:
+		gpr[rt] = zext_8_32(load_byte(ctx, gpr[base] + offset));
 		break;
 
-	case CPU_INSTR_SB:
+	case SB:
 		store_byte(ctx, gpr[base] + offset, gpr[rt] & UINT8_MAX);
 		break;
 
-	case CPU_INSTR_SH:
+	case SH:
 		store_halfword(ctx, gpr[base] + offset, gpr[rt] & UINT16_MAX);
 		break;
 
-	case CPU_INSTR_SW:
+	case SW:
 		store_word(ctx, gpr[base] + offset, gpr[rt]);
 		break;
 

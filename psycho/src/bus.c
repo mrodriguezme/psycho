@@ -27,7 +27,7 @@
 #include "bus.h"
 #include "log.h"
 
-LOG_MODULE(PSYCHO_LOG_MODULE_BUS);
+LOG_MOD(P_LOG_BUS);
 
 enum {
 	// clang-format off
@@ -43,17 +43,17 @@ enum {
 	// clang-format on
 };
 
-u8 *psycho_bus_bios_data_get(struct psycho_ctx *const ctx)
+u8 *p_bios_data_get(struct p_ctx *const ctx)
 {
 	return ctx->bus.bios;
 }
 
-void psycho_bus_init(struct psycho_ctx *const ctx)
+void p_bus_init(struct p_ctx *const ctx)
 {
 	ctx->bus.ram = malloc(RAM_PADDR_END + 1);
 }
 
-u32 psycho_bus_load_word(struct psycho_ctx *const ctx, const u32 paddr)
+u32 p_load_word(struct p_ctx *const ctx, const u32 paddr)
 {
 	u32 word;
 
@@ -76,7 +76,7 @@ u32 psycho_bus_load_word(struct psycho_ctx *const ctx, const u32 paddr)
 	}
 }
 
-u8 psycho_bus_load_byte(struct psycho_ctx *const ctx, const u32 paddr)
+u8 p_load_byte(struct p_ctx *const ctx, const u32 paddr)
 {
 	switch (paddr) {
 	case RAM_PADDR_BEGIN ... RAM_PADDR_END:
@@ -92,8 +92,7 @@ u8 psycho_bus_load_byte(struct psycho_ctx *const ctx, const u32 paddr)
 	}
 }
 
-void psycho_bus_store_word(struct psycho_ctx *const ctx, const u32 paddr,
-			   const u32 word)
+void p_store_word(struct p_ctx *const ctx, const u32 paddr, const u32 word)
 {
 	switch (paddr) {
 	case RAM_PADDR_BEGIN ... RAM_PADDR_END:
@@ -109,15 +108,14 @@ void psycho_bus_store_word(struct psycho_ctx *const ctx, const u32 paddr,
 		 word);
 }
 
-void psycho_bus_store_halfword(struct psycho_ctx *const ctx, const u32 paddr,
-			       const u16 halfword)
+void p_store_halfword(struct p_ctx *const ctx, const u32 paddr,
+		      const u16 halfword)
 {
 	LOG_WARN(ctx, "unknown halfword store: 0x%08X <- 0x%04X; ignoring",
 		 paddr, halfword);
 }
 
-void psycho_bus_store_byte(struct psycho_ctx *const ctx, const u32 paddr,
-			   const u8 byte)
+void p_store_byte(struct p_ctx *const ctx, const u32 paddr, const u8 byte)
 {
 	switch (paddr) {
 	case RAM_PADDR_BEGIN ... RAM_PADDR_END:
@@ -132,7 +130,7 @@ void psycho_bus_store_byte(struct psycho_ctx *const ctx, const u32 paddr,
 		 byte);
 }
 
-void *psycho_bus_get_mem_area(struct psycho_ctx *const ctx, const u32 paddr)
+void *p_get_mem_area(struct p_ctx *const ctx, const u32 paddr)
 {
 	switch (paddr) {
 	case RAM_PADDR_BEGIN ... RAM_PADDR_END:

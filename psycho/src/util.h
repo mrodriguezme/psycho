@@ -27,22 +27,20 @@
 #include <stdint.h>
 
 #include "psycho/compiler.h"
-#include "types.h"
+#include "psycho/types.h"
 
 #define ARRAY_SIZE(x) (sizeof(x) / sizeof((x)[0]))
 
-#define ZEXT_FUNC(width)                                                 \
-	PSYCHO_NODISCARD PSYCHO_ALWAYS_INLINE u32 zero_ext_##width##_32( \
-		const u##width val)                                      \
-	{                                                                \
-		return val;                                              \
+#define ZEXT_FUNC(width)                                                      \
+	P_NODISCARD P_ALWAYS_INLINE u32 zext_##width##_32(const u##width val) \
+	{                                                                     \
+		return val;                                                   \
 	}
 
-#define SEXT_FUNC(width)                                                 \
-	PSYCHO_NODISCARD PSYCHO_ALWAYS_INLINE u32 sign_ext_##width##_32( \
-		const u##width val)                                      \
-	{                                                                \
-		return (s##width)val;                                    \
+#define SEXT_FUNC(width)                                                      \
+	P_NODISCARD P_ALWAYS_INLINE u32 sext_##width##_32(const u##width val) \
+	{                                                                     \
+		return (s##width)val;                                         \
 	}
 
 ZEXT_FUNC(8);

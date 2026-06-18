@@ -23,13 +23,6 @@
 #pragma once
 
 #include "psycho/ctx.h"
-#include "types.h"
 
-void psycho_disasm_init(struct psycho_ctx *ctx,
-			const struct psycho_disasm_cfg *cfg)
-	__attribute__((nonnull));
-
-void psycho_disasm_trace_begin(struct psycho_ctx *ctx, u32 pc)
-	__attribute__((nonnull));
-
-void psycho_disasm_trace_end(struct psycho_ctx *ctx) __attribute__((nonnull));
+void p_disasm_trace_begin(struct p_ctx *ctx, u32 pc) __attribute__((nonnull));
+void p_disasm_trace_end(struct p_ctx *ctx) __attribute__((nonnull));

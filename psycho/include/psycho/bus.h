@@ -23,25 +23,26 @@
 #pragma once
 
 #include <stdint.h>
+
 #include "compiler.h"
+#include "types.h"
 
 #ifdef __cplusplus
 extern "C" {
 #endif // __cplusplus
 
-struct psycho_ctx;
+struct p_ctx;
 
 enum {
-	PSYCHO_BUS_BIOS_SIZE = 524288,
+	P_BUS_BIOS_SIZE = 524288,
 };
 
-struct psycho_bus {
-	uint8_t bios[PSYCHO_BUS_BIOS_SIZE];
-	uint8_t *ram;
+struct p_bus {
+	u8 bios[P_BUS_BIOS_SIZE];
+	u8 *ram;
 };
 
-PSYCHO_NODISCARD uint8_t *psycho_bus_bios_data_get(struct psycho_ctx *ctx)
-	__attribute__((nonnull));
+P_NODISCARD u8 *p_bios_data_get(struct p_ctx *ctx) __attribute__((nonnull));
 
 #ifdef __cplusplus
 }

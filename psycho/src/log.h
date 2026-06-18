@@ -24,39 +24,33 @@
 
 #include "psycho/ctx.h"
 
-#define LOG_MODULE(mod) static const enum psycho_log_module m_log_module = (mod)
+#define LOG_MOD(mod) static const enum p_log_mod m_log_mod = (mod)
 
-#define MODULE_LOG_LEVEL_ACTIVE(ctx, lvl) \
-	log_enabled((ctx), m_log_module, (lvl))
+#define MOD_LOG_LVL_ACTIVE(ctx, lvl) log_enabled((ctx), m_log_mod, (lvl))
 
-#define LOG_MSG(ctx, lvl, args...)                                        \
-	({                                                                \
-		if (MODULE_LOG_LEVEL_ACTIVE((ctx), (lvl)))                \
-			psycho_log_msg((ctx), m_log_module, (lvl), args); \
+#define LOG_MSG(ctx, lvl, args...)                                \
+	({                                                        \
+		if (MOD_LOG_LVL_ACTIVE((ctx), (lvl)))             \
+			p_log_msg((ctx), m_log_mod, (lvl), args); \
 	})
 
-#define LOG_INFO(ctx, args...) LOG_MSG((ctx), PSYCHO_LOG_LEVEL_INFO, args)
-#define LOG_WARN(ctx, args...) LOG_MSG((ctx), PSYCHO_LOG_LEVEL_WARN, args)
-#define LOG_ERR(ctx, args...) LOG_MSG((ctx), PSYCHO_LOG_LEVEL_ERR, args)
-#define LOG_DBG(ctx, args...) LOG_MSG((ctx), PSYCHO_LOG_LEVEL_DBG, args)
-#define LOG_TRACE(ctx, args...) LOG_MSG((ctx), PSYCHO_LOG_LEVEL_TRACE, args)
+#define LOG_INFO(ctx, args...) LOG_MSG((ctx), P_LOG_INFO, args)
+#define LOG_WARN(ctx, args...) LOG_MSG((ctx), P_LOG_WARN, args)
+#define LOG_ERR(ctx, args...) LOG_MSG((ctx), P_LOG_ERR, args)
+#define LOG_DBG(ctx, args...) LOG_MSG((ctx), P_LOG_DBG, args)
+#define LOG_TRACE(ctx, args...) LOG_MSG((ctx), P_LOG_TRACE, args)
 
 #define LOG_TRACE_UNCHECKED(ctx, args...) \
-	psycho_log_msg((ctx), m_log_module, PSYCHO_LOG_LEVEL_TRACE, args)
+	p_log_msg((ctx), m_log_mod, P_LOG_TRACE, args)
 
-PSYCHO_NODISCARD PSYCHO_ALWAYS_INLINE __attribute__((nonnull)) bool
-log_enabled(const struct psycho_ctx *const ctx,
-	    const enum psycho_log_module module,
-	    const enum psycho_log_level level)
+P_NODISCARD P_ALWAYS_INLINE __attribute__((nonnull)) bool
+log_enabled(const struct p_ctx *const ctx, const enum p_log_mod mod,
+	    const enum p_log_lvl lvl)
 {
-	return (ctx->log.cfg.log_cb) && ctx->log.cfg.modules[module] >= level;
+	return (ctx->cfg.log.log_cb) && ctx->cfg.log.mod[mod] >= lvl;
 }
 
-void psycho_log_init(struct psycho_ctx *ctx, const struct psycho_log_cfg *cfg)
-	__attribute__((nonnull));
-
 __attribute__((format(printf, 4, 5))) void
-psycho_log_msg(struct psycho_ctx *const ctx,
-	       const enum psycho_log_module module,
-	       const enum psycho_log_level level, const char *fmt, ...)
+p_log_msg(struct p_ctx *const ctx, const enum p_log_mod mod,
+	  const enum p_log_lvl lvl, const char *fmt, ...)
 	__attribute__((nonnull));

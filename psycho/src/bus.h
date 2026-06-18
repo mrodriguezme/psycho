@@ -23,26 +23,23 @@
 #pragma once
 
 #include "psycho/ctx.h"
-#include "types.h"
 
-void psycho_bus_init(struct psycho_ctx *ctx) __attribute__((nonnull));
+void p_bus_init(struct p_ctx *ctx) __attribute__((nonnull));
 
-PSYCHO_NODISCARD u32 psycho_bus_load_word(struct psycho_ctx *ctx,
-					  const u32 paddr)
+P_NODISCARD u32 p_load_word(struct p_ctx *ctx, const u32 paddr)
 	__attribute__((nonnull));
 
-PSYCHO_NODISCARD u8 psycho_bus_load_byte(struct psycho_ctx *ctx,
-					 const u32 paddr)
+P_NODISCARD u8 p_load_byte(struct p_ctx *ctx, const u32 paddr)
 	__attribute__((nonnull));
 
-void psycho_bus_store_word(struct psycho_ctx *ctx, const u32 paddr,
-			   const u32 word) __attribute__((nonnull));
+void p_store_word(struct p_ctx *ctx, const u32 paddr, const u32 word)
+	__attribute__((nonnull));
 
-void psycho_bus_store_halfword(struct psycho_ctx *ctx, const u32 paddr,
-			       const u16 halfword) __attribute__((nonnull));
+void p_store_halfword(struct p_ctx *ctx, const u32 paddr, const u16 halfword)
+	__attribute__((nonnull));
 
-void psycho_bus_store_byte(struct psycho_ctx *ctx, const u32 paddr,
-			   const u8 byte) __attribute__((nonnull));
+void p_store_byte(struct p_ctx *ctx, const u32 paddr, const u8 byte)
+	__attribute__((nonnull));
 
-void *psycho_bus_get_mem_area(struct psycho_ctx *ctx, const u32 paddr)
+void *p_get_mem_area(struct p_ctx *ctx, const u32 paddr)
 	__attribute__((nonnull));
