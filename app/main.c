@@ -32,6 +32,8 @@
 #include "psycho/ctx.h"
 
 static struct p_ctx m_ctx;
+static u8 *exe_data;
+static size_t exe_size;
 static const char *prog_name;
 
 static void log_cb(struct p_ctx *const ctx, const struct p_log_msg *const msg)
@@ -124,19 +126,53 @@ static bool load_bios_file(const char *const bios_file)
 	return true;
 }
 
+static bool load_exe_file(const char *const exe_file)
+{
+	assert(exe_file != NULL);
+
+	size_t file_size;
+
+	if (!get_file_size(exe_file, &file_size))
+		return false;
+
+	FILE *handle = fopen(exe_file, "rb");
+
+	if (!handle) {
+		fprintf(stderr, "%s: unable to open exe file %s: %s\n",
+			prog_name, exe_file, strerror(errno));
+		return false;
+	}
+
+	exe_data = malloc(file_size);
+	exe_size = fread(exe_data, sizeof(uint8_t), file_size, handle);
+
+	if (exe_size != file_size) {
+		fprintf(stderr,
+			"%s: not all bytes were read from exe file %s: %s\n",
+			prog_name, exe_file, strerror(errno));
+
+		fclose(handle);
+		free(exe_data);
+
+		return false;
+	}
+	fclose(handle);
+	return true;
+}
+
 int main(int argc, char **argv)
 {
-	if (argc < 2) {
+	if (argc < 3) {
 		fprintf(stderr, "%s: missing required argument\n", argv[0]);
-		fprintf(stderr, "%s: syntax: %s <bios_file>\n", argv[0],
-			argv[0]);
+		fprintf(stderr, "%s: syntax: %s <bios_file> <exe_file>\n",
+			argv[0], argv[0]);
 
 		return EXIT_FAILURE;
 	}
 
 	prog_name = argv[0];
 
-	struct p_ctx_cfg *const cfg = p_ctx_cfg_get(&m_ctx);
+	struct p_ctx_cfg *const cfg = p_cfg_get(&m_ctx);
 
 	cfg->cpu.illegal_instr = illegal_instr_cb;
 
@@ -147,21 +183,25 @@ int main(int argc, char **argv)
 	cfg->log.mod[P_LOG_BIOS] = P_LOG_TRACE;
 
 	cfg->bios_trace.stdout_line = on_stdout_line;
-	cfg->bios_trace.deref_ptrs = false;
+	cfg->bios_trace.deref_ptrs = true;
 
 	cfg->disasm.tracing = true;
 
-	p_ctx_init(&m_ctx);
+	p_init(&m_ctx);
 
 	if (!load_bios_file(argv[1]))
 		return EXIT_FAILURE;
 
-	for (;;) {
-		if (m_ctx.cpu.pc == 0x80030000)
-			abort();
+	if (!load_exe_file(argv[2]))
+		return EXIT_FAILURE;
 
-		p_ctx_step(&m_ctx);
+	if (!p_run_exe(&m_ctx, exe_data, exe_size)) {
+		fprintf(stderr, "%s: exe not valid\n", argv[2]);
+		return EXIT_FAILURE;
 	}
+
+	for (;;)
+		p_step(&m_ctx);
 
 	return EXIT_SUCCESS;
 }

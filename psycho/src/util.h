@@ -31,6 +31,9 @@
 
 #define ARRAY_SIZE(x) (sizeof(x) / sizeof((x)[0]))
 
+#define static_assert_offset(x, memb, off) \
+	_Static_assert(offsetof(x, memb) == (off), "Offset is not correct.")
+
 #define ZEXT_FUNC(width)                                                      \
 	P_NODISCARD P_ALWAYS_INLINE u32 zext_##width##_32(const u##width val) \
 	{                                                                     \

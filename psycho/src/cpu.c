@@ -116,13 +116,24 @@ __attribute__((nonnull)) static void branch_if(struct p_ctx *const ctx,
 		ctx->cpu.npc = branch_addr(ctx->cpu.pc, ctx->cpu.instr);
 }
 
+void p_cpu_pc_set(struct p_ctx *const ctx, const u32 pc)
+{
+	ctx->cpu.dly_pc = pc;
+	ctx->cpu.pc = pc;
+	ctx->cpu.npc = pc + sizeof(ctx->cpu.instr);
+}
+
+void p_cpu_gpr_set(struct p_ctx *const ctx, const enum p_cpu_gpr gpr,
+		   const u32 val)
+{
+	assert(gpr < P_GPR_COUNT);
+	ctx->cpu.gpr[gpr] = val;
+}
+
 void p_cpu_rst(struct p_ctx *const ctx)
 {
 	memset(ctx->cpu.gpr, 0, sizeof(ctx->cpu.gpr));
-
-	ctx->cpu.dly_pc = RST_VECTOR;
-	ctx->cpu.pc = RST_VECTOR;
-	ctx->cpu.npc = RST_VECTOR + sizeof(ctx->cpu.instr);
+	p_cpu_pc_set(ctx, RST_VECTOR);
 
 	LOG_INFO(ctx, "reset");
 }

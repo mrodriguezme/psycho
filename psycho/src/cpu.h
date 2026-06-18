@@ -24,5 +24,10 @@
 
 #include "psycho/ctx.h"
 
+void p_cpu_pc_set(struct p_ctx *ctx, const u32 pc) __attribute__((nonnull));
+
+void p_cpu_gpr_set(struct p_ctx *ctx, const enum p_cpu_gpr gpr, const u32 val)
+	__attribute__((nonnull));
+
 void p_cpu_rst(struct p_ctx *ctx) __attribute__((nonnull));
 void p_cpu_step(struct p_ctx *ctx) __attribute__((nonnull));
