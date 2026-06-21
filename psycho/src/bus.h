@@ -29,6 +29,9 @@ void p_bus_init(struct p_ctx *ctx) __attribute__((nonnull));
 P_NODISCARD u32 p_load_word(struct p_ctx *ctx, const u32 paddr)
 	__attribute__((nonnull));
 
+P_NODISCARD u16 p_load_halfword(struct p_ctx *ctx, const u32 paddr)
+	__attribute__((nonnull));
+
 P_NODISCARD u8 p_load_byte(struct p_ctx *ctx, const u32 paddr)
 	__attribute__((nonnull));
 

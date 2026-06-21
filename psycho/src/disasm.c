@@ -194,6 +194,24 @@ void p_disasm_instr(struct p_ctx *const ctx, const u32 pc,
 
 			return;
 
+		case SLLV:
+			fmt("sllv %s, %s, %s", gpr[rd], gpr[rt], gpr[rs]);
+			trace_add(traces, P_DISASM_TRACE_GPR_RD);
+
+			return;
+
+		case SRLV:
+			fmt("srlv %s, %s, %s", gpr[rd], gpr[rt], gpr[rs]);
+			trace_add(traces, P_DISASM_TRACE_GPR_RD);
+
+			return;
+
+		case SRAV:
+			fmt("srav %s, %s, %s", gpr[rd], gpr[rt], gpr[rs]);
+			trace_add(traces, P_DISASM_TRACE_GPR_RD);
+
+			return;
+
 		case JR:
 			fmt("jr %s", gpr[rs]);
 			return;
@@ -210,11 +228,37 @@ void p_disasm_instr(struct p_ctx *const ctx, const u32 pc,
 
 			return;
 
+		case MTHI:
+			fmt("mthi %s", gpr[rs]);
+			trace_add(traces, P_DISASM_TRACE_CPU_HI);
+
+			return;
+
 		case MFLO:
 			fmt("mflo %s", gpr[rd]);
 			trace_add(traces, P_DISASM_TRACE_GPR_RD);
 
 			return;
+
+		case MTLO:
+			fmt("mtlo %s", gpr[rs]);
+			trace_add(traces, P_DISASM_TRACE_CPU_LO);
+
+			return;
+
+		case MULT:
+			fmt("mult %s, %s", gpr[rs], gpr[rt]);
+			trace_add(traces, P_DISASM_TRACE_CPU_LO);
+			trace_add(traces, P_DISASM_TRACE_CPU_HI);
+
+			break;
+
+		case MULTU:
+			fmt("multu %s, %s", gpr[rs], gpr[rt]);
+			trace_add(traces, P_DISASM_TRACE_CPU_LO);
+			trace_add(traces, P_DISASM_TRACE_CPU_HI);
+
+			break;
 
 		case DIV:
 			fmt("div %s, %s", gpr[rs], gpr[rt]);
@@ -242,6 +286,12 @@ void p_disasm_instr(struct p_ctx *const ctx, const u32 pc,
 
 			return;
 
+		case SUB:
+			fmt("sub %s, %s, %s", gpr[rd], gpr[rs], gpr[rt]);
+			trace_add(traces, P_DISASM_TRACE_GPR_RD);
+
+			return;
+
 		case SUBU:
 			fmt("subu %s, %s, %s", gpr[rd], gpr[rs], gpr[rt]);
 			trace_add(traces, P_DISASM_TRACE_GPR_RD);
@@ -256,6 +306,18 @@ void p_disasm_instr(struct p_ctx *const ctx, const u32 pc,
 
 		case OR:
 			fmt("or %s, %s, %s", gpr[rd], gpr[rs], gpr[rt]);
+			trace_add(traces, P_DISASM_TRACE_GPR_RD);
+
+			return;
+
+		case XOR:
+			fmt("xor %s, %s, %s", gpr[rd], gpr[rs], gpr[rt]);
+			trace_add(traces, P_DISASM_TRACE_GPR_RD);
+
+			return;
+
+		case NOR:
+			fmt("nor %s, %s, %s", gpr[rd], gpr[rs], gpr[rt]);
 			trace_add(traces, P_DISASM_TRACE_GPR_RD);
 
 			return;
@@ -285,6 +347,10 @@ void p_disasm_instr(struct p_ctx *const ctx, const u32 pc,
 
 		case BGEZ:
 			fmt("bgez %s, 0x%08X", gpr[rs], branch_addr);
+			return;
+
+		case BLTZAL:
+			fmt("bltzal %s, 0x%08X", gpr[rs], branch_addr);
 			return;
 
 		default:
@@ -352,6 +418,12 @@ void p_disasm_instr(struct p_ctx *const ctx, const u32 pc,
 
 		return;
 
+	case XORI:
+		fmt("xori %s, %s, 0x%04X", gpr[rt], gpr[rs], imm);
+		trace_add(traces, P_DISASM_TRACE_GPR_RT);
+
+		return;
+
 	case LUI:
 		fmt("lui %s, 0x%04X", gpr[rt], imm);
 
@@ -371,12 +443,32 @@ void p_disasm_instr(struct p_ctx *const ctx, const u32 pc,
 			return;
 
 		default:
+			switch (funct) {
+			case RFE:
+				fmt("rfe");
+				return;
+
+			default:
+				break;
+			}
 			break;
 		}
 		break;
 
 	case LB:
 		fmt("lb %s, %d(%s)", gpr[rt], offset, gpr[base]);
+		trace_add(traces, P_DISASM_TRACE_GPR_RT);
+
+		return;
+
+	case LH:
+		fmt("lh %s, %d(%s)", gpr[rt], offset, gpr[base]);
+		trace_add(traces, P_DISASM_TRACE_GPR_RT);
+
+		return;
+
+	case LWL:
+		fmt("lwl %s, %d(%s)", gpr[rt], offset, gpr[base]);
 		trace_add(traces, P_DISASM_TRACE_GPR_RT);
 
 		return;
@@ -393,6 +485,18 @@ void p_disasm_instr(struct p_ctx *const ctx, const u32 pc,
 
 		return;
 
+	case LHU:
+		fmt("lhu %s, %d(%s)", gpr[rt], offset, gpr[base]);
+		trace_add(traces, P_DISASM_TRACE_GPR_RT);
+
+		return;
+
+	case LWR:
+		fmt("lwr %s, %d(%s)", gpr[rt], offset, gpr[base]);
+		trace_add(traces, P_DISASM_TRACE_GPR_RT);
+
+		return;
+
 	case SB:
 		fmt("sb %s, %d(%s)", gpr[rt], offset, gpr[base]);
 		return;
@@ -401,8 +505,16 @@ void p_disasm_instr(struct p_ctx *const ctx, const u32 pc,
 		fmt("sh %s, %d(%s)", gpr[rt], offset, gpr[base]);
 		return;
 
+	case SWL:
+		fmt("swl %s, %d(%s)", gpr[rt], offset, gpr[base]);
+		return;
+
 	case SW:
 		fmt("sw %s, %d(%s)", gpr[rt], offset, gpr[base]);
+		return;
+
+	case SWR:
+		fmt("swr %s, %d(%s)", gpr[rt], offset, gpr[base]);
 		return;
 
 	default:

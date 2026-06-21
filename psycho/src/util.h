@@ -34,19 +34,23 @@
 #define static_assert_offset(x, memb, off) \
 	_Static_assert(offsetof(x, memb) == (off), "Offset is not correct.")
 
-#define ZEXT_FUNC(width)                                                      \
-	P_NODISCARD P_ALWAYS_INLINE u32 zext_##width##_32(const u##width val) \
-	{                                                                     \
-		return val;                                                   \
+#define ZEXT_FUNC(from, to)                                   \
+	P_NODISCARD P_ALWAYS_INLINE u##to zext_##from##_##to( \
+		const u##from val)                            \
+	{                                                     \
+		return val;                                   \
 	}
 
-#define SEXT_FUNC(width)                                                      \
-	P_NODISCARD P_ALWAYS_INLINE u32 sext_##width##_32(const u##width val) \
-	{                                                                     \
-		return (s##width)val;                                         \
+#define SEXT_FUNC(from, to)                                   \
+	P_NODISCARD P_ALWAYS_INLINE u##to sext_##from##_##to( \
+		const u##from val)                            \
+	{                                                     \
+		return (s##from)val;                          \
 	}
 
-ZEXT_FUNC(8);
-ZEXT_FUNC(16);
-SEXT_FUNC(8);
-SEXT_FUNC(16);
+ZEXT_FUNC(8, 32);
+ZEXT_FUNC(16, 32);
+ZEXT_FUNC(32, 64);
+SEXT_FUNC(8, 32);
+SEXT_FUNC(16, 32);
+SEXT_FUNC(32, 64);

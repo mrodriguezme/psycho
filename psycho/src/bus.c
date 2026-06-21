@@ -38,7 +38,11 @@ enum {
 
 	RAM_PADDR_BEGIN	= 0x00000000,
 	RAM_PADDR_END	= 0x001FFFFF,
-	RAM_PADDR_MASK	= 0x00FFFFFF
+	RAM_PADDR_MASK	= 0x00FFFFFF,
+
+	SCRATCHPAD_PADDR_BEGIN	= 0x1F800000,
+	SCRATCHPAD_PADDR_END	= 0x1F8003FF,
+	SCRATCHPAD_PADDR_MASK	= 0x00000FFF
 
 	// clang-format on
 };
@@ -63,6 +67,11 @@ u32 p_load_word(struct p_ctx *const ctx, const u32 paddr)
 		       sizeof(u32));
 		return word;
 
+	case SCRATCHPAD_PADDR_BEGIN ... SCRATCHPAD_PADDR_END:
+		memcpy(&word, &ctx->bus.spad[paddr & SCRATCHPAD_PADDR_MASK],
+		       sizeof(u32));
+		return word;
+
 	case BIOS_PADDR_BEGIN ... BIOS_PADDR_END:
 		memcpy(&word, &ctx->bus.bios[paddr & BIOS_PADDR_MASK],
 		       sizeof(u32));
@@ -76,11 +85,36 @@ u32 p_load_word(struct p_ctx *const ctx, const u32 paddr)
 	}
 }
 
+u16 p_load_halfword(struct p_ctx *const ctx, const u32 paddr)
+{
+	u16 halfword;
+
+	switch (paddr) {
+	case RAM_PADDR_BEGIN ... RAM_PADDR_END:
+		memcpy(&halfword, &ctx->bus.ram[paddr & RAM_PADDR_MASK],
+		       sizeof(u16));
+		return halfword;
+
+	case SCRATCHPAD_PADDR_BEGIN ... SCRATCHPAD_PADDR_END:
+		memcpy(&halfword, &ctx->bus.spad[paddr & SCRATCHPAD_PADDR_MASK],
+		       sizeof(u16));
+		return halfword;
+
+	default:
+		LOG_WARN(ctx, "unknown halfword load: 0x%08X; returning 0xFFFF",
+			 paddr);
+		return UINT16_MAX;
+	}
+}
+
 u8 p_load_byte(struct p_ctx *const ctx, const u32 paddr)
 {
 	switch (paddr) {
 	case RAM_PADDR_BEGIN ... RAM_PADDR_END:
 		return ctx->bus.ram[paddr & RAM_PADDR_MASK];
+
+	case SCRATCHPAD_PADDR_BEGIN ... SCRATCHPAD_PADDR_END:
+		return ctx->bus.spad[paddr & SCRATCHPAD_PADDR_MASK];
 
 	case BIOS_PADDR_BEGIN ... BIOS_PADDR_END:
 		return ctx->bus.bios[paddr & BIOS_PADDR_MASK];
@@ -100,6 +134,11 @@ void p_store_word(struct p_ctx *const ctx, const u32 paddr, const u32 word)
 		       sizeof(u32));
 		return;
 
+	case SCRATCHPAD_PADDR_BEGIN ... SCRATCHPAD_PADDR_END:
+		memcpy(&ctx->bus.spad[paddr & SCRATCHPAD_PADDR_MASK], &word,
+		       sizeof(u32));
+		return;
+
 	default:
 		break;
 	}
@@ -111,6 +150,20 @@ void p_store_word(struct p_ctx *const ctx, const u32 paddr, const u32 word)
 void p_store_halfword(struct p_ctx *const ctx, const u32 paddr,
 		      const u16 halfword)
 {
+	switch (paddr) {
+	case RAM_PADDR_BEGIN ... RAM_PADDR_END:
+		memcpy(&ctx->bus.ram[paddr & RAM_PADDR_MASK], &halfword,
+		       sizeof(u16));
+		return;
+
+	case SCRATCHPAD_PADDR_BEGIN ... SCRATCHPAD_PADDR_END:
+		memcpy(&ctx->bus.spad[paddr & SCRATCHPAD_PADDR_MASK], &halfword,
+		       sizeof(u16));
+		return;
+
+	default:
+		break;
+	}
 	LOG_WARN(ctx, "unknown halfword store: 0x%08X <- 0x%04X; ignoring",
 		 paddr, halfword);
 }
@@ -120,6 +173,10 @@ void p_store_byte(struct p_ctx *const ctx, const u32 paddr, const u8 byte)
 	switch (paddr) {
 	case RAM_PADDR_BEGIN ... RAM_PADDR_END:
 		ctx->bus.ram[paddr & RAM_PADDR_MASK] = byte;
+		return;
+
+	case SCRATCHPAD_PADDR_BEGIN ... SCRATCHPAD_PADDR_END:
+		ctx->bus.spad[paddr & SCRATCHPAD_PADDR_MASK] = byte;
 		return;
 
 	default:

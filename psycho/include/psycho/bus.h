@@ -34,11 +34,18 @@ extern "C" {
 struct p_ctx;
 
 enum {
+	// clang-format off
+
 	P_BUS_BIOS_SIZE = 524288,
+	P_BUS_SPAD_SIZE	= 0x1F8003FF - 0x1F800000
+
+	// clang-format on
 };
 
 struct p_bus {
 	u8 bios[P_BUS_BIOS_SIZE];
+
+	u8 spad[P_BUS_SPAD_SIZE];
 	u8 *ram;
 };
 
