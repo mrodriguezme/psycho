@@ -244,6 +244,9 @@ void p_cpu_step(struct p_ctx *const ctx)
 #define sextimm (sext_16_32(instr_imm(instr)))
 #define offset (sextimm)
 
+	if (ctx->cpu.dly_pc & 3)
+		exc(ctx, EXC_ADEL);
+
 	pc = ctx->cpu.dly_pc;
 	instr = load_word(ctx, pc);
 
@@ -283,10 +286,21 @@ void p_cpu_step(struct p_ctx *const ctx)
 			npc = gpr[rs];
 			break;
 
-		case JALR:
-			gpr[rd] = pc + (sizeof(instr) * 2);
-			npc = gpr[rs];
+		case JALR: {
+			const u32 jmp_addr = gpr[rs];
 
+			gpr[rd] = pc + (sizeof(instr) * 2);
+			npc = jmp_addr;
+
+			break;
+		}
+
+		case SYSCALL:
+			exc(ctx, EXC_SYSCALL);
+			break;
+
+		case BREAK:
+			exc(ctx, EXC_BP);
 			break;
 
 		case MFHI:
@@ -395,27 +409,16 @@ void p_cpu_step(struct p_ctx *const ctx)
 		}
 		break;
 
-	case GRP_REGIMM:
-		switch (rt) {
-		case BLTZ:
-			branch_if(ctx, (s32)gpr[rs] < 0);
-			break;
+	case GRP_REGIMM: {
+		const bool link = (rt & 0x1E) == 0x10;
+		const bool branch = (s32)(gpr[rs] ^ (rt << 31)) < 0;
 
-		case BGEZ:
-			branch_if(ctx, (s32)gpr[rs] >= 0);
-			break;
-
-		case BLTZAL:
+		if (link)
 			gpr[P_RA] = pc + (sizeof(instr) * 2);
-			branch_if(ctx, (s32)gpr[rs] < 0);
 
-			break;
-
-		default:
-			illegal_instr(ctx);
-			break;
-		}
+		branch_if(ctx, branch);
 		break;
+	}
 
 	case J:
 		npc = jmp_addr(pc, instr);

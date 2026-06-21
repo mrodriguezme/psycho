@@ -222,6 +222,14 @@ void p_disasm_instr(struct p_ctx *const ctx, const u32 pc,
 
 			return;
 
+		case SYSCALL:
+			fmt("syscall");
+			return;
+
+		case BREAK:
+			fmt("break");
+			return;
+
 		case MFHI:
 			fmt("mfhi %s", gpr[rd]);
 			trace_add(traces, P_DISASM_TRACE_GPR_RD);
@@ -339,24 +347,13 @@ void p_disasm_instr(struct p_ctx *const ctx, const u32 pc,
 		}
 		break;
 
-	case GRP_REGIMM:
-		switch (rt) {
-		case BLTZ:
-			fmt("bltz %s, 0x%08X", gpr[rs], branch_addr);
-			return;
+	case GRP_REGIMM: {
+		const char *const link = ((rt & 0x1E) == 0x10) ? "al" : "";
+		const char *const name = (rt & 1) ? "bgez" : "bltz";
 
-		case BGEZ:
-			fmt("bgez %s, 0x%08X", gpr[rs], branch_addr);
-			return;
-
-		case BLTZAL:
-			fmt("bltzal %s, 0x%08X", gpr[rs], branch_addr);
-			return;
-
-		default:
-			break;
-		}
-		break;
+		fmt("%s%s %s, 0x%08X", name, link, gpr[rs], branch_addr);
+		return;
+	}
 
 	case J:
 		fmt("j 0x%08X", jmp_addr(pc, instr));

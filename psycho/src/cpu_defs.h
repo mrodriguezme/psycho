@@ -35,6 +35,8 @@ enum cpu_exc {
 
 	EXC_ADEL	= 4,
 	EXC_ADES	= 5,
+	EXC_SYSCALL	= 8,
+	EXC_BP		= 9,
 	EXC_OV		= 12,
 
 	// clang-format on
@@ -76,16 +78,6 @@ enum instr_grp_op {
 	// clang-format on
 };
 
-enum instr_grp_regimm {
-	// clang-format off
-
-	BLTZ	= 0x00,
-	BGEZ	= 0x01,
-	BLTZAL	= 0x10
-
-	// clang-format on
-};
-
 enum instr_grp_special {
 	// clang-format off
 
@@ -97,6 +89,8 @@ enum instr_grp_special {
 	SRAV	= 0x07,
 	JR	= 0x08,
 	JALR	= 0x09,
+	SYSCALL	= 0x0C,
+	BREAK	= 0x0D,
 	MFHI	= 0x10,
 	MTHI	= 0x11,
 	MFLO	= 0x12,
