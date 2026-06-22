@@ -202,6 +202,28 @@ do_divu(struct p_ctx *const ctx, const u32 dividend, const u32 divisor)
 #undef hi
 }
 
+__attribute__((nonnull)) static void dly_slot_process(struct p_ctx *const ctx)
+{
+	ctx->cpu.gpr[ctx->cpu.ld_next.dst] = ctx->cpu.ld_next.val;
+	memset(&ctx->cpu.ld_next, 0, sizeof(ctx->cpu.ld_next));
+	swap(&ctx->cpu.ld_pend, &ctx->cpu.ld_next);
+}
+
+__attribute__((nonnull)) static void load_dly(struct p_ctx *const ctx,
+					      const size_t dst, const u32 val)
+{
+	if (!dst) {
+		LOG_WARN(ctx, "Load delay rejected - dest was $zero");
+		return;
+	}
+
+	ctx->cpu.ld_pend.dst = dst;
+	ctx->cpu.ld_pend.val = val;
+
+	if (ctx->cpu.ld_next.dst == dst)
+		memset(&ctx->cpu.ld_next, 0, sizeof(ctx->cpu.ld_next));
+}
+
 void p_cpu_pc_set(struct p_ctx *const ctx, const u32 pc)
 {
 	ctx->cpu.dly_pc = pc;
@@ -220,6 +242,9 @@ void p_cpu_rst(struct p_ctx *const ctx)
 {
 	memset(ctx->cpu.gpr, 0, sizeof(ctx->cpu.gpr));
 	p_cpu_pc_set(ctx, RST_VECTOR);
+
+	memset(&ctx->cpu.ld_pend, 0, sizeof(ctx->cpu.ld_pend));
+	memset(&ctx->cpu.ld_next, 0, sizeof(ctx->cpu.ld_next));
 
 	LOG_INFO(ctx, "reset");
 }
@@ -254,6 +279,8 @@ void p_cpu_step(struct p_ctx *const ctx)
 	npc = ctx->cpu.dly_pc + sizeof(instr);
 
 	disasm_capture(ctx);
+
+	dly_slot_process(ctx);
 
 	switch (op) {
 	case GRP_SPECIAL:
@@ -510,7 +537,8 @@ void p_cpu_step(struct p_ctx *const ctx)
 		break;
 
 	case LB:
-		gpr[rt] = sext_8_32(load_byte(ctx, gpr[base] + offset));
+		load_dly(ctx, rt,
+			 sext_8_32(load_byte(ctx, gpr[base] + offset)));
 		break;
 
 	case LH: {
@@ -520,7 +548,7 @@ void p_cpu_step(struct p_ctx *const ctx)
 			exc(ctx, EXC_ADEL);
 			break;
 		}
-		gpr[rt] = sext_16_32(load_halfword(ctx, vaddr));
+		load_dly(ctx, rt, sext_16_32(load_halfword(ctx, vaddr)));
 		break;
 	}
 
@@ -533,7 +561,12 @@ void p_cpu_step(struct p_ctx *const ctx)
 		const uint shift = (vaddr & 3) * 8;
 		const uint mask = 0x00FFFFFF >> shift;
 
-		gpr[rt] = (gpr[rt] & mask) | (word << (24 - shift));
+		u32 val = (ctx->cpu.ld_next.dst == rt) ? ctx->cpu.ld_next.val :
+							 gpr[rt];
+
+		val = (val & mask) | (word << (24 - shift));
+		load_dly(ctx, rt, val);
+
 		break;
 	}
 
@@ -544,12 +577,13 @@ void p_cpu_step(struct p_ctx *const ctx)
 			exc(ctx, EXC_ADEL);
 			break;
 		}
-		gpr[rt] = load_word(ctx, vaddr);
+		load_dly(ctx, rt, load_word(ctx, vaddr));
 		break;
 	}
 
 	case LBU:
-		gpr[rt] = zext_8_32(load_byte(ctx, gpr[base] + offset));
+		load_dly(ctx, rt,
+			 zext_8_32(load_byte(ctx, gpr[base] + offset)));
 		break;
 
 	case LHU: {
@@ -560,7 +594,7 @@ void p_cpu_step(struct p_ctx *const ctx)
 			break;
 		}
 
-		gpr[rt] = zext_16_32(load_halfword(ctx, vaddr));
+		load_dly(ctx, rt, zext_16_32(load_halfword(ctx, vaddr)));
 		break;
 	}
 
@@ -573,7 +607,12 @@ void p_cpu_step(struct p_ctx *const ctx)
 		const uint shift = (vaddr & 3) * 8;
 		const uint mask = 0xFFFFFF00 << (24 - shift);
 
-		gpr[rt] = (gpr[rt] & mask) | (word >> shift);
+		u32 val = (ctx->cpu.ld_next.dst == rt) ? ctx->cpu.ld_next.val :
+							 gpr[rt];
+
+		val = (val & mask) | (word >> shift);
+
+		load_dly(ctx, rt, val);
 		break;
 	}
 

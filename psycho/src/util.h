@@ -31,6 +31,13 @@
 
 #define ARRAY_SIZE(x) (sizeof(x) / sizeof((x)[0]))
 
+#define swap(a, b)                       \
+	({                               \
+		__auto_type _tmp = *(a); \
+		*(a) = *(b);             \
+		*(b) = _tmp;             \
+	})
+
 #define static_assert_offset(x, memb, off) \
 	_Static_assert(offsetof(x, memb) == (off), "Offset is not correct.")
 

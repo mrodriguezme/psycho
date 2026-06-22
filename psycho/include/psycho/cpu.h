@@ -22,6 +22,7 @@
 
 #pragma once
 
+#include <stddef.h>
 #include "cpu_defs.h"
 #include "types.h"
 
@@ -35,6 +36,11 @@ struct p_cpu_cfg {
 	void (*illegal_instr)(struct p_ctx *ctx, const u32 instr);
 };
 
+struct p_cpu_dly_slot {
+	size_t dst;
+	u32 val;
+};
+
 struct p_cpu {
 	u32 gpr[P_GPR_COUNT];
 	u32 cop0[P_COP0_COUNT];
@@ -44,6 +50,9 @@ struct p_cpu {
 	u32 instr;
 	u32 lo;
 	u32 hi;
+
+	struct p_cpu_dly_slot ld_pend;
+	struct p_cpu_dly_slot ld_next;
 };
 
 #ifdef __cplusplus
