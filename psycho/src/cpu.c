@@ -116,6 +116,20 @@ __attribute__((nonnull)) static void disasm_emit(struct p_ctx *const ctx)
 		  ctx->disasm.res.str.ptr);
 }
 
+__attribute__((nonnull)) static void gpr_set(struct p_ctx *const ctx,
+					     const size_t reg, const u32 val)
+{
+	// If the instruction following a load writes to the same destination
+	// register, the load’s delay slot is canceled.
+	if (unlikely(ctx->cpu.ld_next.dst == reg))
+		memset(&ctx->cpu.ld_next, 0, sizeof(ctx->cpu.ld_next));
+
+	// Don't bother putting a check for a write to gpr[0] here; it's already
+	// bad enough that we have a branch. gpr[0] is unconditionally set to 0
+	// at the end of every step.
+	ctx->cpu.gpr[reg] = val;
+}
+
 __attribute__((nonnull)) static void branch_if(struct p_ctx *const ctx,
 					       const bool cond)
 {
@@ -126,9 +140,9 @@ __attribute__((nonnull)) static void branch_if(struct p_ctx *const ctx,
 __attribute__((nonnull)) static void exc(struct p_ctx *const ctx,
 					 const enum cpu_exc exc)
 {
-#define EPC (ctx->cpu.cop0[P_EPC])
-#define CAUSE (ctx->cpu.cop0[P_CAUSE])
 #define SR (ctx->cpu.cop0[P_SR])
+#define CAUSE (ctx->cpu.cop0[P_CAUSE])
+#define EPC (ctx->cpu.cop0[P_EPC])
 
 	// So, on an exception, the CPU:
 
@@ -149,57 +163,92 @@ __attribute__((nonnull)) static void exc(struct p_ctx *const ctx,
 	// 4) transfers control to the exception entry point.
 	p_cpu_pc_set(ctx, 0x80000080);
 
-#undef EPC
+#undef SR
 #undef CAUSE
+#undef EPC
 }
 
 __attribute__((nonnull)) static void
 do_div(struct p_ctx *const ctx, const s32 dividend, const s32 divisor)
 {
-#define lo (ctx->cpu.lo)
-#define hi (ctx->cpu.hi)
+#define LO (ctx->cpu.lo)
+#define HI (ctx->cpu.hi)
 
-	if (!divisor) {
-		// That is, if the dividend is negative, the
-		// quotient is 1 (0x00000001), and if the
-		// dividend is positive or zero, the quotient is
-		// -1 (0xFFFFFFFF).
-		lo = (dividend < 0) ? 1 : UINT32_MAX;
+	if (unlikely(!divisor)) {
+		// That is, if the dividend is negative, the quotient is 1
+		// (0x00000001), and if the dividend is positive or zero, the
+		// quotient is -1 (0xFFFFFFFF).
+		LO = (dividend < 0) ? 1 : UINT32_MAX;
 
-		// In both cases the remainder equals the
-		// dividend.
-		hi = dividend;
-	} else if ((dividend == INT32_MIN) && (divisor == -1)) {
-		lo = dividend;
-		hi = 0;
+		// In both cases the remainder equals the dividend.
+		HI = dividend;
+	} else if (unlikely((dividend == INT32_MIN) && (divisor == -1))) {
+		LO = dividend;
+		HI = 0;
 	} else {
-		lo = dividend / divisor;
-		hi = dividend % divisor;
+		LO = dividend / divisor;
+		HI = dividend % divisor;
 	}
 
-#undef lo
-#undef hi
+#undef LO
+#undef HI
 }
 
 __attribute__((nonnull)) static void
 do_divu(struct p_ctx *const ctx, const u32 dividend, const u32 divisor)
 {
-#define lo (ctx->cpu.lo)
-#define hi (ctx->cpu.hi)
+#define LO (ctx->cpu.lo)
+#define HI (ctx->cpu.hi)
 
-	if (!divisor) {
+	if (unlikely(!divisor)) {
 		// In the case of unsigned division, the dividend can't be
 		// negative and thus the quotient is always -1 (0xFFFFFFFF) and
 		// the remainder equals the dividend.
-		lo = UINT32_MAX;
-		hi = dividend;
+		LO = UINT32_MAX;
+		HI = dividend;
 	} else {
-		lo = dividend / divisor;
-		hi = dividend % divisor;
+		LO = dividend / divisor;
+		HI = dividend % divisor;
 	}
 
-#undef lo
-#undef hi
+#undef LO
+#undef HI
+}
+
+__attribute__((nonnull)) static void
+do_add(struct p_ctx *const ctx, const size_t dst, const u32 a0, const u32 a1)
+{
+	int sum;
+
+	if (unlikely(__builtin_sadd_overflow(a0, a1, &sum)))
+		exc(ctx, EXC_OV);
+	else
+		gpr_set(ctx, dst, sum);
+}
+
+__attribute__((nonnull)) static void do_sub(struct p_ctx *const ctx,
+					    const size_t dst, const u32 minuend,
+					    const u32 subtrahend)
+{
+	int diff;
+
+	if (unlikely(__builtin_ssub_overflow(minuend, subtrahend, &diff)))
+		exc(ctx, EXC_OV);
+	else
+		gpr_set(ctx, dst, diff);
+}
+
+__attribute__((nonnull)) static void do_cop0_instr(struct p_ctx *const ctx,
+						   const uint funct)
+{
+#define SR (ctx->cpu.cop0[P_SR])
+
+	if (unlikely(funct != RFE))
+		illegal_instr(ctx);
+	else
+		SR = (SR & ~0x0F) | ((SR >> 2) & 0x0F);
+
+#undef SR
 }
 
 __attribute__((nonnull)) static void dly_slot_process(struct p_ctx *const ctx)
@@ -212,7 +261,7 @@ __attribute__((nonnull)) static void dly_slot_process(struct p_ctx *const ctx)
 __attribute__((nonnull)) static void load_dly(struct p_ctx *const ctx,
 					      const size_t dst, const u32 val)
 {
-	if (!dst) {
+	if (unlikely(!dst)) {
 		LOG_WARN(ctx, "Load delay rejected - dest was $zero");
 		return;
 	}
@@ -220,7 +269,7 @@ __attribute__((nonnull)) static void load_dly(struct p_ctx *const ctx,
 	ctx->cpu.ld_pend.dst = dst;
 	ctx->cpu.ld_pend.val = val;
 
-	if (ctx->cpu.ld_next.dst == dst)
+	if (unlikely(ctx->cpu.ld_next.dst == dst))
 		memset(&ctx->cpu.ld_next, 0, sizeof(ctx->cpu.ld_next));
 }
 
@@ -269,7 +318,7 @@ void p_cpu_step(struct p_ctx *const ctx)
 #define sextimm (sext_16_32(instr_imm(instr)))
 #define offset (sextimm)
 
-	if (ctx->cpu.dly_pc & 3)
+	if (unlikely(ctx->cpu.dly_pc & 3))
 		exc(ctx, EXC_ADEL);
 
 	pc = ctx->cpu.dly_pc;
@@ -286,27 +335,27 @@ void p_cpu_step(struct p_ctx *const ctx)
 	case GRP_SPECIAL:
 		switch (funct) {
 		case SLL:
-			gpr[rd] = gpr[rt] << shamt;
+			gpr_set(ctx, rd, gpr[rt] << shamt);
 			break;
 
 		case SRL:
-			gpr[rd] = gpr[rt] >> shamt;
+			gpr_set(ctx, rd, gpr[rt] >> shamt);
 			break;
 
 		case SRA:
-			gpr[rd] = (s32)gpr[rt] >> shamt;
+			gpr_set(ctx, rd, (s32)gpr[rt] >> shamt);
 			break;
 
 		case SLLV:
-			gpr[rd] = gpr[rt] << (gpr[rs] & 0x1F);
+			gpr_set(ctx, rd, gpr[rt] << (gpr[rs] & 0x1F));
 			break;
 
 		case SRLV:
-			gpr[rd] = gpr[rt] >> (gpr[rs] & 0x1F);
+			gpr_set(ctx, rd, gpr[rt] >> (gpr[rs] & 0x1F));
 			break;
 
 		case SRAV:
-			gpr[rd] = (s32)gpr[rt] >> (gpr[rs] & 0x1F);
+			gpr_set(ctx, rd, (s32)gpr[rt] >> (gpr[rs] & 0x1F));
 			break;
 
 		case JR:
@@ -316,7 +365,7 @@ void p_cpu_step(struct p_ctx *const ctx)
 		case JALR: {
 			const u32 jmp_addr = gpr[rs];
 
-			gpr[rd] = pc + (sizeof(instr) * 2);
+			gpr_set(ctx, rd, pc + (sizeof(instr) * 2));
 			npc = jmp_addr;
 
 			break;
@@ -331,7 +380,7 @@ void p_cpu_step(struct p_ctx *const ctx)
 			break;
 
 		case MFHI:
-			gpr[rd] = hi;
+			gpr_set(ctx, rd, hi);
 			break;
 
 		case MTHI:
@@ -339,7 +388,7 @@ void p_cpu_step(struct p_ctx *const ctx)
 			break;
 
 		case MFLO:
-			gpr[rd] = lo;
+			gpr_set(ctx, rd, lo);
 			break;
 
 		case MTLO:
@@ -347,21 +396,19 @@ void p_cpu_step(struct p_ctx *const ctx)
 			break;
 
 		case MULT: {
-			const u64 prod =
-				sext_32_64(gpr[rs]) * sext_32_64(gpr[rt]);
+			const u64 x = sext_32_64(gpr[rs]) * sext_32_64(gpr[rt]);
 
-			lo = prod & UINT32_MAX;
-			hi = prod >> 32;
+			lo = x & UINT32_MAX;
+			hi = x >> 32;
 
 			break;
 		}
 
 		case MULTU: {
-			const u64 prod =
-				zext_32_64(gpr[rs]) * zext_32_64(gpr[rt]);
+			const u64 x = zext_32_64(gpr[rs]) * zext_32_64(gpr[rt]);
 
-			lo = prod & UINT32_MAX;
-			hi = prod >> 32;
+			lo = x & UINT32_MAX;
+			hi = x >> 32;
 
 			break;
 		}
@@ -374,60 +421,44 @@ void p_cpu_step(struct p_ctx *const ctx)
 			do_divu(ctx, gpr[rs], gpr[rt]);
 			break;
 
-		case ADD: {
-			int sum;
-
-			if (__builtin_sadd_overflow(gpr[rs], gpr[rt], &sum)) {
-				exc(ctx, EXC_OV);
-				break;
-			}
-
-			gpr[rd] = sum;
+		case ADD:
+			do_add(ctx, rd, gpr[rs], gpr[rt]);
 			break;
-		}
 
 		case ADDU:
-			gpr[rd] = gpr[rs] + gpr[rt];
+			gpr_set(ctx, rd, gpr[rs] + gpr[rt]);
 			break;
 
-		case SUB: {
-			int diff;
-
-			if (__builtin_ssub_overflow(gpr[rs], gpr[rt], &diff)) {
-				exc(ctx, EXC_OV);
-				break;
-			}
-
-			gpr[rd] = diff;
+		case SUB:
+			do_sub(ctx, rd, gpr[rs], gpr[rt]);
 			break;
-		}
 
 		case SUBU:
-			gpr[rd] = gpr[rs] - gpr[rt];
+			gpr_set(ctx, rd, gpr[rs] - gpr[rt]);
 			break;
 
 		case AND:
-			gpr[rd] = gpr[rs] & gpr[rt];
+			gpr_set(ctx, rd, gpr[rs] & gpr[rt]);
 			break;
 
 		case OR:
-			gpr[rd] = gpr[rs] | gpr[rt];
+			gpr_set(ctx, rd, gpr[rs] | gpr[rt]);
 			break;
 
 		case XOR:
-			gpr[rd] = gpr[rs] ^ gpr[rt];
+			gpr_set(ctx, rd, gpr[rs] ^ gpr[rt]);
 			break;
 
 		case NOR:
-			gpr[rd] = ~(gpr[rs] | gpr[rt]);
+			gpr_set(ctx, rd, ~(gpr[rs] | gpr[rt]));
 			break;
 
 		case SLT:
-			gpr[rd] = (s32)gpr[rs] < (s32)gpr[rt];
+			gpr_set(ctx, rd, (s32)gpr[rs] < (s32)gpr[rt]);
 			break;
 
 		case SLTU:
-			gpr[rd] = gpr[rs] < gpr[rt];
+			gpr_set(ctx, rd, gpr[rs] < gpr[rt]);
 			break;
 
 		default:
@@ -441,7 +472,7 @@ void p_cpu_step(struct p_ctx *const ctx)
 		const bool branch = (s32)(gpr[rs] ^ (rt << 31)) < 0;
 
 		if (link)
-			gpr[P_RA] = pc + (sizeof(instr) * 2);
+			gpr_set(ctx, P_RA, pc + (sizeof(instr) * 2));
 
 		branch_if(ctx, branch);
 		break;
@@ -452,7 +483,7 @@ void p_cpu_step(struct p_ctx *const ctx)
 		break;
 
 	case JAL:
-		gpr[P_RA] = pc + (sizeof(instr) * 2);
+		gpr_set(ctx, P_RA, pc + (sizeof(instr) * 2));
 		npc = jmp_addr(pc, instr);
 
 		break;
@@ -476,47 +507,46 @@ void p_cpu_step(struct p_ctx *const ctx)
 	case ADDI: {
 		int sum;
 
-		if (__builtin_sadd_overflow(gpr[rs], sextimm, &sum)) {
+		if (unlikely(__builtin_sadd_overflow(gpr[rs], sextimm, &sum)))
 			exc(ctx, EXC_OV);
-			break;
-		}
+		else
+			gpr_set(ctx, rt, sum);
 
-		gpr[rt] = sum;
 		break;
 	}
 
 	case ADDIU:
-		gpr[rt] = gpr[rs] + sextimm;
+		gpr_set(ctx, rt, gpr[rs] + sextimm);
 		break;
 
 	case SLTI:
-		gpr[rt] = (s32)gpr[rs] < (s32)sextimm;
+		gpr_set(ctx, rt, (s32)gpr[rs] < (s32)sextimm);
 		break;
 
 	case SLTIU:
-		gpr[rt] = gpr[rs] < sextimm;
+		gpr_set(ctx, rt, gpr[rs] < sextimm);
 		break;
 
 	case ANDI:
-		gpr[rt] = zextimm & gpr[rs];
+		gpr_set(ctx, rt, zextimm & gpr[rs]);
 		break;
 
 	case ORI:
-		gpr[rt] = zextimm | gpr[rs];
+		gpr_set(ctx, rt, zextimm | gpr[rs]);
 		break;
 
 	case XORI:
-		gpr[rt] = zextimm ^ gpr[rs];
+		gpr_set(ctx, rt, zextimm ^ gpr[rs]);
 		break;
 
 	case LUI:
-		gpr[rt] = zextimm << 16;
+		gpr_set(ctx, rt, zextimm << 16);
 		break;
 
 	case GRP_COP0:
 		switch (rs) {
 		case MFC:
-			gpr[rt] = ctx->cpu.cop0[rd];
+			gpr_set(ctx, rt, ctx->cpu.cop0[rd]);
 			break;
 
 		case MTC:
@@ -524,15 +554,8 @@ void p_cpu_step(struct p_ctx *const ctx)
 			break;
 
 		default:
-			switch (funct) {
-			case RFE:
-				SR = (SR & ~0x0F) | ((SR >> 2) & 0x0F);
-				break;
-
-			default:
-				illegal_instr(ctx);
-				break;
-			}
+			do_cop0_instr(ctx, funct);
+			break;
 		}
 		break;
 
@@ -544,7 +567,7 @@ void p_cpu_step(struct p_ctx *const ctx)
 	case LH: {
 		const u32 vaddr = gpr[base] + offset;
 
-		if (vaddr & 1) {
+		if (unlikely(vaddr & 1)) {
 			exc(ctx, EXC_ADEL);
 			break;
 		}
@@ -573,7 +596,7 @@ void p_cpu_step(struct p_ctx *const ctx)
 	case LW: {
 		const u32 vaddr = gpr[base] + offset;
 
-		if (vaddr & 0x3) {
+		if (unlikely(vaddr & 0x3)) {
 			exc(ctx, EXC_ADEL);
 			break;
 		}
@@ -589,7 +612,7 @@ void p_cpu_step(struct p_ctx *const ctx)
 	case LHU: {
 		const u32 vaddr = gpr[base] + offset;
 
-		if (vaddr & 1) {
+		if (unlikely(vaddr & 1)) {
 			exc(ctx, EXC_ADEL);
 			break;
 		}
@@ -623,7 +646,7 @@ void p_cpu_step(struct p_ctx *const ctx)
 	case SH: {
 		const u32 vaddr = gpr[base] + offset;
 
-		if (vaddr & 1) {
+		if (unlikely(vaddr & 1)) {
 			exc(ctx, EXC_ADES);
 			break;
 		}
@@ -649,7 +672,7 @@ void p_cpu_step(struct p_ctx *const ctx)
 	case SW: {
 		const u32 vaddr = gpr[base] + offset;
 
-		if (vaddr & 3) {
+		if (unlikely(vaddr & 3)) {
 			exc(ctx, EXC_ADES);
 			break;
 		}
