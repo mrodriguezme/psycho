@@ -21,10 +21,10 @@
 # SOFTWARE.
 
 # CMakePresets.json specified build directories
-build-clang-dbg/**
-build-clang-rel/**
-build-gcc-dbg/**
-build-gcc-rel/**
+build_clang_dbg/**
+build-clang_rel/**
+build_gcc_dbg/**
+build_gcc_rel/**
 
 # CMake
 CMakeLists.txt.user
