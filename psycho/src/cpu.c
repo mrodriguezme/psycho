@@ -130,17 +130,11 @@ __attribute__((nonnull)) static void gpr_set(struct p_ctx *const ctx,
 	ctx->cpu.gpr[reg] = val;
 }
 
-__attribute__((nonnull)) static void do_branch(struct p_ctx *const ctx,
-					       const u32 addr)
-{
-	ctx->cpu.npc = addr;
-}
-
 __attribute__((nonnull)) static void branch(struct p_ctx *const ctx,
 					    const u32 addr)
 {
 	ctx->cpu.next_in_bd = true;
-	do_branch(ctx, addr);
+	ctx->cpu.npc = addr;
 }
 
 __attribute__((nonnull)) static void branch_if(struct p_ctx *const ctx,
@@ -149,11 +143,11 @@ __attribute__((nonnull)) static void branch_if(struct p_ctx *const ctx,
 	ctx->cpu.next_in_bd = true;
 
 	if (cond) {
-		const u32 pc = (ctx->cpu.in_bd) ?
+		const u32 pc = unlikely(ctx->cpu.in_bd) ?
 				       ctx->cpu.dly_pc - sizeof(u32) :
 				       ctx->cpu.pc;
 
-		do_branch(ctx, branch_addr(pc, ctx->cpu.instr));
+		ctx->cpu.npc = branch_addr(pc, ctx->cpu.instr);
 	}
 }
 

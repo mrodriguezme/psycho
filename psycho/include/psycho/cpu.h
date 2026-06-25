@@ -22,7 +22,9 @@
 
 #pragma once
 
+#include <stdbool.h>
 #include <stddef.h>
+
 #include "cpu_defs.h"
 #include "types.h"
 
@@ -53,6 +55,9 @@ struct p_cpu {
 
 	struct p_cpu_dly_slot ld_pend;
 	struct p_cpu_dly_slot ld_next;
+
+	bool in_bd;
+	bool next_in_bd;
 };
 
 #ifdef __cplusplus
