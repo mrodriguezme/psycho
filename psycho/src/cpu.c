@@ -130,11 +130,31 @@ __attribute__((nonnull)) static void gpr_set(struct p_ctx *const ctx,
 	ctx->cpu.gpr[reg] = val;
 }
 
+__attribute__((nonnull)) static void do_branch(struct p_ctx *const ctx,
+					       const u32 addr)
+{
+	ctx->cpu.npc = addr;
+}
+
+__attribute__((nonnull)) static void branch(struct p_ctx *const ctx,
+					    const u32 addr)
+{
+	ctx->cpu.next_in_bd = true;
+	do_branch(ctx, addr);
+}
+
 __attribute__((nonnull)) static void branch_if(struct p_ctx *const ctx,
 					       const bool cond)
 {
-	if (cond)
-		ctx->cpu.npc = branch_addr(ctx->cpu.pc, ctx->cpu.instr);
+	ctx->cpu.next_in_bd = true;
+
+	if (cond) {
+		const u32 pc = (ctx->cpu.in_bd) ?
+				       ctx->cpu.dly_pc - sizeof(u32) :
+				       ctx->cpu.pc;
+
+		do_branch(ctx, branch_addr(pc, ctx->cpu.instr));
+	}
 }
 
 __attribute__((nonnull)) static void exc(struct p_ctx *const ctx,
@@ -321,6 +341,9 @@ void p_cpu_step(struct p_ctx *const ctx)
 	if (unlikely(ctx->cpu.dly_pc & 3))
 		exc(ctx, EXC_ADEL);
 
+	ctx->cpu.in_bd = ctx->cpu.next_in_bd;
+	ctx->cpu.next_in_bd = false;
+
 	pc = ctx->cpu.dly_pc;
 	instr = load_word(ctx, pc);
 
@@ -359,14 +382,14 @@ void p_cpu_step(struct p_ctx *const ctx)
 			break;
 
 		case JR:
-			npc = gpr[rs];
+			branch(ctx, gpr[rs]);
 			break;
 
 		case JALR: {
 			const u32 jmp_addr = gpr[rs];
 
 			gpr_set(ctx, rd, pc + (sizeof(instr) * 2));
-			npc = jmp_addr;
+			branch(ctx, jmp_addr);
 
 			break;
 		}
@@ -479,12 +502,12 @@ void p_cpu_step(struct p_ctx *const ctx)
 	}
 
 	case J:
-		npc = jmp_addr(pc, instr);
+		branch(ctx, jmp_addr(pc, instr));
 		break;
 
 	case JAL:
 		gpr_set(ctx, P_RA, pc + (sizeof(instr) * 2));
-		npc = jmp_addr(pc, instr);
+		branch(ctx, jmp_addr(pc, instr));
 
 		break;
 
