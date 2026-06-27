@@ -31,6 +31,7 @@ extern "C" {
 #include "bus.h"
 #include "disasm.h"
 #include "log.h"
+#include "sched.h"
 
 struct p_ctx_cfg {
 	struct p_cpu_cfg cpu;
@@ -44,6 +45,7 @@ struct p_ctx {
 	struct p_bios_trace bios_trace;
 	struct p_bus bus;
 	struct p_disasm disasm;
+	struct p_sched sched;
 
 	struct p_ctx_cfg cfg;
 
@@ -68,6 +70,8 @@ void p_init(struct p_ctx *ctx) __attribute__((nonnull));
 void p_rst(struct p_ctx *ctx) __attribute__((nonnull));
 
 void p_step(struct p_ctx *ctx) __attribute__((nonnull));
+
+void p_run_until_ev(struct p_ctx *ctx) __attribute__((nonnull));
 
 P_NODISCARD enum p_ctx_ret p_run_exe(struct p_ctx *ctx, const u8 *exe,
 				     const size_t exe_size)

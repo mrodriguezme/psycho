@@ -22,14 +22,33 @@
 
 #pragma once
 
-#include "psycho/ctx.h"
+#include <stdbool.h>
+#include <stddef.h>
+#include "types.h"
 
-void p_cpu_pc_set(struct p_ctx *ctx, const u32 pc) __attribute__((nonnull));
+#ifdef __cplusplus
+extern "C" {
+#endif // __cplusplus
 
-void p_cpu_gpr_set(struct p_ctx *ctx, const enum p_cpu_gpr gpr, const u32 val)
-	__attribute__((nonnull));
+struct p_ctx;
 
-void p_cpu_run(struct p_ctx *ctx, u64 cycles) __attribute__((nonnull));
+enum {
+	P_SCHED_NUM_EVENTS = 10,
+};
 
-void p_cpu_rst(struct p_ctx *ctx) __attribute__((nonnull));
-void p_cpu_step(struct p_ctx *ctx) __attribute__((nonnull));
+struct p_sched_ev {
+	void (*cb)(struct p_ctx *ctx);
+	size_t idx;
+	bool valid;
+	u64 ts;
+};
+
+struct p_sched {
+	struct p_sched_ev *ev[P_SCHED_NUM_EVENTS];
+	size_t num_ev;
+	u64 ts_now;
+};
+
+#ifdef __cplusplus
+}
+#endif // __cplusplus

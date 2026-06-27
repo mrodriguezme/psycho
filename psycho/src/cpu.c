@@ -29,6 +29,7 @@
 #include "disasm.h"
 #include "log.h"
 #include "util.h"
+#include "sched.h"
 
 LOG_MOD(P_LOG_CPU);
 
@@ -43,6 +44,8 @@ __attribute__((nonnull)) static void illegal_instr(struct p_ctx *const ctx)
 P_NODISCARD __attribute__((nonnull)) static u32
 load_word(struct p_ctx *const ctx, u32 vaddr)
 {
+	p_sched_adv_ts(ctx, 1);
+
 	vaddr = vaddr_to_paddr(vaddr);
 	return p_load_word(ctx, vaddr);
 }
@@ -50,6 +53,8 @@ load_word(struct p_ctx *const ctx, u32 vaddr)
 P_NODISCARD __attribute__((nonnull)) static u16
 load_halfword(struct p_ctx *const ctx, u32 vaddr)
 {
+	p_sched_adv_ts(ctx, 1);
+
 	vaddr = vaddr_to_paddr(vaddr);
 	return p_load_halfword(ctx, vaddr);
 }
@@ -57,6 +62,8 @@ load_halfword(struct p_ctx *const ctx, u32 vaddr)
 P_NODISCARD __attribute__((nonnull)) static u8
 load_byte(struct p_ctx *const ctx, u32 vaddr)
 {
+	p_sched_adv_ts(ctx, 1);
+
 	vaddr = vaddr_to_paddr(vaddr);
 	return p_load_byte(ctx, vaddr);
 }
@@ -64,6 +71,8 @@ load_byte(struct p_ctx *const ctx, u32 vaddr)
 __attribute__((nonnull)) static void store_word(struct p_ctx *const ctx,
 						u32 vaddr, const u32 word)
 {
+	p_sched_adv_ts(ctx, 1);
+
 	if (ctx->cpu.cop0[P_SR] & SR_ISC)
 		return;
 
@@ -77,6 +86,8 @@ store_halfword(struct p_ctx *const ctx, u32 vaddr, const u16 halfword)
 	if (ctx->cpu.cop0[P_SR] & SR_ISC)
 		return;
 
+	p_sched_adv_ts(ctx, 1);
+
 	vaddr = vaddr_to_paddr(vaddr);
 	p_store_halfword(ctx, vaddr, halfword);
 }
@@ -86,6 +97,8 @@ __attribute__((nonnull)) static void store_byte(struct p_ctx *const ctx,
 {
 	if (ctx->cpu.cop0[P_SR] & SR_ISC)
 		return;
+
+	p_sched_adv_ts(ctx, 1);
 
 	vaddr = vaddr_to_paddr(vaddr);
 	p_store_byte(ctx, vaddr, byte);
@@ -299,6 +312,14 @@ void p_cpu_gpr_set(struct p_ctx *const ctx, const enum p_cpu_gpr gpr,
 {
 	assert(gpr < P_GPR_COUNT);
 	ctx->cpu.gpr[gpr] = val;
+}
+
+void p_cpu_run(struct p_ctx *const ctx, u64 cycles)
+{
+	cycles += ctx->sched.ts_now;
+
+	while (ctx->sched.ts_now < cycles)
+		p_cpu_step(ctx);
 }
 
 void p_cpu_rst(struct p_ctx *const ctx)

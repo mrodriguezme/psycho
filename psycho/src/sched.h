@@ -24,12 +24,18 @@
 
 #include "psycho/ctx.h"
 
-void p_cpu_pc_set(struct p_ctx *ctx, const u32 pc) __attribute__((nonnull));
+__attribute__((nonnull)) P_ALWAYS_INLINE void p_sched_adv_ts(struct p_ctx *ctx,
+							     const u64 ts)
+{
+	ctx->sched.ts_now += ts;
+}
 
-void p_cpu_gpr_set(struct p_ctx *ctx, const enum p_cpu_gpr gpr, const u32 val)
+void p_sched_rst(struct p_ctx *ctx) __attribute__((nonnull));
+
+bool p_sched_run(struct p_ctx *ctx) __attribute__((nonnull));
+
+void p_sched_add(struct p_ctx *ctx, struct p_sched_ev *ev)
 	__attribute__((nonnull));
 
-void p_cpu_run(struct p_ctx *ctx, u64 cycles) __attribute__((nonnull));
-
-void p_cpu_rst(struct p_ctx *ctx) __attribute__((nonnull));
-void p_cpu_step(struct p_ctx *ctx) __attribute__((nonnull));
+void p_sched_del(struct p_ctx *ctx, struct p_sched_ev *ev)
+	__attribute__((nonnull));

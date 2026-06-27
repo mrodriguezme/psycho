@@ -29,6 +29,7 @@
 #include "cpu.h"
 #include "cpu_defs.h"
 #include "log.h"
+#include "sched.h"
 #include "util.h"
 
 LOG_MOD(P_LOG_CTX);
@@ -113,7 +114,9 @@ void p_init(struct p_ctx *const ctx)
 
 void p_rst(struct p_ctx *const ctx)
 {
+	p_sched_rst(ctx);
 	p_cpu_rst(ctx);
+
 	LOG_INFO(ctx, "reset");
 }
 
@@ -148,4 +151,14 @@ P_NODISCARD enum p_ctx_ret p_run_exe(struct p_ctx *const ctx,
 	LOG_INFO(ctx, "will inject exe");
 
 	return P_OK;
+}
+
+void p_run_until_ev(struct p_ctx *ctx)
+{
+	for (;;) {
+		p_cpu_run(ctx, 100);
+
+		if (p_sched_run(ctx))
+			break;
+	}
 }

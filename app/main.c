@@ -181,6 +181,7 @@ int main(int argc, char **argv)
 	cfg->log.mod[P_LOG_CPU] = P_LOG_TRACE;
 	cfg->log.mod[P_LOG_BUS] = P_LOG_TRACE;
 	cfg->log.mod[P_LOG_BIOS] = P_LOG_TRACE;
+	cfg->log.mod[P_LOG_SCHED] = P_LOG_TRACE;
 
 	cfg->bios_trace.stdout_line = on_stdout_line;
 	cfg->bios_trace.deref_ptrs = true;
@@ -201,7 +202,7 @@ int main(int argc, char **argv)
 	}
 
 	for (;;)
-		p_step(&m_ctx);
+		p_run_until_ev(&m_ctx);
 
 	return EXIT_SUCCESS;
 }
