@@ -23,6 +23,7 @@
 #include <assert.h>
 #include <string.h>
 
+#include "bios_trace.h"
 #include "bus.h"
 #include "cpu.h"
 #include "cpu_defs.h"
@@ -314,14 +315,6 @@ void p_cpu_gpr_set(struct p_ctx *const ctx, const enum p_cpu_gpr gpr,
 	ctx->cpu.gpr[gpr] = val;
 }
 
-void p_cpu_run(struct p_ctx *const ctx, u64 cycles)
-{
-	cycles += ctx->sched.ts_now;
-
-	while (ctx->sched.ts_now < cycles)
-		p_cpu_step(ctx);
-}
-
 void p_cpu_rst(struct p_ctx *const ctx)
 {
 	memset(ctx->cpu.gpr, 0, sizeof(ctx->cpu.gpr));
@@ -333,7 +326,7 @@ void p_cpu_rst(struct p_ctx *const ctx)
 	LOG_INFO(ctx, "reset");
 }
 
-void p_cpu_step(struct p_ctx *const ctx)
+static void step(struct p_ctx *const ctx)
 {
 #define gpr (ctx->cpu.gpr)
 #define pc (ctx->cpu.pc)
@@ -366,6 +359,7 @@ void p_cpu_step(struct p_ctx *const ctx)
 	npc = ctx->cpu.dly_pc + sizeof(instr);
 
 	disasm_capture(ctx);
+	p_bios_trace_begin(ctx);
 
 	dly_slot_process(ctx);
 
@@ -741,5 +735,14 @@ void p_cpu_step(struct p_ctx *const ctx)
 	// Better than a branch - ensure that zero is indeed always zero.
 	gpr[P_ZERO] = 0;
 
+	p_bios_trace_end(ctx);
 	disasm_emit(ctx);
+}
+
+void p_cpu_run(struct p_ctx *const ctx, u64 cycles)
+{
+	cycles += ctx->sched.ts_now;
+
+	while (ctx->sched.ts_now < cycles)
+		step(ctx);
 }

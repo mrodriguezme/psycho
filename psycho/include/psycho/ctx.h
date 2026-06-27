@@ -53,6 +53,8 @@ struct p_ctx {
 		const u8 *data;
 		size_t size;
 	} exe;
+
+	bool kernel_initialized;
 };
 
 enum p_ctx_ret {

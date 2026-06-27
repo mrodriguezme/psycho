@@ -125,9 +125,7 @@ void p_step(struct p_ctx *const ctx)
 	if ((ctx->exe.data) && (ctx->cpu.pc == KERNEL_INIT_PC))
 		exe_inject(ctx);
 
-	p_bios_trace_begin(ctx);
-	p_cpu_step(ctx);
-	p_bios_trace_end(ctx);
+	p_cpu_run(ctx, 1);
 }
 
 P_NODISCARD enum p_ctx_ret p_run_exe(struct p_ctx *const ctx,
@@ -153,10 +151,21 @@ P_NODISCARD enum p_ctx_ret p_run_exe(struct p_ctx *const ctx,
 	return P_OK;
 }
 
-void p_run_until_ev(struct p_ctx *ctx)
+void p_run_until_ev(struct p_ctx *const ctx)
 {
+	bool inject = false;
+
 	for (;;) {
-		p_cpu_run(ctx, 100);
+		if ((inject) && ctx->cpu.pc == KERNEL_INIT_PC) {
+			exe_inject(ctx);
+			inject = false;
+		}
+
+		if (ctx->exe.data) {
+			inject = true;
+			p_cpu_run(ctx, 1);
+		} else
+			p_cpu_run(ctx, 100);
 
 		if (p_sched_run(ctx))
 			break;

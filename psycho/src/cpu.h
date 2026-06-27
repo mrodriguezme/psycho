@@ -32,4 +32,3 @@ void p_cpu_gpr_set(struct p_ctx *ctx, const enum p_cpu_gpr gpr, const u32 val)
 void p_cpu_run(struct p_ctx *ctx, u64 cycles) __attribute__((nonnull));
 
 void p_cpu_rst(struct p_ctx *ctx) __attribute__((nonnull));
-void p_cpu_step(struct p_ctx *ctx) __attribute__((nonnull));
