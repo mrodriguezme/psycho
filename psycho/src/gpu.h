@@ -27,6 +27,7 @@
 enum {
 	// clang-format off
 
+	GPU_ADDR_GPUREAD	= 0x1F801810,
 	GPU_ADDR_GP0		= 0x1F801810,
 	GPU_ADDR_GP1		= 0x1F801814,
 	GPU_ADDR_GPUSTAT	= GPU_ADDR_GP1
@@ -40,7 +41,7 @@ enum {
 	GP0_CMD_NOP			= 0x00,
 	GP0_CMD_CLR_CACHE		= 0x01,
 	GP0_CMD_CPY_RECT_CPU_TO_VRAM	= 0xA0,
-	GP0_CMD_CPY_RECT_FROM_VRAM	= 0xC0,
+	GP0_CMD_CPY_RECT_VRAM_TO_CPU	= 0xC0,
 
 	// clang-format on
 };
@@ -49,7 +50,7 @@ enum {
 	// clang-format off
 
 	GP1_CMD_RST		= 0x00,
-	GP1_CMD_FIFO_CLR	= 0x01,
+	GP1_CMD_GPU_INFO	= 0x10
 
 	// clang-format on
 };
@@ -59,3 +60,5 @@ void p_gpu_rst(struct p_ctx *const ctx) __attribute__((nonnull));
 
 void p_gpu_gp0(struct p_ctx *ctx, const u32 packet) __attribute__((nonnull));
 void p_gpu_gp1(struct p_ctx *ctx, const u32 packet) __attribute__((nonnull));
+
+P_NODISCARD u32 p_gpu_gpuread(struct p_ctx *ctx) __attribute__((nonnull));

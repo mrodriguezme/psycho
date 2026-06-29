@@ -22,6 +22,7 @@
 
 #pragma once
 
+#include <stddef.h>
 #include "types.h"
 
 #ifdef __cplusplus
@@ -29,17 +30,33 @@ extern "C" {
 #endif // __cplusplus
 
 enum {
-	VRAM_NUM_LINES	= 512,
-	VRAM_LINE_SIZE	= 2048,
+	VRAM_HEIGHT = 512,
+	VRAM_WIDTH = 1024,
 };
 
 struct p_ctx;
 
 struct p_gpu {
-	void (*cmd_handler)(struct p_ctx *ctx, u32 packet);
-	u32 gpustat;
+	struct {
+		void (*fn)(struct p_ctx *ctx);
+		size_t rem_params;
+		size_t params;
+		u32 data[64];
+	} init;
+
+	struct {
+		size_t x;
+		size_t y;
+		size_t x_orig;
+		size_t x_max;
+		uint rem;
+	} copy;
 
 	u16 *vram;
+	void (*cmd_fn)(struct p_ctx *ctx, u32 packet);
+
+	u32 gpustat;
+	u32 gpuread;
 };
 
 #ifdef __cplusplus

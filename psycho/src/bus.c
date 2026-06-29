@@ -83,6 +83,9 @@ u32 p_load_word(struct p_ctx *const ctx, const u32 paddr)
 	case GPU_ADDR_GPUSTAT:
 		return ctx->gpu.gpustat;
 
+	case GPU_ADDR_GPUREAD:
+		return p_gpu_gpuread(ctx);
+
 	case BIOS_PADDR_BEGIN ... BIOS_PADDR_END:
 		memcpy(&word, &ctx->bus.bios[paddr & BIOS_PADDR_MASK],
 		       sizeof(u32));
