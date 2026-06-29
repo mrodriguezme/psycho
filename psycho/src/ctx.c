@@ -28,6 +28,7 @@
 #include "bus.h"
 #include "cpu.h"
 #include "cpu_defs.h"
+#include "gpu.h"
 #include "log.h"
 #include "sched.h"
 #include "util.h"
@@ -107,8 +108,10 @@ void p_init(struct p_ctx *const ctx)
 {
 	p_bios_trace_init(ctx);
 	p_bus_init(ctx);
+	p_gpu_init(ctx);
 
 	p_rst(ctx);
+
 	LOG_INFO(ctx, "initialized");
 }
 
@@ -116,6 +119,7 @@ void p_rst(struct p_ctx *const ctx)
 {
 	p_sched_rst(ctx);
 	p_cpu_rst(ctx);
+	p_gpu_rst(ctx);
 
 	LOG_INFO(ctx, "reset");
 }

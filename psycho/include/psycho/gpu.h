@@ -22,39 +22,24 @@
 
 #pragma once
 
-#include <stdbool.h>
-#include <stddef.h>
 #include "types.h"
 
 #ifdef __cplusplus
 extern "C" {
 #endif // __cplusplus
 
+enum {
+	VRAM_NUM_LINES	= 512,
+	VRAM_LINE_SIZE	= 2048,
+};
+
 struct p_ctx;
 
-enum p_sched_ev_type;
+struct p_gpu {
+	void (*cmd_handler)(struct p_ctx *ctx, u32 packet);
+	u32 gpustat;
 
-enum {
-	P_SCHED_NUM_EVENTS = 10,
-};
-
-enum p_sched_ev_type {
-	P_SCHED_EV_VBLANK,
-	P_SCHED_EV_COUNT,
-};
-
-struct p_sched_ev {
-	void (*cb)(struct p_ctx *ctx);
-	enum p_sched_ev_type type;
-	size_t idx;
-	bool valid;
-	u64 ts;
-};
-
-struct p_sched {
-	struct p_sched_ev *ev[P_SCHED_NUM_EVENTS];
-	size_t num_ev;
-	u64 ts_now;
+	u16 *vram;
 };
 
 #ifdef __cplusplus

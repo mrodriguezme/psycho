@@ -47,6 +47,8 @@ enum p_log_mod {
 	P_LOG_BUS,
 	P_LOG_BIOS,
 	P_LOG_SCHED,
+	P_LOG_GPU,
+	P_LOG_INTCTRL,
 	P_LOG_MOD_COUNT,
 };
 

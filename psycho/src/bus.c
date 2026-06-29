@@ -25,6 +25,8 @@
 #include <string.h>
 
 #include "bus.h"
+#include "gpu.h"
+#include "intctrl.h"
 #include "log.h"
 
 LOG_MOD(P_LOG_BUS);
@@ -71,6 +73,15 @@ u32 p_load_word(struct p_ctx *const ctx, const u32 paddr)
 		memcpy(&word, &ctx->bus.spad[paddr & SCRATCHPAD_PADDR_MASK],
 		       sizeof(u32));
 		return word;
+
+	case INTCTRL_ADDR_I_STAT:
+		return ctx->intctrl.i_stat;
+
+	case INTCTRL_ADDR_I_MASK:
+		return ctx->intctrl.i_mask;
+
+	case GPU_ADDR_GPUSTAT:
+		return ctx->gpu.gpustat;
 
 	case BIOS_PADDR_BEGIN ... BIOS_PADDR_END:
 		memcpy(&word, &ctx->bus.bios[paddr & BIOS_PADDR_MASK],
@@ -137,6 +148,22 @@ void p_store_word(struct p_ctx *const ctx, const u32 paddr, const u32 word)
 	case SCRATCHPAD_PADDR_BEGIN ... SCRATCHPAD_PADDR_END:
 		memcpy(&ctx->bus.spad[paddr & SCRATCHPAD_PADDR_MASK], &word,
 		       sizeof(u32));
+		return;
+
+	case INTCTRL_ADDR_I_STAT:
+		p_irq_ack(ctx, word);
+		return;
+
+	case INTCTRL_ADDR_I_MASK:
+		p_irq_mask_set(ctx, word);
+		return;
+
+	case GPU_ADDR_GP0:
+		p_gpu_gp0(ctx, word);
+		return;
+
+	case GPU_ADDR_GP1:
+		p_gpu_gp1(ctx, word);
 		return;
 
 	default:

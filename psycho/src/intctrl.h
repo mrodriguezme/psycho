@@ -22,41 +22,38 @@
 
 #pragma once
 
-#include <stdbool.h>
-#include <stddef.h>
-#include "types.h"
-
-#ifdef __cplusplus
-extern "C" {
-#endif // __cplusplus
-
-struct p_ctx;
-
-enum p_sched_ev_type;
+#include "psycho/ctx.h"
 
 enum {
-	P_SCHED_NUM_EVENTS = 10,
+	// clang-format off
+
+	INTCTRL_ADDR_I_STAT	= 0x1F801070,
+	INTCTRL_ADDR_I_MASK	= 0x1F801074,
+
+	// clang-format on
 };
 
-enum p_sched_ev_type {
-	P_SCHED_EV_VBLANK,
-	P_SCHED_EV_COUNT,
+enum irq {
+	// clang-format off
+
+	IRQ_VBLANK	= 1 << 0,
+	IRQ_GPU		= 1 << 1,
+	IRQ_CDROM	= 1 << 2,
+	IRQ_DMA		= 1 << 3,
+	IRQ_TMR0	= 1 << 4,
+	IRQ_TMR1	= 1 << 5,
+	IRQ_TMR2	= 1 << 6,
+	IRQ_SIO0	= 1 << 7,
+	IRQ_SIO1	= 1 << 8,
+	IRQ_SPU		= 1 << 9,
+	IRQ_CTRL	= 1 << 10,
+	IRQ_COUNT	= 11
+
+	// clang-format on
 };
 
-struct p_sched_ev {
-	void (*cb)(struct p_ctx *ctx);
-	enum p_sched_ev_type type;
-	size_t idx;
-	bool valid;
-	u64 ts;
-};
+void p_irq_mask_set(struct p_ctx *ctx, const u32 mask) __attribute__((nonnull));
 
-struct p_sched {
-	struct p_sched_ev *ev[P_SCHED_NUM_EVENTS];
-	size_t num_ev;
-	u64 ts_now;
-};
+void p_irq_ack(struct p_ctx *ctx, const u32 mask) __attribute__((nonnull));
 
-#ifdef __cplusplus
-}
-#endif // __cplusplus
+void p_irq_pending(struct p_ctx *ctx, const u32 mask) __attribute__((nonnull));

@@ -22,8 +22,6 @@
 
 #pragma once
 
-#include <stdbool.h>
-#include <stddef.h>
 #include "types.h"
 
 #ifdef __cplusplus
@@ -32,29 +30,9 @@ extern "C" {
 
 struct p_ctx;
 
-enum p_sched_ev_type;
-
-enum {
-	P_SCHED_NUM_EVENTS = 10,
-};
-
-enum p_sched_ev_type {
-	P_SCHED_EV_VBLANK,
-	P_SCHED_EV_COUNT,
-};
-
-struct p_sched_ev {
-	void (*cb)(struct p_ctx *ctx);
-	enum p_sched_ev_type type;
-	size_t idx;
-	bool valid;
-	u64 ts;
-};
-
-struct p_sched {
-	struct p_sched_ev *ev[P_SCHED_NUM_EVENTS];
-	size_t num_ev;
-	u64 ts_now;
+struct p_intctrl {
+	u32 i_stat;
+	u32 i_mask;
 };
 
 #ifdef __cplusplus

@@ -26,11 +26,14 @@
 extern "C" {
 #endif // __cplusplus
 
+#include "cpu_defs.h"
 #include "cpu.h"
 #include "bios_trace.h"
 #include "bus.h"
 #include "disasm.h"
 #include "log.h"
+#include "gpu.h"
+#include "intctrl.h"
 #include "sched.h"
 
 struct p_ctx_cfg {
@@ -46,6 +49,8 @@ struct p_ctx {
 	struct p_bus bus;
 	struct p_disasm disasm;
 	struct p_sched sched;
+	struct p_gpu gpu;
+	struct p_intctrl intctrl;
 
 	struct p_ctx_cfg cfg;
 
@@ -53,8 +58,6 @@ struct p_ctx {
 		const u8 *data;
 		size_t size;
 	} exe;
-
-	bool kernel_initialized;
 };
 
 enum p_ctx_ret {

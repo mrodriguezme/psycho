@@ -259,14 +259,14 @@ void p_disasm_instr(struct p_ctx *const ctx, const u32 pc,
 			trace_add(traces, P_DISASM_TRACE_CPU_LO);
 			trace_add(traces, P_DISASM_TRACE_CPU_HI);
 
-			break;
+			return;
 
 		case MULTU:
 			fmt("multu %s, %s", gpr[rs], gpr[rt]);
 			trace_add(traces, P_DISASM_TRACE_CPU_LO);
 			trace_add(traces, P_DISASM_TRACE_CPU_HI);
 
-			break;
+			return;
 
 		case DIV:
 			fmt("div %s, %s", gpr[rs], gpr[rt]);

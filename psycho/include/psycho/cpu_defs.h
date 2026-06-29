@@ -26,6 +26,10 @@
 extern "C" {
 #endif // __cplusplus
 
+enum {
+	P_CPU_CLKFREQ_HZ	= 33868800,
+};
+
 enum p_cpu_gpr {
 	P_ZERO,
 	P_AT,

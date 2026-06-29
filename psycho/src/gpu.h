@@ -22,41 +22,40 @@
 
 #pragma once
 
-#include <stdbool.h>
-#include <stddef.h>
-#include "types.h"
-
-#ifdef __cplusplus
-extern "C" {
-#endif // __cplusplus
-
-struct p_ctx;
-
-enum p_sched_ev_type;
+#include "psycho/ctx.h"
 
 enum {
-	P_SCHED_NUM_EVENTS = 10,
+	// clang-format off
+
+	GPU_ADDR_GP0		= 0x1F801810,
+	GPU_ADDR_GP1		= 0x1F801814,
+	GPU_ADDR_GPUSTAT	= GPU_ADDR_GP1
+
+	// clang-format on
 };
 
-enum p_sched_ev_type {
-	P_SCHED_EV_VBLANK,
-	P_SCHED_EV_COUNT,
+enum {
+	// clang-format off
+
+	GP0_CMD_NOP			= 0x00,
+	GP0_CMD_CLR_CACHE		= 0x01,
+	GP0_CMD_CPY_RECT_CPU_TO_VRAM	= 0xA0,
+	GP0_CMD_CPY_RECT_FROM_VRAM	= 0xC0,
+
+	// clang-format on
 };
 
-struct p_sched_ev {
-	void (*cb)(struct p_ctx *ctx);
-	enum p_sched_ev_type type;
-	size_t idx;
-	bool valid;
-	u64 ts;
+enum {
+	// clang-format off
+
+	GP1_CMD_RST		= 0x00,
+	GP1_CMD_FIFO_CLR	= 0x01,
+
+	// clang-format on
 };
 
-struct p_sched {
-	struct p_sched_ev *ev[P_SCHED_NUM_EVENTS];
-	size_t num_ev;
-	u64 ts_now;
-};
+void p_gpu_init(struct p_ctx *ctx) __attribute__((nonnull));
+void p_gpu_rst(struct p_ctx *const ctx) __attribute__((nonnull));
 
-#ifdef __cplusplus
-}
-#endif // __cplusplus
+void p_gpu_gp0(struct p_ctx *ctx, const u32 packet) __attribute__((nonnull));
+void p_gpu_gp1(struct p_ctx *ctx, const u32 packet) __attribute__((nonnull));

@@ -29,6 +29,14 @@
 
 LOG_MOD(P_LOG_SCHED);
 
+static const char *const ev_names[P_SCHED_EV_COUNT] = {
+	// clang-format off
+
+	[P_SCHED_EV_VBLANK]	= "vblank"
+
+	// clang-format on
+};
+
 P_NODISCARD static size_t node_parent(const size_t node)
 {
 	return (node - 1) / 2;
@@ -105,9 +113,16 @@ bool p_sched_run(struct p_ctx *const ctx)
 		ev_ran = true;
 
 		struct p_sched_ev *const ev = ctx->sched.ev[0];
-		ev->cb(ctx);
+
+		const u64 jitter = ctx->sched.ts_now -  ev->ts;
+
+		LOG_TRACE(ctx,
+			  "servicing event \"%s\" (current timestamp=%lu), "
+			  "jitter cycles=%lu",
+			  ev_names[ev->type], ctx->sched.ts_now, jitter);
 
 		p_sched_del(ctx, ev);
+		ev->cb(ctx);
 	}
 	return ev_ran;
 }
@@ -120,8 +135,18 @@ void p_sched_add(struct p_ctx *const ctx, struct p_sched_ev *const ev)
 
 	ev->idx = node;
 	ev->valid = true;
+	ev->ts += ctx->sched.ts_now;
 
 	ctx->sched.ev[ctx->sched.num_ev++] = ev;
+
+	const u64 expiry = ev->ts - ctx->sched.ts_now;
+
+	LOG_TRACE(
+		ctx,
+		"adding event \"%s\"; will be serviced in %lu cycle%s; current "
+		"time is %lu",
+		ev_names[ev->type], expiry, (expiry != 0) ? "s" : "",
+		ctx->sched.ts_now);
 
 	sift_up(ctx, node);
 }
@@ -142,4 +167,6 @@ void p_sched_del(struct p_ctx *const ctx, struct p_sched_ev *const ev)
 		sift_down(ctx, idx);
 		sift_up(ctx, idx);
 	}
+
+	LOG_TRACE(ctx, "event \"%s\" deleted", ev_names[ev->type]);
 }

@@ -32,6 +32,8 @@ target_sources(
 	include/psycho/cpu.h
 	include/psycho/ctx.h
 	include/psycho/disasm.h
+	include/psycho/gpu.h
+	include/psycho/intctrl.h
 	include/psycho/log.h
 	include/psycho/sched.h
 	include/psycho/str.h
@@ -45,6 +47,10 @@ target_sources(
 	src/cpu.h
 	src/ctx.c
 	src/disasm.c
+	src/gpu.c
+	src/gpu.h
+	src/intctrl.c
+	src/intctrl.h
 	src/log.c
 	src/log.h
 	src/sched.c

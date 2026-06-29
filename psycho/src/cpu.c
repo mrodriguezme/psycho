@@ -746,3 +746,14 @@ void p_cpu_run(struct p_ctx *const ctx, u64 cycles)
 	while (ctx->sched.ts_now < cycles)
 		step(ctx);
 }
+
+void p_cpu_irq_mux_set(struct p_ctx *const ctx, const bool set)
+{
+	if (set) {
+		ctx->cpu.cop0[P_SR] |= (1 << 10);
+		LOG_DBG(ctx, "irq mux line asserted");
+	} else {
+		ctx->cpu.cop0[P_SR] &= ~(1 << 10);
+		LOG_DBG(ctx, "irq mux line not asserted");
+	}
+}

@@ -178,10 +178,12 @@ int main(int argc, char **argv)
 
 	cfg->log.log_cb = log_cb;
 	cfg->log.mod[P_LOG_CTX] = P_LOG_TRACE;
-	cfg->log.mod[P_LOG_CPU] = P_LOG_TRACE;
+	cfg->log.mod[P_LOG_CPU] = P_LOG_OFF;
 	cfg->log.mod[P_LOG_BUS] = P_LOG_TRACE;
 	cfg->log.mod[P_LOG_BIOS] = P_LOG_TRACE;
-	cfg->log.mod[P_LOG_SCHED] = P_LOG_TRACE;
+	cfg->log.mod[P_LOG_SCHED] = P_LOG_OFF;
+	cfg->log.mod[P_LOG_GPU] = P_LOG_TRACE;
+	cfg->log.mod[P_LOG_INTCTRL] = P_LOG_TRACE;
 
 	cfg->bios_trace.stdout_line = on_stdout_line;
 	cfg->bios_trace.deref_ptrs = true;
