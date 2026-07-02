@@ -47,6 +47,8 @@ target_sources(
 	src/cpu.h
 	src/ctx.c
 	src/disasm.c
+	src/gpu_sw.c
+	src/gpu_sw.h
 	src/gpu.c
 	src/gpu.h
 	src/intctrl.c

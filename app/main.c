@@ -27,6 +27,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <sys/stat.h>
+#include <SDL3/SDL.h>
 
 #include "ansi-color-codes.h"
 #include "psycho/ctx.h"
@@ -35,6 +36,9 @@ static struct p_ctx m_ctx;
 static u8 *exe_data;
 static size_t exe_size;
 static const char *prog_name;
+static SDL_Window *window;
+static SDL_Renderer *renderer;
+static SDL_Texture *texture;
 
 static void log_cb(struct p_ctx *const ctx, const struct p_log_msg *const msg)
 {
@@ -84,6 +88,15 @@ static bool get_file_size(const char *const file, size_t *const file_size)
 
 	*file_size = st.st_size;
 	return true;
+}
+
+static void on_vblank(struct p_ctx *const ctx)
+{
+	SDL_UpdateTexture(texture, NULL, ctx->gpu.vram,
+			  VRAM_WIDTH * sizeof(*ctx->gpu.vram));
+	SDL_RenderClear(renderer);
+	SDL_RenderTexture(renderer, texture, NULL, NULL);
+	SDL_RenderPresent(renderer);
 }
 
 static bool load_bios_file(const char *const bios_file)
@@ -181,14 +194,16 @@ int main(int argc, char **argv)
 	cfg->log.mod[P_LOG_CPU] = P_LOG_OFF;
 	cfg->log.mod[P_LOG_BUS] = P_LOG_TRACE;
 	cfg->log.mod[P_LOG_BIOS] = P_LOG_TRACE;
-	cfg->log.mod[P_LOG_SCHED] = P_LOG_OFF;
-	cfg->log.mod[P_LOG_GPU] = P_LOG_TRACE;
+	cfg->log.mod[P_LOG_SCHED] = P_LOG_TRACE;
+	cfg->log.mod[P_LOG_GPU] = P_LOG_OFF;
 	cfg->log.mod[P_LOG_INTCTRL] = P_LOG_TRACE;
 
 	cfg->bios_trace.stdout_line = on_stdout_line;
 	cfg->bios_trace.deref_ptrs = true;
 
-	cfg->disasm.tracing = true;
+	//cfg->disasm.tracing = true;
+
+	cfg->on_vblank = on_vblank;
 
 	p_init(&m_ctx);
 
@@ -203,8 +218,51 @@ int main(int argc, char **argv)
 		return EXIT_FAILURE;
 	}
 
-	for (;;)
+	if (!SDL_Init(SDL_INIT_VIDEO)) {
+		SDL_LogError(SDL_LOG_CATEGORY_APPLICATION,
+			     "Couldn't initialize SDL: %s", SDL_GetError());
+		return EXIT_FAILURE;
+	}
+
+	if (!SDL_CreateWindowAndRenderer("psycho", 1920, 1080,
+					 SDL_WINDOW_RESIZABLE, &window,
+					 &renderer)) {
+		SDL_LogError(SDL_LOG_CATEGORY_APPLICATION,
+			     "Couldn't create window and renderer: %s",
+			     SDL_GetError());
+		return EXIT_FAILURE;
+	}
+
+	texture = SDL_CreateTexture(renderer, SDL_PIXELFORMAT_XBGR1555,
+				    SDL_TEXTUREACCESS_STREAMING, VRAM_WIDTH,
+				    VRAM_HEIGHT);
+
+	SDL_RenderClear(renderer);
+	SDL_RenderTexture(renderer, texture, NULL, NULL);
+	SDL_RenderPresent(renderer);
+
+	for (;;) {
+		SDL_Event event;
+		while (SDL_PollEvent(&event))
+			if (event.type == SDL_EVENT_QUIT)
+				goto end;
+
+		Uint64 start_ticks = SDL_GetTicks();
 		p_run_until_ev(&m_ctx);
+		Uint64 end_ticks = SDL_GetTicks();
+
+		Uint64 ft = end_ticks - start_ticks;
+
+		if (ft < (1000 / 60))
+			SDL_Delay((1000 / 60) - ft);
+	}
+
+end:
+	SDL_DestroyTexture(texture);
+	SDL_DestroyRenderer(renderer);
+	SDL_DestroyWindow(window);
+
+	SDL_Quit();
 
 	return EXIT_SUCCESS;
 }

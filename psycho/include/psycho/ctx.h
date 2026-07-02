@@ -41,6 +41,8 @@ struct p_ctx_cfg {
 	struct p_bios_trace_cfg bios_trace;
 	struct p_disasm_cfg disasm;
 	struct p_log_cfg log;
+
+	void (*on_vblank)(struct p_ctx *ctx);
 };
 
 struct p_ctx {

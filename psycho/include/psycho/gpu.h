@@ -36,6 +36,16 @@ enum {
 
 struct p_ctx;
 
+struct p_gpu_vertex {
+	s16 x;
+	s16 y;
+	uint color;
+};
+
+struct p_gpu_render_ops {
+	void (*rect)(struct p_ctx *ctx, struct p_gpu_vertex *v0);
+};
+
 struct p_gpu {
 	struct {
 		void (*fn)(struct p_ctx *ctx);
@@ -51,6 +61,10 @@ struct p_gpu {
 		size_t x_max;
 		uint rem;
 	} copy;
+
+	struct p_gpu_vertex rect;
+
+	struct p_gpu_render_ops render_ops;
 
 	u16 *vram;
 	void (*cmd_fn)(struct p_ctx *ctx, u32 packet);

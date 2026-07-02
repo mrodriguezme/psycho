@@ -38,8 +38,7 @@ enum {
 enum {
 	// clang-format off
 
-	GP0_CMD_NOP			= 0x00,
-	GP0_CMD_CLR_CACHE		= 0x01,
+	GP0_CMD_MONO_RECT_1X1_OPAQUE	= 0x68,
 	GP0_CMD_CPY_RECT_CPU_TO_VRAM	= 0xA0,
 	GP0_CMD_CPY_RECT_VRAM_TO_CPU	= 0xC0,
 
@@ -60,5 +59,27 @@ void p_gpu_rst(struct p_ctx *const ctx) __attribute__((nonnull));
 
 void p_gpu_gp0(struct p_ctx *ctx, const u32 packet) __attribute__((nonnull));
 void p_gpu_gp1(struct p_ctx *ctx, const u32 packet) __attribute__((nonnull));
+
+__attribute__((nonnull)) P_ALWAYS_INLINE void
+vram_px_set(struct p_ctx *const ctx, const size_t x, const size_t y,
+	    const u16 data)
+{
+	ctx->gpu.vram[x + (VRAM_WIDTH * y)] = data;
+}
+
+__attribute__((nonnull)) P_ALWAYS_INLINE u16
+vram_px_get(struct p_ctx *const ctx, const size_t x, const size_t y)
+{
+	return ctx->gpu.vram[x + (VRAM_WIDTH * y)];
+}
+
+P_NODISCARD P_ALWAYS_INLINE u16 color_to_15bit(const u32 px)
+{
+	const uint r = (px & UINT8_MAX) >> 3;
+	const uint g = ((px >> 8) & UINT8_MAX) >> 3;
+	const uint b = ((px >> 16) & UINT8_MAX) >> 3;
+
+	return (b << 10) | (g << 5) | r;
+}
 
 P_NODISCARD u32 p_gpu_gpuread(struct p_ctx *ctx) __attribute__((nonnull));

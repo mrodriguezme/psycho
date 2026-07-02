@@ -20,5 +20,11 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
+find_package(SDL3 REQUIRED)
+
 add_executable(psycho_testbed main.c)
-target_link_libraries(psycho_testbed PRIVATE psycho_cfg_base_c psycho)
+
+target_link_libraries(
+	psycho_testbed PRIVATE
+	psycho_cfg_base_c psycho SDL3::SDL3
+)

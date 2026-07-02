@@ -23,6 +23,7 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "gpu_sw.h"
 #include "gpu.h"
 #include "intctrl.h"
 #include "log.h"
@@ -73,6 +74,9 @@ P_NODISCARD static uint ysiz_mask_cpy(const u16 ysiz)
 
 static void on_vblank(struct p_ctx *const ctx)
 {
+	if (ctx->cfg.on_vblank)
+		ctx->cfg.on_vblank(ctx);
+
 	p_irq_pending(ctx, IRQ_VBLANK);
 
 	ev_vblank.type = P_SCHED_EV_VBLANK;
@@ -80,20 +84,6 @@ static void on_vblank(struct p_ctx *const ctx)
 	ev_vblank.ts = P_CPU_CLKFREQ_HZ / 60;
 
 	p_sched_add(ctx, &ev_vblank);
-}
-
-__attribute__((nonnull)) static void vram_set_pixel(struct p_ctx *const ctx,
-						    const size_t x,
-						    const size_t y,
-						    const u16 data)
-{
-	ctx->gpu.vram[x + (VRAM_WIDTH * y)] = data;
-}
-
-__attribute__((nonnull)) static u16
-vram_get_pixel(struct p_ctx *const ctx, const size_t x, const size_t y)
-{
-	return ctx->gpu.vram[x + (VRAM_WIDTH * y)];
 }
 
 __attribute__((nonnull)) static void copy_adv(struct p_ctx *const ctx)
@@ -107,15 +97,15 @@ __attribute__((nonnull)) static void copy_adv(struct p_ctx *const ctx)
 }
 
 __attribute__((nonnull)) static void cpy_pixel_to_vram(struct p_ctx *const ctx,
-						       const u16 pixel)
+						       const u16 px)
 {
-	vram_set_pixel(ctx, ctx->gpu.copy.x, ctx->gpu.copy.y, pixel);
+	vram_px_set(ctx, ctx->gpu.copy.x, ctx->gpu.copy.y, px);
 	copy_adv(ctx);
 }
 
 __attribute__((nonnull)) static u16 cpy_pixel_to_cpu(struct p_ctx *const ctx)
 {
-	const u16 px = vram_get_pixel(ctx, ctx->gpu.copy.x, ctx->gpu.copy.y);
+	const u16 px = vram_px_get(ctx, ctx->gpu.copy.x, ctx->gpu.copy.y);
 	copy_adv(ctx);
 
 	return px;
@@ -154,6 +144,15 @@ cpy_rect_cpu_to_vram_exec(struct p_ctx *const ctx, const u32 data)
 	}
 }
 
+__attribute__((nonnull)) static void draw_rect_init(struct p_ctx *const ctx)
+{
+	ctx->gpu.rect.x = ctx->gpu.init.data[0] & UINT16_MAX;
+	ctx->gpu.rect.y = ctx->gpu.init.data[0] >> 16;
+
+	ctx->gpu.render_ops.rect(ctx, &ctx->gpu.rect);
+	ctx->gpu.gpustat |= GPUSTAT_RDY_CMD_WORD_BIT;
+}
+
 __attribute__((nonnull)) static void
 cpy_rect_cpu_to_vram_init(struct p_ctx *const ctx)
 {
@@ -172,6 +171,14 @@ __attribute__((nonnull)) static void gp0(struct p_ctx *const ctx, const u8 cmd,
 					 const u32 param)
 {
 	switch (cmd) {
+	case GP0_CMD_MONO_RECT_1X1_OPAQUE:
+		ctx->gpu.init.fn = draw_rect_init;
+		ctx->gpu.init.rem_params = 1;
+		ctx->gpu.rect.color = param;
+
+		ctx->gpu.gpustat &= ~GPUSTAT_RDY_CMD_WORD_BIT;
+		return;
+
 	case GP0_CMD_CPY_RECT_CPU_TO_VRAM:
 		ctx->gpu.init.fn = cpy_rect_cpu_to_vram_init;
 		ctx->gpu.init.rem_params = 2;
@@ -210,6 +217,8 @@ void p_gpu_init(struct p_ctx *const ctx)
 {
 	ctx->gpu.vram =
 		malloc(VRAM_WIDTH * VRAM_HEIGHT * sizeof(*ctx->gpu.vram));
+
+	ctx->gpu.render_ops.rect = p_gpu_sw_draw_rect;
 }
 
 void p_gpu_rst(struct p_ctx *const ctx)

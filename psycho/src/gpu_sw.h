@@ -21,3 +21,7 @@
 // SOFTWARE.
 
 #pragma once
+
+#include "psycho/ctx.h"
+
+void p_gpu_sw_draw_rect(struct p_ctx *ctx, struct p_gpu_vertex *const v0);
