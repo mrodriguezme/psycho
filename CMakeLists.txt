@@ -110,7 +110,6 @@ add_compiler_flags(
 	-Wuninitialized
 	-Wunknown-pragmas
 	-Wunsafe-loop-optimizations
-	-Wunsuffixed-float-constants
 	-Wunused-macros
 	-Wvla
 	-Wwrite-strings
