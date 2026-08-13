@@ -24,6 +24,6 @@
 
 #include "psycho/ctx.h"
 
-void p_bios_trace_init(struct p_ctx *ctx) __attribute__((nonnull));
-void p_bios_trace_begin(struct p_ctx *ctx) __attribute__((nonnull));
-void p_bios_trace_end(struct p_ctx *ctx) __attribute__((nonnull));
+void p_bios_trace_init(struct p_ctx *ctx) P_NONNULL;
+void p_bios_trace_begin(struct p_ctx *ctx) P_NONNULL;
+void p_bios_trace_end(struct p_ctx *ctx) P_NONNULL;

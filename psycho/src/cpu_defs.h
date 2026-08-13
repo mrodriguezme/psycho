@@ -28,7 +28,7 @@
 
 #define RST_VECTOR (UINT32_C(0xBFC00000))
 
-#define SR_ISC (1 << 16)
+#define SR_ISC	   (1 << 16)
 
 enum cpu_exc {
 	// clang-format off
@@ -118,61 +118,59 @@ enum instr_grp_cop {
 	MTC = 0x04,
 };
 
-enum instr_grp_cop0 {
-	RFE = 0x10
-};
+enum instr_grp_cop0 { RFE = 0x10 };
 
-P_NODISCARD P_ALWAYS_INLINE u32 vaddr_to_paddr(const u32 vaddr)
+P_NODISCARD P_ALWAYS_INLINE u32 vaddr_to_paddr(u32 vaddr)
 {
 	return vaddr & 0x1FFFFFFF;
 }
 
-P_NODISCARD P_ALWAYS_INLINE uint instr_op(const u32 instr)
+P_NODISCARD P_ALWAYS_INLINE uint instr_op(u32 instr)
 {
 	return instr >> 26;
 }
 
-P_NODISCARD P_ALWAYS_INLINE uint instr_rs(const u32 instr)
+P_NODISCARD P_ALWAYS_INLINE uint instr_rs(u32 instr)
 {
 	return (instr >> 21) & 0x1F;
 }
 
-P_NODISCARD P_ALWAYS_INLINE uint instr_rt(const u32 instr)
+P_NODISCARD P_ALWAYS_INLINE uint instr_rt(u32 instr)
 {
 	return (instr >> 16) & 0x1F;
 }
 
-P_NODISCARD P_ALWAYS_INLINE uint instr_rd(const u32 instr)
+P_NODISCARD P_ALWAYS_INLINE uint instr_rd(u32 instr)
 {
 	return (instr >> 11) & 0x1F;
 }
 
-P_NODISCARD P_ALWAYS_INLINE uint instr_shamt(const u32 instr)
+P_NODISCARD P_ALWAYS_INLINE uint instr_shamt(u32 instr)
 {
 	return (instr >> 6) & 0x1F;
 }
 
-P_NODISCARD P_ALWAYS_INLINE uint instr_target(const u32 instr)
+P_NODISCARD P_ALWAYS_INLINE uint instr_target(u32 instr)
 {
 	return instr & 0x03FFFFFF;
 }
 
-P_NODISCARD P_ALWAYS_INLINE uint instr_funct(const u32 instr)
+P_NODISCARD P_ALWAYS_INLINE uint instr_funct(u32 instr)
 {
 	return instr & 0x0000003F;
 }
 
-P_NODISCARD P_ALWAYS_INLINE u16 instr_imm(const u32 instr)
+P_NODISCARD P_ALWAYS_INLINE u16 instr_imm(u32 instr)
 {
 	return instr & UINT16_MAX;
 }
 
-P_NODISCARD P_ALWAYS_INLINE u32 jmp_addr(const u32 pc, const u32 instr)
+P_NODISCARD P_ALWAYS_INLINE u32 jmp_addr(u32 pc, u32 instr)
 {
 	return (instr_target(instr) << 2) + (pc & 0xF0000000);
 }
 
-P_NODISCARD P_ALWAYS_INLINE u32 branch_addr(const u32 pc, const u32 instr)
+P_NODISCARD P_ALWAYS_INLINE u32 branch_addr(u32 pc, u32 instr)
 {
 	return sext_16_32(instr_imm(instr) << 2) + pc + sizeof(instr);
 }

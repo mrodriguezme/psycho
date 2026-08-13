@@ -65,12 +65,12 @@ struct p_ctx {
 
 enum p_ctx_ret {
 	P_EXE_FILE_SIZE_INVALID = -3,
-	P_EXE_SIZE_INVALID = -2,
-	P_EXE_ID_INVALID = -1,
-	P_OK = 1,
+	P_EXE_SIZE_INVALID	= -2,
+	P_EXE_ID_INVALID	= -1,
+	P_OK			= 1,
 };
 
-P_NODISCARD struct p_ctx_cfg *p_cfg_get(struct p_ctx *ctx) P_NONNULL;
+P_NODISCARD P_CONST struct p_ctx_cfg *p_cfg_get(struct p_ctx *ctx) P_NONNULL;
 
 void p_init(struct p_ctx *ctx) P_NONNULL;
 
@@ -78,10 +78,10 @@ void p_rst(struct p_ctx *ctx) P_NONNULL;
 
 void p_step(struct p_ctx *ctx) P_NONNULL;
 
-void p_run_until_ev(struct p_ctx *ctx) P_NONNULL;
-
 P_NODISCARD enum p_ctx_ret p_run_exe(struct p_ctx *ctx, u8 *exe,
 				     size_t size) P_NONNULL;
+
+void p_run_until_ev(struct p_ctx *ctx) P_NONNULL;
 
 #ifdef __cplusplus
 }

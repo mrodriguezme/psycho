@@ -36,11 +36,7 @@
 
 LOG_MOD(P_LOG_CTX);
 
-// clang-format off
-
-#define KERNEL_INIT_PC	(UINT32_C(0x80030000))
-
-// clang-format on
+#define KERNEL_INIT_PC (UINT32_C(0x80030000))
 
 struct exe_hdr {
 	const char id[0x008 - 0x000];
@@ -128,7 +124,7 @@ void p_rst(struct p_ctx *ctx)
 
 void p_step(struct p_ctx *ctx)
 {
-	if ((ctx->exe.data) && (ctx->cpu.pc == KERNEL_INIT_PC))
+	if (unlikely((ctx->exe.data) && (ctx->cpu.pc == KERNEL_INIT_PC)))
 		exe_inject(ctx);
 
 	p_cpu_run(ctx, 1);
@@ -136,15 +132,15 @@ void p_step(struct p_ctx *ctx)
 
 P_NODISCARD enum p_ctx_ret p_run_exe(struct p_ctx *ctx, u8 *exe, size_t size)
 {
-	if (size < sizeof(struct exe_hdr))
+	if (unlikely(size < sizeof(struct exe_hdr)))
 		return P_EXE_SIZE_INVALID;
 
-	struct exe_hdr *hdr = (struct exe_hdr *)exe;
+	const struct exe_hdr *hdr = (const struct exe_hdr *)exe;
 
-	if (memcmp(hdr->id, "PS-X EXE", sizeof("PS-X EXE") - 1) != 0)
+	if (unlikely(memcmp(hdr->id, "PS-X EXE", sizeof("PS-X EXE") - 1) != 0))
 		return P_EXE_ID_INVALID;
 
-	if (hdr->file_size != (size - offsetof(struct exe_hdr, code)))
+	if (unlikely(hdr->file_size != (size - offsetof(struct exe_hdr, code))))
 		return P_EXE_FILE_SIZE_INVALID;
 
 	ctx->exe.data = exe;
@@ -161,12 +157,12 @@ void p_run_until_ev(struct p_ctx *ctx)
 	bool inject = false;
 
 	while (!p_sched_run(ctx)) {
-		if ((inject) && ctx->cpu.pc == KERNEL_INIT_PC) {
+		if (unlikely((inject) && ctx->cpu.pc == KERNEL_INIT_PC)) {
 			exe_inject(ctx);
 			inject = false;
 		}
 
-		if (ctx->exe.data) {
+		if (unlikely(ctx->exe.data)) {
 			inject = true;
 			p_cpu_run(ctx, 1);
 		} else

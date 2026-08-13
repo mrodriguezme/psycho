@@ -27,19 +27,18 @@
 
 #include "str.h"
 
-void p_str_init_fixed(struct p_str *str, char *const ptr, const size_t cap)
+void p_str_init_fixed(struct p_str *str, char *ptr, size_t cap)
 {
 	memset(str, 0, sizeof(*str));
 
-	str->ptr = ptr;
+	str->ptr    = ptr;
 	str->ptr[0] = '\0';
 
 	str->cap = cap;
 	str->len = 0;
 }
 
-void p_str_append(struct p_str *const str, bool *const truncated,
-		  const char *const fmt, ...)
+void p_str_append(struct p_str *str, bool *truncated, const char *fmt, ...)
 {
 	va_list args;
 	va_start(args, fmt);
@@ -47,8 +46,8 @@ void p_str_append(struct p_str *const str, bool *const truncated,
 	va_end(args);
 }
 
-void p_str_vappend(struct p_str *const str, bool *const truncated,
-		   const char *const fmt, va_list args)
+void p_str_vappend(struct p_str *str, bool *truncated, const char *fmt,
+		   va_list args)
 {
 	const size_t rem = str->cap - str->len;
 
@@ -79,8 +78,7 @@ void p_str_vappend(struct p_str *const str, bool *const truncated,
 		*truncated = false;
 }
 
-void p_str_pad(struct p_str *const str, const char c, const size_t count,
-	       bool *const truncated)
+void p_str_pad(struct p_str *str, char c, size_t count, bool *truncated)
 {
 	if (str->len >= count) {
 		if (truncated)
@@ -90,7 +88,7 @@ void p_str_pad(struct p_str *const str, const char c, const size_t count,
 	}
 
 	const size_t needed = count - str->len;
-	const size_t rem = str->cap - str->len - 1;
+	const size_t rem    = str->cap - str->len - 1;
 
 	const size_t written = (needed > rem) ? rem : needed;
 	memset(&str->ptr[str->len], c, written);

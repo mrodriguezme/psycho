@@ -55,13 +55,13 @@ enum p_log_mod {
 };
 
 struct p_log_msg {
-	const struct p_str str;
-	const enum p_log_mod mod;
-	const enum p_log_lvl lvl;
+	struct p_str str;
+	enum p_log_mod mod;
+	enum p_log_lvl lvl;
 };
 
 struct p_log_cfg {
-	void (*log_cb)(struct p_ctx *ctx, const struct p_log_msg *msg);
+	void (*log_cb)(struct p_ctx *ctx, struct p_log_msg *msg);
 	enum p_log_lvl mod[P_LOG_MOD_COUNT];
 };
 

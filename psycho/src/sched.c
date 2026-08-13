@@ -31,7 +31,7 @@
 LOG_MOD(P_LOG_SCHED);
 
 static const char *ev_names[P_SCHED_EV_COUNT] = {
-	[P_SCHED_EV_VBLANK] = "vblank",
+	[P_SCHED_EV_VBLANK]  = "vblank",
 	[P_SCHED_EV_SIO0_TX] = "sio0 tx"
 };
 
@@ -75,8 +75,8 @@ P_NONNULL static void sift_down(struct p_ctx *ctx, size_t node)
 {
 	for (;;) {
 		size_t smallest = node;
-		const size_t l = node_left(node);
-		const size_t r = node_right(node);
+		const size_t l	= node_left(node);
+		const size_t r	= node_right(node);
 
 		if ((l < ctx->sched.num_ev) &&
 		    (ctx->sched.ev[l]->ts < ctx->sched.ev[smallest]->ts))
@@ -109,7 +109,7 @@ bool p_sched_run(struct p_ctx *ctx)
 		ev_ran = true;
 
 		struct p_sched_ev *ev = ctx->sched.ev[0];
-		u64 latency = ctx->sched.ts_now - ev->ts;
+		u64 latency	      = ctx->sched.ts_now - ev->ts;
 
 		LOG_TRACE(ctx,
 			  "servicing event \"%s\" (ts_now=%" PRIu64 "), "
@@ -134,7 +134,7 @@ void p_sched_add(struct p_ctx *ctx, struct p_sched_ev *ev)
 
 	size_t node = ctx->sched.num_ev;
 
-	ev->idx = node;
+	ev->idx	  = node;
 	ev->valid = true;
 
 	if (unlikely(ev->permanent)) {
@@ -146,7 +146,7 @@ void p_sched_add(struct p_ctx *ctx, struct p_sched_ev *ev)
 
 	ctx->sched.ev[ctx->sched.num_ev++] = ev;
 
-	u64 expiry = ev->ts - ctx->sched.ts_now;
+	u64 expiry	   = ev->ts - ctx->sched.ts_now;
 	const char *plural = likely(expiry != 1) ? "s" : "";
 
 	LOG_TRACE(ctx,
@@ -164,13 +164,13 @@ void p_sched_del(struct p_ctx *ctx, struct p_sched_ev *ev)
 
 	assert(ev->permanent != true);
 
-	size_t idx = ev->idx;
+	size_t idx  = ev->idx;
 	size_t last = --ctx->sched.num_ev;
 
 	ev->valid = false;
 
 	if (idx != last) {
-		ctx->sched.ev[idx] = ctx->sched.ev[last];
+		ctx->sched.ev[idx]	= ctx->sched.ev[last];
 		ctx->sched.ev[idx]->idx = idx;
 
 		sift_down(ctx, idx);

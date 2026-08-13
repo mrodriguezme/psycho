@@ -24,14 +24,12 @@
 
 #include "psycho/ctx.h"
 
-void p_cpu_irq_mux_set(struct p_ctx *ctx, const bool set)
-	__attribute__((nonnull));
+void p_cpu_irq_mux_set(struct p_ctx *ctx, bool set) P_NONNULL;
 
-void p_cpu_pc_set(struct p_ctx *ctx, const u32 pc) __attribute__((nonnull));
+void p_cpu_pc_set(struct p_ctx *ctx, u32 pc) P_NONNULL;
 
-void p_cpu_gpr_set(struct p_ctx *ctx, const enum p_cpu_gpr gpr, const u32 val)
-	__attribute__((nonnull));
+void p_cpu_gpr_set(struct p_ctx *ctx, enum p_cpu_gpr gpr, u32 val) P_NONNULL;
 
-void p_cpu_run(struct p_ctx *ctx, u64 cycles) __attribute__((nonnull));
+void p_cpu_rst(struct p_ctx *ctx) P_NONNULL;
 
-void p_cpu_rst(struct p_ctx *ctx) __attribute__((nonnull));
+void p_cpu_run(struct p_ctx *ctx, u64 cycles) P_NONNULL;

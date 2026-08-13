@@ -35,11 +35,9 @@
 
 LOG_MOD(P_LOG_BIOS);
 
-enum {
-	JR_RA = 0x03E00008,
-};
+#define JR_RA (0x03E00008)
 
-static void on_putchar(struct p_ctx *ctx, const struct p_bios_frame *frame);
+static void on_putchar(struct p_ctx *ctx, struct p_bios_frame *frame);
 
 static const struct p_bios_fn a0_funcs[] = {
 	// clang-format off
@@ -150,9 +148,8 @@ static const struct p_bios_fn c0_funcs[] = {
 	// clang-format on
 };
 
-P_NODISCARD __attribute__((nonnull)) static const struct p_bios_fn *
-func_get(const struct p_bios_fn *const arr, const size_t arr_elems,
-	 const u32 func)
+P_NODISCARD P_NONNULL static const struct p_bios_fn *
+func_get(const struct p_bios_fn *arr, size_t arr_elems, u32 func)
 {
 	if (func >= arr_elems)
 		return NULL;
@@ -160,11 +157,10 @@ func_get(const struct p_bios_fn *const arr, const size_t arr_elems,
 	return arr[func].prototype ? &arr[func] : NULL;
 }
 
-__attribute__((nonnull)) static void
-frame_init(struct p_ctx *const ctx, struct p_bios_frame *const frame,
-	   const struct p_bios_fn *const fn)
+P_NONNULL static void frame_init(struct p_ctx *ctx, struct p_bios_frame *frame,
+				 const struct p_bios_fn *fn)
 {
-	frame->fn = fn;
+	frame->fn      = fn;
 	frame->arg_pos = 0;
 
 	frame->a0 = ctx->cpu.gpr[P_A0];
@@ -178,8 +174,8 @@ frame_init(struct p_ctx *const ctx, struct p_bios_frame *const frame,
 	p_str_init_fixed(&frame->str, frame->str_buf, sizeof(frame->str_buf));
 }
 
-P_NODISCARD __attribute__((nonnull)) static struct p_bios_frame *
-stack_emplace(struct p_ctx *const ctx)
+P_NODISCARD P_NONNULL static struct p_bios_frame *
+stack_emplace(struct p_ctx *ctx)
 {
 	if (ctx->bios_trace.stack.top >= sizeof(ctx->bios_trace.stack.frames))
 		return NULL;
@@ -187,8 +183,7 @@ stack_emplace(struct p_ctx *const ctx)
 	return &ctx->bios_trace.stack.frames[ctx->bios_trace.stack.top++];
 }
 
-P_NODISCARD __attribute__((nonnull)) static struct p_bios_frame *
-stack_pop(struct p_ctx *const ctx)
+P_NODISCARD P_NONNULL static struct p_bios_frame *stack_pop(struct p_ctx *ctx)
 {
 	if (!ctx->bios_trace.stack.top)
 		return NULL;
@@ -196,16 +191,16 @@ stack_pop(struct p_ctx *const ctx)
 	return &ctx->bios_trace.stack.frames[--ctx->bios_trace.stack.top];
 }
 
-P_NODISCARD __attribute__((nonnull)) static u32
-get_arg(struct p_ctx *const ctx, struct p_bios_frame *const frame)
+P_NODISCARD P_NONNULL static u32 get_arg(struct p_ctx *ctx,
+					 struct p_bios_frame *frame)
 {
 	if (frame->arg_pos <= P_A3)
 		return (&frame->a0)[frame->arg_pos++];
 
-	return p_load_word(ctx, frame->sp + 16 + (frame->arg_pos++ - 4) * 4);
+	return p_load32(ctx, frame->sp + 16 + (frame->arg_pos++ - 4) * 4);
 }
 
-__attribute__((nonnull)) static void rst_tty_strs(struct p_ctx *const ctx)
+P_NONNULL static void rst_tty_strs(struct p_ctx *ctx)
 {
 	p_str_init_fixed(&ctx->bios_trace.tty_orig.str,
 			 ctx->bios_trace.tty_orig.buf,
@@ -216,7 +211,7 @@ __attribute__((nonnull)) static void rst_tty_strs(struct p_ctx *const ctx)
 			 sizeof(ctx->bios_trace.tty_log.buf));
 }
 
-P_NODISCARD static const char *esc_seq(const char c)
+P_NODISCARD static const char *esc_seq(char c)
 {
 	switch (c) {
 	case '\n':
@@ -247,8 +242,8 @@ P_NODISCARD static const char *esc_seq(const char c)
 	}
 }
 
-__attribute__((nonnull)) static void
-process_char(struct p_ctx *const ctx, struct p_bios_frame *const frame)
+P_NONNULL static void process_char(struct p_ctx *ctx,
+				   struct p_bios_frame *frame)
 {
 	const char c = get_arg(ctx, frame);
 
@@ -260,21 +255,19 @@ process_char(struct p_ctx *const ctx, struct p_bios_frame *const frame)
 		p_str_append(&frame->str, NULL, "'%c'", c);
 }
 
-__attribute__((nonnull)) static void
-process_int(struct p_ctx *const ctx, struct p_bios_frame *const frame)
+P_NONNULL static void process_int(struct p_ctx *ctx, struct p_bios_frame *frame)
 {
 	p_str_append(&frame->str, NULL, "%" PRIu32, get_arg(ctx, frame));
 }
 
-__attribute__((nonnull)) static void
-process_str(struct p_ctx *const ctx, struct p_bios_frame *const frame)
+P_NONNULL static void process_str(struct p_ctx *ctx, struct p_bios_frame *frame)
 {
 	const u32 ptr = get_arg(ctx, frame);
 
 	if (!ctx->cfg.bios_trace.deref_ptrs)
 		goto end;
 
-	u8 *const area = p_get_mem_area(ctx, vaddr_to_paddr(ptr));
+	u8 *area = p_get_mem_area(ctx, vaddr_to_paddr(ptr));
 
 	if (!area)
 		goto end;
@@ -286,17 +279,15 @@ end:
 	p_str_append(&frame->str, NULL, "0x%08X", ptr);
 }
 
-__attribute__((nonnull)) static void
-process_ptr(struct p_ctx *const ctx, struct p_bios_frame *const frame)
+P_NONNULL static void process_ptr(struct p_ctx *ctx, struct p_bios_frame *frame)
 {
 	p_str_append(&frame->str, NULL, "0x%08X", get_arg(ctx, frame));
 }
 
-__attribute__((nonnull)) static void
-on_putchar(struct p_ctx *const ctx, const struct p_bios_frame *const frame)
+P_NONNULL static void on_putchar(struct p_ctx *ctx, struct p_bios_frame *frame)
 {
-	const char c = frame->a0;
-	const char *const seq = esc_seq(c);
+	const char c	= frame->a0;
+	const char *seq = esc_seq(c);
 
 	p_str_append(&ctx->bios_trace.tty_orig.str, NULL, "%c", c);
 
@@ -318,8 +309,8 @@ on_putchar(struct p_ctx *const ctx, const struct p_bios_frame *const frame)
 	}
 }
 
-__attribute__((nonnull)) static void
-process_prototype(struct p_ctx *const ctx, struct p_bios_frame *const frame)
+P_NONNULL static void process_prototype(struct p_ctx *ctx,
+					struct p_bios_frame *frame)
 {
 	const char *src = frame->fn->prototype;
 
@@ -356,12 +347,12 @@ process_prototype(struct p_ctx *const ctx, struct p_bios_frame *const frame)
 	}
 }
 
-void p_bios_trace_init(struct p_ctx *const ctx)
+void p_bios_trace_init(struct p_ctx *ctx)
 {
 	rst_tty_strs(ctx);
 }
 
-void p_bios_trace_begin(struct p_ctx *const ctx)
+void p_bios_trace_begin(struct p_ctx *ctx)
 {
 	const u32 fn_num = ctx->cpu.gpr[P_T1];
 
@@ -383,7 +374,7 @@ void p_bios_trace_begin(struct p_ctx *const ctx)
 		return;
 	}
 
-	struct p_bios_frame *const frame = stack_emplace(ctx);
+	struct p_bios_frame *frame = stack_emplace(ctx);
 	if (!frame) {
 		LOG_WARN(ctx, "BIOS call stack is too deep for us to handle");
 		return;
@@ -402,7 +393,8 @@ void p_bios_trace_end(struct p_ctx *const ctx)
 	if (ctx->cpu.instr != JR_RA)
 		return;
 
-	struct p_bios_frame *const frame = stack_pop(ctx);
+	struct p_bios_frame *frame = stack_pop(ctx);
+
 	if (!frame)
 		return;
 

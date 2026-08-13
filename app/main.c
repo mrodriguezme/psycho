@@ -45,21 +45,17 @@ static Uint64 fps_last_update_ns;
 static Uint32 frame;
 struct p_digital_ctrl ctrl;
 
-static void log_cb(struct p_ctx *const ctx, const struct p_log_msg *const msg)
+static void log_cb(struct p_ctx *ctx, struct p_log_msg *msg)
 {
 	assert(ctx != NULL);
 	assert(msg != NULL);
 
-	static const char *const color_str[P_LOG_COUNT] = {
-		// clang-format off
-
-		[P_LOG_INFO]	= BHWHT "%s\n" CRESET,
-		[P_LOG_WARN]	= BHYEL "%s\n" CRESET,
-		[P_LOG_ERR]	= BHRED "%s\n" CRESET,
-		[P_LOG_DBG]	= BHCYN "%s\n" CRESET,
-		[P_LOG_TRACE]	= BHMAG "%s\n" CRESET
-
-		// clang-format on
+	static const char *color_str[P_LOG_COUNT] = {
+		[P_LOG_INFO]  = BHWHT "%s\n" CRESET,
+		[P_LOG_WARN]  = BHYEL "%s\n" CRESET,
+		[P_LOG_ERR]   = BHRED "%s\n" CRESET,
+		[P_LOG_DBG]   = BHCYN "%s\n" CRESET,
+		[P_LOG_TRACE] = BHMAG "%s\n" CRESET
 	};
 
 #pragma GCC diagnostic push
@@ -68,7 +64,7 @@ static void log_cb(struct p_ctx *const ctx, const struct p_log_msg *const msg)
 #pragma GCC diagnostic pop
 }
 
-static void illegal_instr_cb(struct p_ctx *const ctx, const uint32_t instr)
+static void illegal_instr_cb(struct p_ctx *ctx, u32 instr)
 {
 	assert(ctx != NULL);
 
@@ -76,11 +72,11 @@ static void illegal_instr_cb(struct p_ctx *const ctx, const uint32_t instr)
 	abort();
 }
 
-static void on_stdout_line(struct p_ctx *const ctx, struct p_str *const str)
+static void on_stdout_line(struct p_ctx *ctx, struct p_str *str)
 {
 }
 
-static bool get_file_size(const char *const file, size_t *const file_size)
+static bool get_file_size(const char *file, size_t *file_size)
 {
 	struct stat st;
 
@@ -95,7 +91,7 @@ static bool get_file_size(const char *const file, size_t *const file_size)
 	return true;
 }
 
-static void on_vblank(struct p_ctx *const ctx)
+static void on_vblank(struct p_ctx *ctx)
 {
 	SDL_UpdateTexture(texture, NULL, ctx->gpu.vram,
 			  VRAM_WIDTH * sizeof(*ctx->gpu.vram));
@@ -105,7 +101,7 @@ static void on_vblank(struct p_ctx *const ctx)
 	SDL_RenderPresent(renderer);
 }
 
-static bool load_bios_file(const char *const bios_file)
+static bool load_bios_file(char *bios_file)
 {
 	assert(bios_file != NULL);
 
@@ -114,11 +110,11 @@ static bool load_bios_file(const char *const bios_file)
 	if (!get_file_size(bios_file, &file_size))
 		return false;
 
-	if (file_size != P_BUS_BIOS_SIZE) {
+	if (file_size != P_BUS_BIOS_SIZE_BYTES) {
 		fprintf(stderr,
 			"%s: bios file size is not correct (expected %d bytes, "
 			"got %zu)\n",
-			prog_name, P_BUS_BIOS_SIZE, file_size);
+			prog_name, P_BUS_BIOS_SIZE_BYTES, file_size);
 		return false;
 	}
 
@@ -145,7 +141,7 @@ static bool load_bios_file(const char *const bios_file)
 	return true;
 }
 
-static bool load_exe_file(const char *const exe_file)
+static bool load_exe_file(char *exe_file)
 {
 	assert(exe_file != NULL);
 
@@ -185,7 +181,7 @@ static void fps_update(void)
 	frame++;
 
 	const Uint64 curr_ticks = SDL_GetTicksNS();
-	const Uint64 fps_diff = curr_ticks - fps_last_update_ns;
+	const Uint64 fps_diff	= curr_ticks - fps_last_update_ns;
 
 	if (fps_diff >= 1000000000) {
 		const double fps = frame * 1000000000.0 / (double)fps_diff;
@@ -193,7 +189,7 @@ static void fps_update(void)
 		SDL_snprintf(title, sizeof(title), "psycho - %.1f FPS", fps);
 		SDL_SetWindowTitle(window, title);
 
-		frame = 0;
+		frame		   = 0;
 		fps_last_update_ns = curr_ticks;
 	}
 }
@@ -229,7 +225,7 @@ static bool gfx_init(void)
 	SDL_RenderTexture(renderer, texture, NULL, NULL);
 	SDL_RenderPresent(renderer);
 
-	frame = 0;
+	frame		   = 0;
 	fps_last_update_ns = SDL_GetTicksNS();
 
 	return true;
@@ -260,7 +256,7 @@ static void emu_init(void)
 	// clang-format on
 
 	cfg->bios_trace.stdout_line = on_stdout_line;
-	cfg->bios_trace.deref_ptrs = true;
+	cfg->bios_trace.deref_ptrs  = true;
 
 	cfg->on_vblank = on_vblank;
 
@@ -331,43 +327,43 @@ static void rel_emu_btn(SDL_Event *ev)
 {
 	switch (ev->key.key) {
 	case SDLK_DOWN:
-		p_digital_ctrl_button_rel(&ctrl, P_DIGITAL_CTRL_DN);
+		p_digital_ctrl_btn_rel(&ctrl, P_DIGITAL_CTRL_DN);
 		break;
 
 	case SDLK_UP:
-		p_digital_ctrl_button_rel(&ctrl, P_DIGITAL_CTRL_UP);
+		p_digital_ctrl_btn_rel(&ctrl, P_DIGITAL_CTRL_UP);
 		break;
 
 	case SDLK_LEFT:
-		p_digital_ctrl_button_rel(&ctrl, P_DIGITAL_CTRL_LT);
+		p_digital_ctrl_btn_rel(&ctrl, P_DIGITAL_CTRL_LT);
 		break;
 
 	case SDLK_RIGHT:
-		p_digital_ctrl_button_rel(&ctrl, P_DIGITAL_CTRL_RT);
+		p_digital_ctrl_btn_rel(&ctrl, P_DIGITAL_CTRL_RT);
 		break;
 
 	case SDLK_X:
-		p_digital_ctrl_button_rel(&ctrl, P_DIGITAL_CTRL_CROSS);
+		p_digital_ctrl_btn_rel(&ctrl, P_DIGITAL_CTRL_CROSS);
 		break;
 
 	case SDLK_O:
-		p_digital_ctrl_button_rel(&ctrl, P_DIGITAL_CTRL_CIR);
+		p_digital_ctrl_btn_rel(&ctrl, P_DIGITAL_CTRL_CIR);
 		break;
 
 	case SDLK_S:
-		p_digital_ctrl_button_rel(&ctrl, P_DIGITAL_CTRL_SQR);
+		p_digital_ctrl_btn_rel(&ctrl, P_DIGITAL_CTRL_SQR);
 		break;
 
 	case SDLK_T:
-		p_digital_ctrl_button_rel(&ctrl, P_DIGITAL_CTRL_TRI);
+		p_digital_ctrl_btn_rel(&ctrl, P_DIGITAL_CTRL_TRI);
 		break;
 
 	case SDLK_RETURN:
-		p_digital_ctrl_button_rel(&ctrl, P_DIGITAL_CTRL_START);
+		p_digital_ctrl_btn_rel(&ctrl, P_DIGITAL_CTRL_START);
 		break;
 
 	case SDLK_SPACE:
-		p_digital_ctrl_button_rel(&ctrl, P_DIGITAL_CTRL_SEL);
+		p_digital_ctrl_btn_rel(&ctrl, P_DIGITAL_CTRL_SEL);
 		break;
 
 	default:
@@ -375,7 +371,7 @@ static void rel_emu_btn(SDL_Event *ev)
 	}
 }
 
-static void sdl_process_ev(SDL_Event *const ev)
+static void sdl_process_ev(SDL_Event *ev)
 {
 	switch (ev->type) {
 	case SDL_EVENT_QUIT:

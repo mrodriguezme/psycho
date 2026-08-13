@@ -25,45 +25,39 @@
 
 LOG_MOD(P_LOG_DIGITAL_CTRL);
 
-enum {
-	// clang-format off
+#define ADDR	(0x01)
+#define CTRL_ID (0x5A41)
 
-	ADDRESS	= 0x01,
-	CTRL_ID	= 0x5A41
-
-	// clang-format on
-};
-
-static bool addressed(const u8 addr)
+static bool addressed(u8 addr)
 {
-	return addr == ADDRESS;
+	return addr == ADDR;
 }
 
-static u8 transceive(void *const dev, const u8 mosi, bool *const done)
+static u8 transceive(void *dev, u8 mosi, bool *done)
 {
-	struct p_digital_ctrl *const ctrl = dev;
+	struct p_digital_ctrl *ctrl = dev;
 
 	switch (ctrl->state) {
-	case P_DIGITAL_CTRL_STATE_ID_LO:
+	case P_DIGITAL_CTRL_ID_LO:
 		if (mosi == 0x42) {
-			ctrl->state = P_DIGITAL_CTRL_STATE_ID_HI;
+			ctrl->state = P_DIGITAL_CTRL_ID_HI;
 			return CTRL_ID & UINT8_MAX;
 		}
 		return 0xFF;
 
-	case P_DIGITAL_CTRL_STATE_ID_HI:
-		ctrl->state = P_DIGITAL_CTRL_STATE_SW_LO;
+	case P_DIGITAL_CTRL_ID_HI:
+		ctrl->state = P_DIGITAL_CTRL_SW_LO;
 		return CTRL_ID >> 8;
 
-	case P_DIGITAL_CTRL_STATE_SW_LO:
-		ctrl->state = P_DIGITAL_CTRL_STATE_SW_HI;
-		return ctrl->buttons & UINT8_MAX;
+	case P_DIGITAL_CTRL_SW_LO:
+		ctrl->state = P_DIGITAL_CTRL_SW_HI;
+		return ctrl->btns & UINT8_MAX;
 
-	case P_DIGITAL_CTRL_STATE_SW_HI:
-		ctrl->state = P_DIGITAL_CTRL_STATE_ID_LO;
-		*done = true;
+	case P_DIGITAL_CTRL_SW_HI:
+		ctrl->state = P_DIGITAL_CTRL_ID_LO;
+		*done	    = true;
 
-		return ctrl->buttons >> 8;
+		return ctrl->btns >> 8;
 
 	default:
 		__builtin_unreachable();
@@ -75,12 +69,12 @@ void p_digital_ctrl_init(struct p_ctx *ctx, struct p_digital_ctrl *ctrl)
 	ctrl->ctx = ctx;
 
 	ctrl->dev.transceive = transceive;
-	ctrl->dev.name = "Digital Controller (SCPH-1010)";
-	ctrl->dev.type = P_SIO0_DEV_TYPE_CTRL;
-	ctrl->dev.addressed = addressed;
-	ctrl->dev.handle = ctrl;
+	ctrl->dev.name	     = "Digital Controller (SCPH-1010)";
+	ctrl->dev.type	     = P_SIO0_DEV_TYPE_CTRL;
+	ctrl->dev.addressed  = addressed;
+	ctrl->dev.handle     = ctrl;
 
-	ctrl->buttons = UINT16_MAX;
+	ctrl->btns = UINT16_MAX;
 
 	LOG_INFO(ctx, "spawned peripheral \"%s\"", ctrl->dev.name);
 }
@@ -88,13 +82,13 @@ void p_digital_ctrl_init(struct p_ctx *ctx, struct p_digital_ctrl *ctrl)
 void p_digital_ctrl_btn_press(struct p_digital_ctrl *ctrl,
 			      enum p_digital_ctrl_btns btns)
 {
-	ctrl->buttons &= ~btns;
+	ctrl->btns &= ~btns;
 	LOG_INFO(ctrl->ctx, "button pressed");
 }
 
-void p_digital_ctrl_button_rel(struct p_digital_ctrl *ctrl,
-			       enum p_digital_ctrl_btns btns)
+void p_digital_ctrl_btn_rel(struct p_digital_ctrl *ctrl,
+			    enum p_digital_ctrl_btns btns)
 {
-	ctrl->buttons |= btns;
+	ctrl->btns |= btns;
 	LOG_INFO(ctrl->ctx, "button released");
 }

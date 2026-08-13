@@ -34,23 +34,21 @@
 			p_log_msg((ctx), m_log_mod, (lvl), args); \
 	})
 
-#define LOG_INFO(ctx, args...) LOG_MSG((ctx), P_LOG_INFO, args)
-#define LOG_WARN(ctx, args...) LOG_MSG((ctx), P_LOG_WARN, args)
-#define LOG_ERR(ctx, args...) LOG_MSG((ctx), P_LOG_ERR, args)
-#define LOG_DBG(ctx, args...) LOG_MSG((ctx), P_LOG_DBG, args)
+#define LOG_INFO(ctx, args...)	LOG_MSG((ctx), P_LOG_INFO, args)
+#define LOG_WARN(ctx, args...)	LOG_MSG((ctx), P_LOG_WARN, args)
+#define LOG_ERR(ctx, args...)	LOG_MSG((ctx), P_LOG_ERR, args)
+#define LOG_DBG(ctx, args...)	LOG_MSG((ctx), P_LOG_DBG, args)
 #define LOG_TRACE(ctx, args...) LOG_MSG((ctx), P_LOG_TRACE, args)
 
 #define LOG_TRACE_UNCHECKED(ctx, args...) \
 	p_log_msg((ctx), m_log_mod, P_LOG_TRACE, args)
 
-P_NODISCARD P_ALWAYS_INLINE __attribute__((nonnull)) bool
-log_enabled(const struct p_ctx *const ctx, const enum p_log_mod mod,
-	    const enum p_log_lvl lvl)
+P_NODISCARD P_ALWAYS_INLINE P_NONNULL bool
+log_enabled(struct p_ctx *ctx, enum p_log_mod mod, enum p_log_lvl lvl)
 {
 	return (ctx->cfg.log.log_cb) && ctx->cfg.log.mod[mod] >= lvl;
 }
 
 __attribute__((format(printf, 4, 5))) void
-p_log_msg(struct p_ctx *const ctx, const enum p_log_mod mod,
-	  const enum p_log_lvl lvl, const char *fmt, ...)
-	__attribute__((nonnull));
+p_log_msg(struct p_ctx *ctx, enum p_log_mod mod, enum p_log_lvl lvl,
+	  const char *fmt, ...) P_NONNULL;

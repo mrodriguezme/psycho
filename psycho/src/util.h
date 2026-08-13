@@ -29,10 +29,10 @@
 #include "psycho/compiler.h"
 #include "psycho/types.h"
 
-#define likely(x) __builtin_expect(!!(x), 1)
-#define unlikely(x) __builtin_expect(!!(x), 0)
+#define likely(x)		  __builtin_expect(!!(x), 1)
+#define unlikely(x)		  __builtin_expect(!!(x), 0)
 
-#define ARRAY_SIZE(x) (sizeof(x) / sizeof((x)[0]))
+#define ARRAY_SIZE(x)		  (sizeof(x) / sizeof((x)[0]))
 
 #define bit_became_set(a, b, bit) ((!((a) & (bit))) && ((b) & (bit)))
 
@@ -53,25 +53,23 @@
 #define swap(a, b)                       \
 	({                               \
 		__auto_type _tmp = *(a); \
-		*(a) = *(b);             \
-		*(b) = _tmp;             \
+		*(a)		 = *(b); \
+		*(b)		 = _tmp; \
 	})
 
 #define static_assert_offset(x, memb, off) \
 	_Static_assert(offsetof(x, memb) == (off), "Offset is not correct.")
 
-#define ZEXT_FUNC(from, to)                                   \
-	P_NODISCARD P_ALWAYS_INLINE u##to zext_##from##_##to( \
-		const u##from val)                            \
-	{                                                     \
-		return val;                                   \
+#define ZEXT_FUNC(from, to)                                               \
+	P_NODISCARD P_ALWAYS_INLINE u##to zext_##from##_##to(u##from val) \
+	{                                                                 \
+		return val;                                               \
 	}
 
-#define SEXT_FUNC(from, to)                                   \
-	P_NODISCARD P_ALWAYS_INLINE u##to sext_##from##_##to( \
-		const u##from val)                            \
-	{                                                     \
-		return (s##from)val;                          \
+#define SEXT_FUNC(from, to)                                               \
+	P_NODISCARD P_ALWAYS_INLINE u##to sext_##from##_##to(u##from val) \
+	{                                                                 \
+		return (s##from)val;                                      \
 	}
 
 ZEXT_FUNC(8, 32);

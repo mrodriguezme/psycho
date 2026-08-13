@@ -30,10 +30,10 @@ extern "C" {
 #endif // __cplusplus
 
 enum p_digital_ctrl_state {
-	P_DIGITAL_CTRL_STATE_ID_LO,
-	P_DIGITAL_CTRL_STATE_ID_HI,
-	P_DIGITAL_CTRL_STATE_SW_LO,
-	P_DIGITAL_CTRL_STATE_SW_HI
+	P_DIGITAL_CTRL_ID_LO,
+	P_DIGITAL_CTRL_ID_HI,
+	P_DIGITAL_CTRL_SW_LO,
+	P_DIGITAL_CTRL_SW_HI
 };
 
 enum p_digital_ctrl_btns {
@@ -61,18 +61,17 @@ struct p_digital_ctrl {
 	struct p_ctx *ctx;
 	struct p_sio0_dev dev;
 	enum p_digital_ctrl_state state;
-	u16 buttons;
+	u16 btns;
 };
 
-void p_digital_ctrl_init(struct p_ctx *ctx, struct p_digital_ctrl *ctrl);
+void p_digital_ctrl_init(struct p_ctx *ctx,
+			 struct p_digital_ctrl *ctrl) P_NONNULL;
 
 void p_digital_ctrl_btn_press(struct p_digital_ctrl *ctrl,
-			      const enum p_digital_ctrl_btns btns)
-	__attribute__((nonnull));
+			      enum p_digital_ctrl_btns btns) P_NONNULL;
 
-void p_digital_ctrl_button_rel(struct p_digital_ctrl *ctrl,
-			       const enum p_digital_ctrl_btns btns)
-	__attribute__((nonnull));
+void p_digital_ctrl_btn_rel(struct p_digital_ctrl *ctrl,
+			    enum p_digital_ctrl_btns btns) P_NONNULL;
 
 #ifdef __cplusplus
 }

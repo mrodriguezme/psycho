@@ -26,9 +26,7 @@
 extern "C" {
 #endif // __cplusplus
 
-enum {
-	P_CPU_CLKFREQ_HZ	= 33868800,
-};
+#define P_CPU_CLKFREQ_HZ (33868800)
 
 enum p_cpu_gpr {
 	P_ZERO,
@@ -67,17 +65,17 @@ enum p_cpu_gpr {
 };
 
 enum p_cpu_cop0 {
-	P_BPC = 3,
-	P_BDA = 5,
-	P_TAR = 6,
-	P_DCIC = 7,
-	P_BADVADDR = 8,
-	P_BDAM = 9,
-	P_BPCM = 11,
-	P_SR = 12,
-	P_CAUSE = 13,
-	P_EPC = 14,
-	P_PRID = 15,
+	P_BPC	     = 3,
+	P_BDA	     = 5,
+	P_TAR	     = 6,
+	P_DCIC	     = 7,
+	P_BADVADDR   = 8,
+	P_BDAM	     = 9,
+	P_BPCM	     = 11,
+	P_SR	     = 12,
+	P_CAUSE	     = 13,
+	P_EPC	     = 14,
+	P_PRID	     = 15,
 	P_COP0_COUNT = 32,
 };
 

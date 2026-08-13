@@ -34,14 +34,8 @@ extern "C" {
 
 struct p_ctx;
 
-enum {
-	// clang-format off
-
-	P_BIOS_TRACE_STACK_MAX		= 10,
-	P_BIOS_TRACE_TTY_STR_LEN_MAX	= 512
-
-	// clang-format on
-};
+#define P_BIOS_TRACE_STACK_MAX		(10)
+#define P_BIOS_TRACE_TTY_STDOUT_LEN_MAX (512)
 
 enum p_bios_fn_ret {
 	P_BIOS_FN_RET_INT,
@@ -65,9 +59,9 @@ struct p_bios_frame {
 };
 
 struct p_bios_fn {
-	const char *const prototype;
+	const char *prototype;
 	const enum p_bios_fn_ret ret;
-	void (*hook_cb)(struct p_ctx *ctx, const struct p_bios_frame *frame);
+	void (*hook_cb)(struct p_ctx *ctx, struct p_bios_frame *frame);
 };
 
 struct p_bios_trace_cfg {
@@ -76,7 +70,7 @@ struct p_bios_trace_cfg {
 };
 
 struct p_tty_str {
-	char buf[P_BIOS_TRACE_TTY_STR_LEN_MAX];
+	char buf[P_BIOS_TRACE_TTY_STDOUT_LEN_MAX];
 	struct p_str str;
 };
 

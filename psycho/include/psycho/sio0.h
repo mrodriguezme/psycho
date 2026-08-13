@@ -24,6 +24,7 @@
 
 #include <stddef.h>
 
+#include "compiler.h"
 #include "sio0_dev.h"
 #include "sched.h"
 
@@ -52,8 +53,8 @@ struct p_sio0 {
 
 		union {
 			u8 entries[4];
+			u32 raw;
 		};
-		u32 raw;
 	} rxfifo;
 
 	u32 stat;
@@ -65,4 +66,4 @@ struct p_sio0 {
 };
 
 void p_attach_dev_to_sio0(struct p_ctx *ctx, struct p_sio0_dev *dev,
-			  const enum sio0_slot slot) __attribute__((nonnull));
+			  enum sio0_slot slot) P_NONNULL;

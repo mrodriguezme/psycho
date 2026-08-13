@@ -36,9 +36,7 @@ extern "C" {
 
 struct p_ctx;
 
-enum {
-	P_DISASM_TRACE_LEN_MAX = 512,
-};
+#define P_DISASM_TRACE_LEN_MAX (512)
 
 enum p_disasm_trace {
 	P_DISASM_TRACE_GPR_RT,
@@ -69,8 +67,8 @@ struct p_disasm {
 	struct p_disasm_traces traces;
 };
 
-P_NODISCARD const char *p_gpr_get(const enum p_cpu_gpr reg);
-P_NODISCARD const char *p_cop0_get(const enum p_cpu_cop0 reg);
+P_NODISCARD P_CONST const char *p_gpr_get(enum p_cpu_gpr reg);
+P_NODISCARD P_CONST const char *p_cop0_get(enum p_cpu_cop0 reg);
 
 void p_disasm_instr(struct p_ctx *ctx, u32 pc, struct p_disasm_traces *traces)
 	__attribute__((nonnull(1)));

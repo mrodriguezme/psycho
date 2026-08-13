@@ -29,9 +29,11 @@ extern "C" {
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wunused-macros"
 
-#define P_NODISCARD __attribute__((warn_unused_result))
+#define P_NODISCARD	__attribute__((warn_unused_result))
+#define P_CONST		__attribute__((const))
+#define P_PURE		__attribute__((pure))
 #define P_ALWAYS_INLINE __attribute__((always_inline)) static inline
-#define P_NONNULL __attribute__((nonnull))
+#define P_NONNULL	__attribute__((nonnull))
 
 #pragma GCC diagnostic pop
 

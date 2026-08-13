@@ -31,12 +31,8 @@
 
 LOG_MOD(P_LOG_GPU);
 
-// clang-format off
-
-#define GPUSTAT_RDY_CMD_WORD_BIT	(1 << 26)
-#define GPUSTAT_FIFO_DATA_AVAIL_BIT	(1 << 27)
-
-// clang-format on
+#define GPUSTAT_RDY_CMD_WORD_BIT    (1 << 26)
+#define GPUSTAT_FIFO_DATA_AVAIL_BIT (1 << 27)
 
 struct vram_xfer {
 	union {
@@ -50,35 +46,35 @@ struct vram_xfer {
 	};
 };
 
-P_NODISCARD static uint xpos_mask_cpy(const u16 xpos)
+P_NODISCARD static uint xpos_mask_cpy(u16 xpos)
 {
 	return xpos & 0x3FF;
 }
 
-P_NODISCARD static uint ypos_mask_cpy(const u16 ypos)
+P_NODISCARD static uint ypos_mask_cpy(u16 ypos)
 {
 	return ypos & 0x1FF;
 }
 
-P_NODISCARD static uint xsiz_mask_cpy(const u16 xsiz)
+P_NODISCARD static uint xsiz_mask_cpy(u16 xsiz)
 {
 	return ((xsiz - 1) & 0x3FF) + 1;
 }
 
-P_NODISCARD static uint ysiz_mask_cpy(const u16 ysiz)
+P_NODISCARD static uint ysiz_mask_cpy(u16 ysiz)
 {
 	return ((ysiz - 1) & 0x1FF) + 1;
 }
 
-static void on_vblank(struct p_ctx *const ctx)
+P_NONNULL static void on_vblank(struct p_ctx *ctx)
 {
 	if (ctx->cfg.on_vblank)
 		ctx->cfg.on_vblank(ctx);
 
-	p_irq_pending(ctx, IRQ_VBLANK);
+	p_irq_pend(ctx, IRQ_VBLANK);
 }
 
-__attribute__((nonnull)) static void copy_adv(struct p_ctx *const ctx)
+P_NONNULL static void copy_adv(struct p_ctx *ctx)
 {
 	ctx->gpu.copy.x++;
 
@@ -88,14 +84,13 @@ __attribute__((nonnull)) static void copy_adv(struct p_ctx *const ctx)
 	}
 }
 
-__attribute__((nonnull)) static void cpy_pixel_to_vram(struct p_ctx *const ctx,
-						       const u16 px)
+P_NONNULL static void cpy_pixel_to_vram(struct p_ctx *ctx, u16 px)
 {
 	vram_px_set(ctx, ctx->gpu.copy.x, ctx->gpu.copy.y, px);
 	copy_adv(ctx);
 }
 
-__attribute__((nonnull)) static u16 cpy_pixel_to_cpu(struct p_ctx *const ctx)
+P_NONNULL static u16 cpy_pixel_to_cpu(struct p_ctx *ctx)
 {
 	const u16 px = vram_px_get(ctx, ctx->gpu.copy.x, ctx->gpu.copy.y);
 	copy_adv(ctx);
@@ -103,7 +98,7 @@ __attribute__((nonnull)) static u16 cpy_pixel_to_cpu(struct p_ctx *const ctx)
 	return px;
 }
 
-__attribute__((nonnull)) static void vram_xfer_init(struct p_ctx *const ctx)
+P_NONNULL static void vram_xfer_init(struct p_ctx *ctx)
 {
 	struct vram_xfer *params = (struct vram_xfer *)ctx->gpu.init.data;
 
@@ -112,16 +107,15 @@ __attribute__((nonnull)) static void vram_xfer_init(struct p_ctx *const ctx)
 	params->w = xsiz_mask_cpy(params->w);
 	params->h = ysiz_mask_cpy(params->h);
 
-	ctx->gpu.copy.x = params->x;
+	ctx->gpu.copy.x	     = params->x;
 	ctx->gpu.copy.x_orig = params->x;
-	ctx->gpu.copy.x_max = ctx->gpu.copy.x + params->w;
+	ctx->gpu.copy.x_max  = ctx->gpu.copy.x + params->w;
 
-	ctx->gpu.copy.y = params->y;
+	ctx->gpu.copy.y	  = params->y;
 	ctx->gpu.copy.rem = (params->w * params->h) / sizeof(u16);
 }
 
-__attribute__((nonnull)) static void
-cpy_rect_cpu_to_vram_exec(struct p_ctx *const ctx, const u32 data)
+P_NONNULL static void cpy_rect_cpu_to_vram_exec(struct p_ctx *ctx, u32 data)
 {
 	cpy_pixel_to_vram(ctx, data & UINT16_MAX);
 	cpy_pixel_to_vram(ctx, data >> 16);
@@ -136,7 +130,7 @@ cpy_rect_cpu_to_vram_exec(struct p_ctx *const ctx, const u32 data)
 	}
 }
 
-__attribute__((nonnull)) static void draw_rect_init(struct p_ctx *const ctx)
+P_NONNULL static void draw_rect_init(struct p_ctx *ctx)
 {
 	ctx->gpu.rect.x = ctx->gpu.init.data[0] & UINT16_MAX;
 	ctx->gpu.rect.y = ctx->gpu.init.data[0] >> 16;
@@ -145,41 +139,38 @@ __attribute__((nonnull)) static void draw_rect_init(struct p_ctx *const ctx)
 	ctx->gpu.gpustat |= GPUSTAT_RDY_CMD_WORD_BIT;
 }
 
-__attribute__((nonnull)) static void
-cpy_rect_cpu_to_vram_init(struct p_ctx *const ctx)
+P_NONNULL static void cpy_rect_cpu_to_vram_init(struct p_ctx *ctx)
 {
 	vram_xfer_init(ctx);
 	ctx->gpu.cmd_fn = cpy_rect_cpu_to_vram_exec;
 }
 
-__attribute__((nonnull)) static void
-cpy_rect_vram_to_cpu_init(struct p_ctx *const ctx)
+P_NONNULL static void cpy_rect_vram_to_cpu_init(struct p_ctx *ctx)
 {
 	vram_xfer_init(ctx);
 	ctx->gpu.gpustat |= GPUSTAT_FIFO_DATA_AVAIL_BIT;
 }
 
-__attribute__((nonnull)) static void gp0(struct p_ctx *const ctx, const u8 cmd,
-					 const u32 param)
+P_NONNULL static void gp0(struct p_ctx *ctx, u8 cmd, u32 param)
 {
 	switch (cmd) {
-	case GP0_CMD_MONO_RECT_1X1_OPAQUE:
-		ctx->gpu.init.fn = draw_rect_init;
+	case GP0_MONO_RECT_1X1_OPAQUE:
+		ctx->gpu.init.fn	 = draw_rect_init;
 		ctx->gpu.init.rem_params = 1;
-		ctx->gpu.rect.color = param;
+		ctx->gpu.rect.color	 = param;
 
 		ctx->gpu.gpustat &= ~GPUSTAT_RDY_CMD_WORD_BIT;
 		return;
 
-	case GP0_CMD_CPY_RECT_CPU_TO_VRAM:
-		ctx->gpu.init.fn = cpy_rect_cpu_to_vram_init;
+	case GP0_CPY_RECT_CPU_TO_VRAM:
+		ctx->gpu.init.fn	 = cpy_rect_cpu_to_vram_init;
 		ctx->gpu.init.rem_params = 2;
 
 		ctx->gpu.gpustat &= ~GPUSTAT_RDY_CMD_WORD_BIT;
 		return;
 
-	case GP0_CMD_CPY_RECT_VRAM_TO_CPU:
-		ctx->gpu.init.fn = cpy_rect_vram_to_cpu_init;
+	case GP0_CPY_RECT_VRAM_TO_CPU:
+		ctx->gpu.init.fn	 = cpy_rect_vram_to_cpu_init;
 		ctx->gpu.init.rem_params = 2;
 
 		ctx->gpu.gpustat &= ~GPUSTAT_RDY_CMD_WORD_BIT;
@@ -191,8 +182,7 @@ __attribute__((nonnull)) static void gp0(struct p_ctx *const ctx, const u8 cmd,
 	}
 }
 
-__attribute__((nonnull)) static void handle_gpu_info(struct p_ctx *const ctx,
-						     const uint data)
+P_NONNULL static void handle_gpu_info(struct p_ctx *ctx, uint data)
 {
 	switch (data & 0x07) {
 	case 0x07:
@@ -205,7 +195,7 @@ __attribute__((nonnull)) static void handle_gpu_info(struct p_ctx *const ctx,
 	}
 }
 
-void p_gpu_init(struct p_ctx *const ctx)
+void p_gpu_init(struct p_ctx *ctx)
 {
 	ctx->gpu.vram =
 		malloc(VRAM_WIDTH * VRAM_HEIGHT * sizeof(*ctx->gpu.vram));
@@ -213,17 +203,17 @@ void p_gpu_init(struct p_ctx *const ctx)
 	ctx->gpu.render_ops.rect = p_gpu_sw_draw_rect;
 }
 
-void p_gpu_rst(struct p_ctx *const ctx)
+void p_gpu_rst(struct p_ctx *ctx)
 {
-	ctx->gpu.ev_vblank.type = P_SCHED_EV_VBLANK;
-	ctx->gpu.ev_vblank.cb = on_vblank;
-	ctx->gpu.ev_vblank.ts = P_CPU_CLKFREQ_HZ / 60;
+	ctx->gpu.ev_vblank.type	     = P_SCHED_EV_VBLANK;
+	ctx->gpu.ev_vblank.cb	     = on_vblank;
+	ctx->gpu.ev_vblank.ts	     = P_CPU_CLKFREQ_HZ / 60;
 	ctx->gpu.ev_vblank.permanent = true;
 
 	p_sched_add(ctx, &ctx->gpu.ev_vblank);
 }
 
-void p_gpu_gp0(struct p_ctx *const ctx, const u32 packet)
+void p_gp0(struct p_ctx *ctx, u32 packet)
 {
 	LOG_TRACE(ctx, "GP0 <- 0x%08X", packet);
 
@@ -244,20 +234,20 @@ void p_gpu_gp0(struct p_ctx *const ctx, const u32 packet)
 		ctx->gpu.cmd_fn(ctx, packet);
 }
 
-void p_gpu_gp1(struct p_ctx *const ctx, const u32 packet)
+void p_gp1(struct p_ctx *ctx, u32 packet)
 {
 	LOG_TRACE(ctx, "GP1 <- 0x%08X", packet);
 
 	const u8 cmd = packet >> 24;
 
 	switch (cmd) {
-	case GP1_CMD_RST:
+	case GP1_RST:
 		ctx->gpu.gpustat = 0x14802000;
 
 		LOG_TRACE(ctx, "command reset");
 		return;
 
-	case GP1_CMD_GPU_INFO:
+	case GP1_GPU_INFO:
 		handle_gpu_info(ctx, packet & 0x00FFFFFF);
 		return;
 
@@ -267,11 +257,11 @@ void p_gpu_gp1(struct p_ctx *const ctx, const u32 packet)
 	}
 }
 
-u32 p_gpu_gpuread(struct p_ctx *const ctx)
+u32 p_gpuread(struct p_ctx *ctx)
 {
 	if (ctx->gpu.gpustat & GPUSTAT_FIFO_DATA_AVAIL_BIT) {
-		const u16 px0 = cpy_pixel_to_cpu(ctx);
-		const u16 px1 = cpy_pixel_to_cpu(ctx);
+		const u16 px0	 = cpy_pixel_to_cpu(ctx);
+		const u16 px1	 = cpy_pixel_to_cpu(ctx);
 		ctx->gpu.gpuread = ((u32)px0 << 16) | px1;
 
 		ctx->gpu.copy.rem--;

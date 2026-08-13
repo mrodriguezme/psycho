@@ -30,10 +30,8 @@
 extern "C" {
 #endif // __cplusplus
 
-enum {
-	VRAM_HEIGHT = 512,
-	VRAM_WIDTH = 1024,
-};
+#define VRAM_HEIGHT (512)
+#define VRAM_WIDTH  (1024)
 
 struct p_ctx;
 

@@ -33,97 +33,40 @@
 #include "disasm.h"
 #include "str.h"
 
-enum {
-	TRACE_NUM_SPACES = 40,
+#define TRACE_NUM_SPACES (40)
+
+static const char *gpr[P_GPR_COUNT] = {
+	[P_ZERO] = "$zero", [P_AT] = "$at", [P_V0] = "$v0", [P_V1] = "$v1",
+	[P_A0] = "$a0",	    [P_A1] = "$a1", [P_A2] = "$a2", [P_A3] = "$a3",
+	[P_T0] = "$t0",	    [P_T1] = "$t1", [P_T2] = "$t2", [P_T3] = "$t3",
+	[P_T4] = "$t4",	    [P_T5] = "$t5", [P_T6] = "$t6", [P_T7] = "$t7",
+	[P_S0] = "$s0",	    [P_S1] = "$s1", [P_S2] = "$s2", [P_S3] = "$s3",
+	[P_S4] = "$s4",	    [P_S5] = "$s5", [P_S6] = "$s6", [P_S7] = "$s7",
+	[P_T8] = "$t8",	    [P_T9] = "$t9", [P_K0] = "$k0", [P_K1] = "$k1",
+	[P_GP] = "$gp",	    [P_SP] = "$sp", [P_FP] = "$fp", [P_RA] = "$ra"
 };
 
-static const char *const gpr[P_GPR_COUNT] = {
-	// clang-format off
-
-	[P_ZERO]	= "$zero",
-	[P_AT]		= "$at",
-	[P_V0]		= "$v0",
-	[P_V1]		= "$v1",
-	[P_A0]		= "$a0",
-	[P_A1]		= "$a1",
-	[P_A2]		= "$a2",
-	[P_A3]		= "$a3",
-	[P_T0]		= "$t0",
-	[P_T1]		= "$t1",
-	[P_T2]		= "$t2",
-	[P_T3]		= "$t3",
-	[P_T4]		= "$t4",
-	[P_T5]		= "$t5",
-	[P_T6]		= "$t6",
-	[P_T7]		= "$t7",
-	[P_S0]		= "$s0",
-	[P_S1]		= "$s1",
-	[P_S2]		= "$s2",
-	[P_S3]		= "$s3",
-	[P_S4]		= "$s4",
-	[P_S5]		= "$s5",
-	[P_S6]		= "$s6",
-	[P_S7]		= "$s7",
-	[P_T8]		= "$t8",
-	[P_T9]		= "$t9",
-	[P_K0]		= "$k0",
-	[P_K1]		= "$k1",
-	[P_GP]		= "$gp",
-	[P_SP]		= "$sp",
-	[P_FP]		= "$fp",
-	[P_RA]		= "$ra"
-
-	// clang-format on
+static const char *cop0[P_COP0_COUNT] = {
+	[0] = "REG0",	   [1] = "REG1",	[2] = "REG2",
+	[P_BPC] = "BPC",   [4] = "REG4",	[P_BDA] = "BDA",
+	[P_TAR] = "TAR",   [P_DCIC] = "DCIC",	[P_BADVADDR] = "BADVADDR",
+	[P_BDAM] = "BDAM", [10] = "REG10",	[P_BPCM] = "BPCM",
+	[P_SR] = "SR",	   [P_CAUSE] = "CAUSE", [P_EPC] = "EPC",
+	[P_PRID] = "PRID", [16] = "REG16",	[17] = "REG17",
+	[18] = "REG18",	   [19] = "REG19",	[20] = "REG20",
+	[21] = "REG21",	   [22] = "REG22",	[23] = "REG23",
+	[24] = "REG24",	   [25] = "REG25",	[26] = "REG26",
+	[27] = "REG27",	   [28] = "REG28",	[29] = "REG29",
+	[30] = "REG30",	   [31] = "REG31"
 };
 
-static const char *const cop0[P_COP0_COUNT] = {
-	// clang-format off
-
-	[0]		= "C0_UNUSED0",
-	[1]		= "C0_UNUSED1",
-	[2]		= "C0_UNUSED2",
-	[P_BPC]		= "C0_BPC",
-	[4]		= "C0_UNUSED4",
-	[P_BDA]		= "C0_BDA",
-	[P_TAR]		= "C0_TAR",
-	[P_DCIC]	= "C0_DCIC",
-	[P_BADVADDR]	= "C0_BADVADDR",
-	[P_BDAM]	= "C0_BDAM",
-	[10]		= "C0_UNUSED10",
-	[P_BPCM]	= "C0_BPCM",
-	[P_SR]		= "C0_SR",
-	[P_CAUSE]	= "C0_CAUSE",
-	[P_EPC]		= "C0_EPC",
-	[P_PRID]	= "C0_PRID",
-	[16]		= "C0_UNUSED16",
-	[17]		= "C0_UNUSED17",
-	[18]		= "C0_UNUSED18",
-	[19]		= "C0_UNUSED19",
-	[20]		= "C0_UNUSED20",
-	[21]		= "C0_UNUSED21",
-	[22]		= "C0_UNUSED22",
-	[23]		= "C0_UNUSED23",
-	[24]		= "C0_UNUSED24",
-	[25]		= "C0_UNUSED25",
-	[26]		= "C0_UNUSED26",
-	[27]		= "C0_UNUSED27",
-	[28]		= "C0_UNUSED28",
-	[29]		= "C0_UNUSED29",
-	[30]		= "C0_UNUSED30",
-	[31]		= "C0_UNUSED31"
-
-	// clang-format on
-};
-
-P_NODISCARD __attribute__((nonnull)) static u32
-instr_get(struct p_ctx *const ctx, u32 pc)
+P_NODISCARD P_NONNULL static u32 instr_get(struct p_ctx *ctx, u32 pc)
 {
 	pc = vaddr_to_paddr(pc);
-	return p_load_word(ctx, pc);
+	return p_load32(ctx, pc);
 }
 
-static void trace_add(struct p_disasm_traces *const traces,
-		      const enum p_disasm_trace trace)
+static void trace_add(struct p_disasm_traces *traces, enum p_disasm_trace trace)
 {
 	if (traces) {
 		assert(traces->count < ARRAY_SIZE(traces->data));
@@ -131,28 +74,27 @@ static void trace_add(struct p_disasm_traces *const traces,
 	}
 }
 
-P_NODISCARD const char *p_gpr_get(const enum p_cpu_gpr reg)
+P_NODISCARD const char *p_gpr_get(enum p_cpu_gpr reg)
 {
 	assert(reg < P_GPR_COUNT);
 	return gpr[reg];
 }
 
-P_NODISCARD const char *p_cop0_get(const enum p_cpu_cop0 reg)
+P_NODISCARD const char *p_cop0_get(enum p_cpu_cop0 reg)
 {
 	assert(reg < P_COP0_COUNT);
 	return cop0[reg];
 }
 
-void p_disasm_instr(struct p_ctx *const ctx, const u32 pc,
-		    struct p_disasm_traces *traces)
+void p_disasm_instr(struct p_ctx *ctx, u32 pc, struct p_disasm_traces *traces)
 {
 	p_str_init_fixed(&ctx->disasm.res.str, ctx->disasm.res.str_buf,
 			 sizeof(ctx->disasm.res.str_buf));
 
-	const u32 instr = instr_get(ctx, pc);
+	u32 instr = instr_get(ctx, pc);
 
 	ctx->disasm.res.instr = instr;
-	ctx->disasm.res.pc = pc;
+	ctx->disasm.res.pc    = pc;
 
 #define fmt(args...)                                                  \
 	({                                                            \
@@ -161,16 +103,16 @@ void p_disasm_instr(struct p_ctx *const ctx, const u32 pc,
 		assert(!truncated);                                   \
 	})
 
-#define op (instr_op(instr))
-#define rt (instr_rt(instr))
-#define rs (instr_rs(instr))
-#define rd (instr_rd(instr))
-#define shamt (instr_shamt(instr))
-#define funct (instr_funct(instr))
-#define imm (instr_imm(instr))
-#define simm ((s16)imm)
-#define offset (simm)
-#define base (rs)
+#define op	    (instr_op(instr))
+#define rt	    (instr_rt(instr))
+#define rs	    (instr_rs(instr))
+#define rd	    (instr_rd(instr))
+#define shamt	    (instr_shamt(instr))
+#define funct	    (instr_funct(instr))
+#define imm	    (instr_imm(instr))
+#define simm	    ((s16)imm)
+#define offset	    (simm)
+#define base	    (rs)
 #define branch_addr (branch_addr(pc, instr))
 
 	switch (op) {
@@ -348,8 +290,8 @@ void p_disasm_instr(struct p_ctx *const ctx, const u32 pc,
 		break;
 
 	case GRP_REGIMM: {
-		const char *const link = ((rt & 0x1E) == 0x10) ? "al" : "";
-		const char *const name = (rt & 1) ? "bgez" : "bltz";
+		const char *link = ((rt & 0x1E) == 0x10) ? "al" : "";
+		const char *name = (rt & 1) ? "bgez" : "bltz";
 
 		fmt("%s%s %s, 0x%08X", name, link, gpr[rs], branch_addr);
 		return;
@@ -550,7 +492,7 @@ void p_disasm_instr(struct p_ctx *const ctx, const u32 pc,
 #undef branch_addr
 }
 
-void p_disasm_trace_begin(struct p_ctx *const ctx, const u32 pc)
+void p_disasm_trace_begin(struct p_ctx *ctx, u32 pc)
 {
 	memset(&ctx->disasm.traces, 0, sizeof(ctx->disasm.traces));
 	p_disasm_instr(ctx, pc, &ctx->disasm.traces);
@@ -567,7 +509,7 @@ void p_disasm_trace_begin(struct p_ctx *const ctx, const u32 pc)
 	assert(!truncated);
 }
 
-void p_disasm_trace_end(struct p_ctx *const ctx)
+void p_disasm_trace_end(struct p_ctx *ctx)
 {
 #define fmt(args...)                                                  \
 	({                                                            \
@@ -602,9 +544,9 @@ void p_disasm_trace_end(struct p_ctx *const ctx)
 			break;
 
 		case P_DISASM_TRACE_CPU_PADDR:
-			fmt("paddr=0x%08X",
-			    (instr_imm(ctx->disasm.res.instr) +
-				    ctx->cpu.gpr[rs]) & 0x1FFFFFFF);
+			fmt("paddr=0x%08X", (instr_imm(ctx->disasm.res.instr) +
+					     ctx->cpu.gpr[rs]) &
+						    0x1FFFFFFF);
 			break;
 
 		case P_DISASM_TRACE_COUNT:

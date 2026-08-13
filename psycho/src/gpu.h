@@ -24,56 +24,36 @@
 
 #include "psycho/ctx.h"
 
-enum {
-	// clang-format off
+#define GPU_GPUREAD		 (0x1F801810)
+#define GPU_GP0			 (0x1F801810)
+#define GPU_GP1			 (0x1F801814)
+#define GPU_GPUSTAT		 (0x1F801814)
 
-	GPU_ADDR_GPUREAD	= 0x1F801810,
-	GPU_ADDR_GP0		= 0x1F801810,
-	GPU_ADDR_GP1		= 0x1F801814,
-	GPU_ADDR_GPUSTAT	= GPU_ADDR_GP1
+#define GP0_MONO_RECT_1X1_OPAQUE (0x68)
+#define GP0_CPY_RECT_CPU_TO_VRAM (0xA0)
+#define GP0_CPY_RECT_VRAM_TO_CPU (0xC0)
 
-	// clang-format on
-};
+#define GP1_RST			 (0x00)
+#define GP1_GPU_INFO		 (0x10)
 
-enum {
-	// clang-format off
+void p_gpu_init(struct p_ctx *ctx) P_NONNULL;
+void p_gpu_rst(struct p_ctx *ctx) P_NONNULL;
 
-	GP0_CMD_MONO_RECT_1X1_OPAQUE	= 0x68,
-	GP0_CMD_CPY_RECT_CPU_TO_VRAM	= 0xA0,
-	GP0_CMD_CPY_RECT_VRAM_TO_CPU	= 0xC0,
+void p_gp0(struct p_ctx *ctx, u32 packet) P_NONNULL;
+void p_gp1(struct p_ctx *ctx, u32 packet) P_NONNULL;
 
-	// clang-format on
-};
-
-enum {
-	// clang-format off
-
-	GP1_CMD_RST		= 0x00,
-	GP1_CMD_GPU_INFO	= 0x10
-
-	// clang-format on
-};
-
-void p_gpu_init(struct p_ctx *ctx) __attribute__((nonnull));
-void p_gpu_rst(struct p_ctx *const ctx) __attribute__((nonnull));
-
-void p_gpu_gp0(struct p_ctx *ctx, const u32 packet) __attribute__((nonnull));
-void p_gpu_gp1(struct p_ctx *ctx, const u32 packet) __attribute__((nonnull));
-
-__attribute__((nonnull)) P_ALWAYS_INLINE void
-vram_px_set(struct p_ctx *const ctx, const size_t x, const size_t y,
-	    const u16 data)
+P_NONNULL P_ALWAYS_INLINE void vram_px_set(struct p_ctx *ctx, size_t x,
+					   size_t y, u16 data)
 {
 	ctx->gpu.vram[x + (VRAM_WIDTH * y)] = data;
 }
 
-__attribute__((nonnull)) P_ALWAYS_INLINE u16
-vram_px_get(struct p_ctx *const ctx, const size_t x, const size_t y)
+P_NONNULL P_ALWAYS_INLINE u16 vram_px_get(struct p_ctx *ctx, size_t x, size_t y)
 {
 	return ctx->gpu.vram[x + (VRAM_WIDTH * y)];
 }
 
-P_NODISCARD P_ALWAYS_INLINE u16 color_to_15bit(const u32 px)
+P_NODISCARD P_ALWAYS_INLINE u16 color_to_15bit(u32 px)
 {
 	const uint r = (px & UINT8_MAX) >> 3;
 	const uint g = ((px >> 8) & UINT8_MAX) >> 3;
@@ -82,4 +62,4 @@ P_NODISCARD P_ALWAYS_INLINE u16 color_to_15bit(const u32 px)
 	return (b << 10) | (g << 5) | r;
 }
 
-P_NODISCARD u32 p_gpu_gpuread(struct p_ctx *ctx) __attribute__((nonnull));
+P_NODISCARD u32 p_gpuread(struct p_ctx *ctx) P_NONNULL;

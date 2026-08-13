@@ -35,7 +35,7 @@ extern "C" {
 struct p_ctx;
 
 struct p_cpu_cfg {
-	void (*illegal_instr)(struct p_ctx *ctx, const u32 instr);
+	void (*illegal_instr)(struct p_ctx *ctx, u32 instr);
 };
 
 struct p_cpu_dly_slot {

@@ -23,18 +23,16 @@
 #include <assert.h>
 #include <string.h>
 
-#include "bios_trace.h"
 #include "bus.h"
 #include "cpu.h"
 #include "cpu_defs.h"
-#include "disasm.h"
 #include "log.h"
 #include "util.h"
 #include "sched.h"
 
 LOG_MOD(P_LOG_CPU);
 
-__attribute__((nonnull)) static void illegal_instr(struct p_ctx *const ctx)
+P_NONNULL static void illegal_instr(struct p_ctx *ctx)
 {
 	LOG_ERR(ctx, "illegal instruction trapped (pc=0x%08X, instr=0x%08X)",
 		ctx->cpu.pc, ctx->cpu.instr);
@@ -42,35 +40,31 @@ __attribute__((nonnull)) static void illegal_instr(struct p_ctx *const ctx)
 	ctx->cfg.cpu.illegal_instr(ctx, ctx->cpu.instr);
 }
 
-P_NODISCARD __attribute__((nonnull)) static u32
-load_word(struct p_ctx *const ctx, u32 vaddr)
+P_NODISCARD P_NONNULL static u32 load32(struct p_ctx *ctx, u32 vaddr)
 {
 	p_sched_adv_ts(ctx, 1);
 
 	vaddr = vaddr_to_paddr(vaddr);
-	return p_load_word(ctx, vaddr);
+	return p_load32(ctx, vaddr);
 }
 
-P_NODISCARD __attribute__((nonnull)) static u16
-load_halfword(struct p_ctx *const ctx, u32 vaddr)
+P_NODISCARD P_NONNULL static u16 load16(struct p_ctx *ctx, u32 vaddr)
 {
 	p_sched_adv_ts(ctx, 1);
 
 	vaddr = vaddr_to_paddr(vaddr);
-	return p_load_halfword(ctx, vaddr);
+	return p_load16(ctx, vaddr);
 }
 
-P_NODISCARD __attribute__((nonnull)) static u8
-load_byte(struct p_ctx *const ctx, u32 vaddr)
+P_NODISCARD P_NONNULL static u8 load8(struct p_ctx *ctx, u32 vaddr)
 {
 	p_sched_adv_ts(ctx, 1);
 
 	vaddr = vaddr_to_paddr(vaddr);
-	return p_load_byte(ctx, vaddr);
+	return p_load8(ctx, vaddr);
 }
 
-__attribute__((nonnull)) static void store_word(struct p_ctx *const ctx,
-						u32 vaddr, const u32 word)
+P_NONNULL static void store32(struct p_ctx *ctx, u32 vaddr, u32 data)
 {
 	p_sched_adv_ts(ctx, 1);
 
@@ -78,11 +72,10 @@ __attribute__((nonnull)) static void store_word(struct p_ctx *const ctx,
 		return;
 
 	vaddr = vaddr_to_paddr(vaddr);
-	p_store_word(ctx, vaddr, word);
+	p_store32(ctx, vaddr, data);
 }
 
-__attribute__((nonnull)) static void
-store_halfword(struct p_ctx *const ctx, u32 vaddr, const u16 halfword)
+P_NONNULL static void store16(struct p_ctx *ctx, u32 vaddr, u16 data)
 {
 	if (ctx->cpu.cop0[P_SR] & SR_ISC)
 		return;
@@ -90,11 +83,10 @@ store_halfword(struct p_ctx *const ctx, u32 vaddr, const u16 halfword)
 	p_sched_adv_ts(ctx, 1);
 
 	vaddr = vaddr_to_paddr(vaddr);
-	p_store_halfword(ctx, vaddr, halfword);
+	p_store16(ctx, vaddr, data);
 }
 
-__attribute__((nonnull)) static void store_byte(struct p_ctx *const ctx,
-						u32 vaddr, const u8 byte)
+P_NONNULL static void store8(struct p_ctx *ctx, u32 vaddr, u8 data)
 {
 	if (ctx->cpu.cop0[P_SR] & SR_ISC)
 		return;
@@ -102,36 +94,10 @@ __attribute__((nonnull)) static void store_byte(struct p_ctx *const ctx,
 	p_sched_adv_ts(ctx, 1);
 
 	vaddr = vaddr_to_paddr(vaddr);
-	p_store_byte(ctx, vaddr, byte);
+	p_store8(ctx, vaddr, data);
 }
 
-__attribute__((nonnull)) static void disasm_capture(struct p_ctx *const ctx)
-{
-	if (ctx->cfg.disasm.tracing) {
-		p_disasm_trace_begin(ctx, ctx->cpu.pc);
-		return;
-	}
-
-	if (MOD_LOG_LVL_ACTIVE(ctx, P_LOG_TRACE)) {
-		p_disasm_instr(ctx, ctx->cpu.pc, NULL);
-		LOG_TRACE_UNCHECKED(ctx, "[disasm] 0x%08X: %s",
-				    ctx->disasm.res.pc,
-				    ctx->disasm.res.str.ptr);
-	}
-}
-
-__attribute__((nonnull)) static void disasm_emit(struct p_ctx *const ctx)
-{
-	if (!ctx->cfg.disasm.tracing)
-		return;
-
-	p_disasm_trace_end(ctx);
-	LOG_TRACE(ctx, "[disasm] 0x%08X: %s", ctx->disasm.res.pc,
-		  ctx->disasm.res.str.ptr);
-}
-
-__attribute__((nonnull)) static void gpr_set(struct p_ctx *const ctx,
-					     const size_t reg, const u32 val)
+P_NONNULL static void gpr_set(struct p_ctx *ctx, size_t reg, u32 val)
 {
 	// If the instruction following a load writes to the same destination
 	// register, the load’s delay slot is canceled.
@@ -144,33 +110,30 @@ __attribute__((nonnull)) static void gpr_set(struct p_ctx *const ctx,
 	ctx->cpu.gpr[reg] = val;
 }
 
-__attribute__((nonnull)) static void branch(struct p_ctx *const ctx,
-					    const u32 addr)
+P_NONNULL static void branch(struct p_ctx *ctx, u32 addr)
 {
 	ctx->cpu.next_in_bd = true;
-	ctx->cpu.npc = addr;
+	ctx->cpu.npc	    = addr;
 }
 
-__attribute__((nonnull)) static void branch_if(struct p_ctx *const ctx,
-					       const bool cond)
+P_NONNULL static void branch_if(struct p_ctx *ctx, bool cond)
 {
 	ctx->cpu.next_in_bd = true;
 
 	if (cond) {
-		const u32 pc = unlikely(ctx->cpu.in_bd) ?
-				       ctx->cpu.dly_pc - sizeof(u32) :
-				       ctx->cpu.pc;
+		u32 pc = unlikely(ctx->cpu.in_bd) ?
+				 ctx->cpu.dly_pc - sizeof(u32) :
+				 ctx->cpu.pc;
 
 		ctx->cpu.npc = branch_addr(pc, ctx->cpu.instr);
 	}
 }
 
-__attribute__((nonnull)) static void exc(struct p_ctx *const ctx,
-					 const enum cpu_exc exc)
+P_NONNULL static void exc(struct p_ctx *ctx, enum cpu_exc exc)
 {
-#define SR (ctx->cpu.cop0[P_SR])
+#define SR    (ctx->cpu.cop0[P_SR])
 #define CAUSE (ctx->cpu.cop0[P_CAUSE])
-#define EPC (ctx->cpu.cop0[P_EPC])
+#define EPC   (ctx->cpu.cop0[P_EPC])
 
 	// So, on an exception, the CPU:
 
@@ -196,8 +159,7 @@ __attribute__((nonnull)) static void exc(struct p_ctx *const ctx,
 #undef EPC
 }
 
-__attribute__((nonnull)) static void
-do_div(struct p_ctx *const ctx, const s32 dividend, const s32 divisor)
+P_NONNULL static void do_div(struct p_ctx *ctx, s32 dividend, s32 divisor)
 {
 #define LO (ctx->cpu.lo)
 #define HI (ctx->cpu.hi)
@@ -222,8 +184,7 @@ do_div(struct p_ctx *const ctx, const s32 dividend, const s32 divisor)
 #undef HI
 }
 
-__attribute__((nonnull)) static void
-do_divu(struct p_ctx *const ctx, const u32 dividend, const u32 divisor)
+P_NONNULL static void do_divu(struct p_ctx *ctx, u32 dividend, u32 divisor)
 {
 #define LO (ctx->cpu.lo)
 #define HI (ctx->cpu.hi)
@@ -243,8 +204,7 @@ do_divu(struct p_ctx *const ctx, const u32 dividend, const u32 divisor)
 #undef HI
 }
 
-__attribute__((nonnull)) static void
-do_add(struct p_ctx *const ctx, const size_t dst, const u32 a0, const u32 a1)
+P_NONNULL static void do_add(struct p_ctx *ctx, size_t dst, u32 a0, u32 a1)
 {
 	int sum;
 
@@ -254,9 +214,8 @@ do_add(struct p_ctx *const ctx, const size_t dst, const u32 a0, const u32 a1)
 		gpr_set(ctx, dst, sum);
 }
 
-__attribute__((nonnull)) static void do_sub(struct p_ctx *const ctx,
-					    const size_t dst, const u32 minuend,
-					    const u32 subtrahend)
+P_NONNULL static void do_sub(struct p_ctx *ctx, size_t dst, u32 minuend,
+			     u32 subtrahend)
 {
 	int diff;
 
@@ -266,8 +225,7 @@ __attribute__((nonnull)) static void do_sub(struct p_ctx *const ctx,
 		gpr_set(ctx, dst, diff);
 }
 
-__attribute__((nonnull)) static void do_cop0_instr(struct p_ctx *const ctx,
-						   const uint funct)
+P_NONNULL static void do_cop0_instr(struct p_ctx *ctx, uint funct)
 {
 #define SR (ctx->cpu.cop0[P_SR])
 
@@ -279,7 +237,7 @@ __attribute__((nonnull)) static void do_cop0_instr(struct p_ctx *const ctx,
 #undef SR
 }
 
-__attribute__((nonnull)) static void dly_slot_process(struct p_ctx *const ctx)
+P_NONNULL static void dly_slot_process(struct p_ctx *ctx)
 {
 	ctx->cpu.gpr[ctx->cpu.ld_next.dst] = ctx->cpu.ld_next.val;
 
@@ -291,8 +249,7 @@ __attribute__((nonnull)) static void dly_slot_process(struct p_ctx *const ctx)
 	swap(&ctx->cpu.ld_pend, &ctx->cpu.ld_next);
 }
 
-__attribute__((nonnull)) static void load_dly(struct p_ctx *const ctx,
-					      const size_t dst, const u32 val)
+P_NONNULL static void load_dly(struct p_ctx *ctx, size_t dst, u32 val)
 {
 	if (unlikely(!dst)) {
 		LOG_WARN(ctx, "Load delay rejected - dest was $zero");
@@ -308,71 +265,39 @@ __attribute__((nonnull)) static void load_dly(struct p_ctx *const ctx,
 		memset(&ctx->cpu.ld_next, 0, sizeof(ctx->cpu.ld_next));
 }
 
-void p_cpu_pc_set(struct p_ctx *const ctx, const u32 pc)
+P_NONNULL static void step(struct p_ctx *ctx)
 {
-	ctx->cpu.dly_pc = pc;
-	ctx->cpu.pc = pc;
-	ctx->cpu.npc = pc + sizeof(ctx->cpu.instr);
-}
+#define gpr	(ctx->cpu.gpr)
+#define pc	(ctx->cpu.pc)
+#define npc	(ctx->cpu.npc)
+#define hi	(ctx->cpu.hi)
+#define lo	(ctx->cpu.lo)
+#define instr	(ctx->cpu.instr)
 
-void p_cpu_gpr_set(struct p_ctx *const ctx, const enum p_cpu_gpr gpr,
-		   const u32 val)
-{
-	assert(gpr < P_GPR_COUNT);
-	ctx->cpu.gpr[gpr] = val;
-}
-
-void p_cpu_rst(struct p_ctx *const ctx)
-{
-	memset(ctx->cpu.gpr, 0, sizeof(ctx->cpu.gpr));
-	p_cpu_pc_set(ctx, RST_VECTOR);
-
-	memset(&ctx->cpu.ld_pend, 0, sizeof(ctx->cpu.ld_pend));
-	memset(&ctx->cpu.ld_next, 0, sizeof(ctx->cpu.ld_next));
-
-	LOG_INFO(ctx, "reset");
-}
-
-static void step(struct p_ctx *const ctx)
-{
-#define gpr (ctx->cpu.gpr)
-#define pc (ctx->cpu.pc)
-#define npc (ctx->cpu.npc)
-#define hi (ctx->cpu.hi)
-#define lo (ctx->cpu.lo)
-#define instr (ctx->cpu.instr)
-
-#define op (instr_op(instr))
-#define rt (instr_rt(instr))
-#define rs (instr_rs(instr))
-#define rd (instr_rd(instr))
-#define shamt (instr_shamt(instr))
-#define funct (instr_funct(instr))
-#define base (rs)
+#define op	(instr_op(instr))
+#define rt	(instr_rt(instr))
+#define rs	(instr_rs(instr))
+#define rd	(instr_rd(instr))
+#define shamt	(instr_shamt(instr))
+#define funct	(instr_funct(instr))
+#define base	(rs)
 #define zextimm (zext_16_32(instr_imm(instr)))
 #define sextimm (sext_16_32(instr_imm(instr)))
-#define offset (sextimm)
+#define offset	(sextimm)
 
 	if (unlikely(ctx->cpu.dly_pc & 3))
 		exc(ctx, EXC_ADEL);
 
-	ctx->cpu.in_bd = ctx->cpu.next_in_bd;
+	ctx->cpu.in_bd	    = ctx->cpu.next_in_bd;
 	ctx->cpu.next_in_bd = false;
 
-	pc = ctx->cpu.dly_pc;
-	instr = load_word(ctx, pc);
+	pc    = ctx->cpu.dly_pc;
+	instr = load32(ctx, pc);
 
 	ctx->cpu.dly_pc = npc;
-	npc = ctx->cpu.dly_pc + sizeof(instr);
-
-	disasm_capture(ctx);
-	p_bios_trace_begin(ctx);
+	npc		= ctx->cpu.dly_pc + sizeof(instr);
 
 	dly_slot_process(ctx);
-
-	for (size_t i = 0; i < 5; ++i)
-		LOG_TRACE(ctx, "jpad[0x0004A1B%zu] = 0x%02X", i,
-			  ctx->bus.ram[0x0004A1B0 + i]);
 
 	switch (op) {
 	case GRP_SPECIAL:
@@ -406,7 +331,7 @@ static void step(struct p_ctx *const ctx)
 			break;
 
 		case JALR: {
-			const u32 jmp_addr = gpr[rs];
+			u32 jmp_addr = gpr[rs];
 
 			gpr_set(ctx, rd, pc + (sizeof(instr) * 2));
 			branch(ctx, jmp_addr);
@@ -439,7 +364,7 @@ static void step(struct p_ctx *const ctx)
 			break;
 
 		case MULT: {
-			const u64 x = sext_32_64(gpr[rs]) * sext_32_64(gpr[rt]);
+			u64 x = sext_32_64(gpr[rs]) * sext_32_64(gpr[rt]);
 
 			lo = x & UINT32_MAX;
 			hi = x >> 32;
@@ -448,7 +373,7 @@ static void step(struct p_ctx *const ctx)
 		}
 
 		case MULTU: {
-			const u64 x = zext_32_64(gpr[rs]) * zext_32_64(gpr[rt]);
+			u64 x = zext_32_64(gpr[rs]) * zext_32_64(gpr[rt]);
 
 			lo = x & UINT32_MAX;
 			hi = x >> 32;
@@ -511,8 +436,8 @@ static void step(struct p_ctx *const ctx)
 		break;
 
 	case GRP_REGIMM: {
-		const bool link = (rt & 0x1E) == 0x10;
-		const bool branch = (s32)(gpr[rs] ^ (rt << 31)) < 0;
+		bool link   = (rt & 0x1E) == 0x10;
+		bool branch = (s32)(gpr[rs] ^ (rt << 31)) < 0;
 
 		if (link)
 			gpr_set(ctx, P_RA, pc + (sizeof(instr) * 2));
@@ -603,29 +528,28 @@ static void step(struct p_ctx *const ctx)
 		break;
 
 	case LB:
-		load_dly(ctx, rt,
-			 sext_8_32(load_byte(ctx, gpr[base] + offset)));
+		load_dly(ctx, rt, sext_8_32(load8(ctx, gpr[base] + offset)));
 		break;
 
 	case LH: {
-		const u32 vaddr = gpr[base] + offset;
+		u32 vaddr = gpr[base] + offset;
 
 		if (unlikely(vaddr & 1)) {
 			exc(ctx, EXC_ADEL);
 			break;
 		}
-		load_dly(ctx, rt, sext_16_32(load_halfword(ctx, vaddr)));
+		load_dly(ctx, rt, sext_16_32(load16(ctx, vaddr)));
 		break;
 	}
 
 	case LWL: {
-		const u32 vaddr = gpr[base] + offset;
-		const u32 aligned_vaddr = vaddr & ~3;
+		u32 vaddr	  = gpr[base] + offset;
+		u32 aligned_vaddr = vaddr & ~3;
 
-		const u32 word = load_word(ctx, aligned_vaddr);
+		u32 word = load32(ctx, aligned_vaddr);
 
-		const uint shift = (vaddr & 3) * 8;
-		const uint mask = 0x00FFFFFF >> shift;
+		uint shift = (vaddr & 3) * 8;
+		uint mask  = 0x00FFFFFF >> shift;
 
 		u32 val = (ctx->cpu.ld_next.dst == rt) ? ctx->cpu.ld_next.val :
 							 gpr[rt];
@@ -637,41 +561,40 @@ static void step(struct p_ctx *const ctx)
 	}
 
 	case LW: {
-		const u32 vaddr = gpr[base] + offset;
+		u32 vaddr = gpr[base] + offset;
 
 		if (unlikely(vaddr & 0x3)) {
 			exc(ctx, EXC_ADEL);
 			break;
 		}
-		load_dly(ctx, rt, load_word(ctx, vaddr));
+		load_dly(ctx, rt, load32(ctx, vaddr));
 		break;
 	}
 
 	case LBU:
-		load_dly(ctx, rt,
-			 zext_8_32(load_byte(ctx, gpr[base] + offset)));
+		load_dly(ctx, rt, zext_8_32(load8(ctx, gpr[base] + offset)));
 		break;
 
 	case LHU: {
-		const u32 vaddr = gpr[base] + offset;
+		u32 vaddr = gpr[base] + offset;
 
 		if (unlikely(vaddr & 1)) {
 			exc(ctx, EXC_ADEL);
 			break;
 		}
 
-		load_dly(ctx, rt, zext_16_32(load_halfword(ctx, vaddr)));
+		load_dly(ctx, rt, zext_16_32(load16(ctx, vaddr)));
 		break;
 	}
 
 	case LWR: {
-		const u32 vaddr = gpr[base] + offset;
-		const u32 aligned_vaddr = vaddr & ~3;
+		u32 vaddr	  = gpr[base] + offset;
+		u32 aligned_vaddr = vaddr & ~3;
 
-		const u32 word = load_word(ctx, aligned_vaddr);
+		u32 word = load32(ctx, aligned_vaddr);
 
-		const uint shift = (vaddr & 3) * 8;
-		const uint mask = 0xFFFFFF00 << (24 - shift);
+		uint shift = (vaddr & 3) * 8;
+		uint mask  = 0xFFFFFF00 << (24 - shift);
 
 		u32 val = (ctx->cpu.ld_next.dst == rt) ? ctx->cpu.ld_next.val :
 							 gpr[rt];
@@ -683,57 +606,57 @@ static void step(struct p_ctx *const ctx)
 	}
 
 	case SB:
-		store_byte(ctx, gpr[base] + offset, gpr[rt] & UINT8_MAX);
+		store8(ctx, gpr[base] + offset, gpr[rt] & UINT8_MAX);
 		break;
 
 	case SH: {
-		const u32 vaddr = gpr[base] + offset;
+		u32 vaddr = gpr[base] + offset;
 
 		if (unlikely(vaddr & 1)) {
 			exc(ctx, EXC_ADES);
 			break;
 		}
 
-		store_halfword(ctx, vaddr, gpr[rt] & UINT16_MAX);
+		store16(ctx, vaddr, gpr[rt] & UINT16_MAX);
 		break;
 	}
 
 	case SWL: {
-		const u32 vaddr = gpr[base] + offset;
-		const u32 aligned_vaddr = vaddr & ~3;
+		u32 vaddr	  = gpr[base] + offset;
+		u32 aligned_vaddr = vaddr & ~3;
 
-		const uint shift = (vaddr & 3) * 8;
-		const uint mask = 0xFFFFFF00 << shift;
+		uint shift = (vaddr & 3) * 8;
+		uint mask  = 0xFFFFFF00 << shift;
 
-		u32 word = load_word(ctx, aligned_vaddr);
-		word = (word & mask) | (gpr[rt] >> (24 - shift));
-		store_word(ctx, aligned_vaddr, word);
+		u32 word = load32(ctx, aligned_vaddr);
+		word	 = (word & mask) | (gpr[rt] >> (24 - shift));
+		store32(ctx, aligned_vaddr, word);
 
 		break;
 	}
 
 	case SW: {
-		const u32 vaddr = gpr[base] + offset;
+		u32 vaddr = gpr[base] + offset;
 
 		if (unlikely(vaddr & 3)) {
 			exc(ctx, EXC_ADES);
 			break;
 		}
 
-		store_word(ctx, vaddr, gpr[rt]);
+		store32(ctx, vaddr, gpr[rt]);
 		break;
 	}
 
 	case SWR: {
-		const u32 vaddr = gpr[base] + offset;
-		const u32 aligned_vaddr = vaddr & ~3;
+		u32 vaddr	  = gpr[base] + offset;
+		u32 aligned_vaddr = vaddr & ~3;
 
-		const uint shift = (vaddr & 3) * 8;
-		const uint mask = 0x00FFFFFF >> (24 - shift);
+		uint shift = (vaddr & 3) * 8;
+		uint mask  = 0x00FFFFFF >> (24 - shift);
 
-		u32 word = load_word(ctx, aligned_vaddr);
-		word = (word & mask) | (gpr[rt] << shift);
-		store_word(ctx, aligned_vaddr, word);
+		u32 word = load32(ctx, aligned_vaddr);
+		word	 = (word & mask) | (gpr[rt] << shift);
+		store32(ctx, aligned_vaddr, word);
 
 		break;
 	}
@@ -746,19 +669,26 @@ static void step(struct p_ctx *const ctx)
 	// Better than a branch - ensure that zero is indeed always zero.
 	gpr[P_ZERO] = 0;
 
-	p_bios_trace_end(ctx);
-	disasm_emit(ctx);
+#undef gpr
+#undef pc
+#undef npc
+#undef hi
+#undef lo
+#undef instr
+
+#undef op
+#undef rt
+#undef rs
+#undef rd
+#undef shamt
+#undef funct
+#undef base
+#undef zextimm
+#undef sextimm
+#undef offset
 }
 
-void p_cpu_run(struct p_ctx *const ctx, u64 cycles)
-{
-	cycles += ctx->sched.ts_now;
-
-	while (ctx->sched.ts_now < cycles)
-		step(ctx);
-}
-
-void p_cpu_irq_mux_set(struct p_ctx *const ctx, const bool set)
+void p_cpu_irq_mux_set(struct p_ctx *ctx, bool set)
 {
 	if (set) {
 		ctx->cpu.cop0[P_SR] |= (1 << 10);
@@ -767,4 +697,36 @@ void p_cpu_irq_mux_set(struct p_ctx *const ctx, const bool set)
 		ctx->cpu.cop0[P_SR] &= ~(1 << 10);
 		LOG_DBG(ctx, "irq mux line not asserted");
 	}
+}
+
+void p_cpu_pc_set(struct p_ctx *ctx, u32 pc)
+{
+	ctx->cpu.dly_pc = pc;
+	ctx->cpu.pc	= pc;
+	ctx->cpu.npc	= pc + sizeof(ctx->cpu.instr);
+}
+
+void p_cpu_gpr_set(struct p_ctx *ctx, enum p_cpu_gpr gpr, u32 val)
+{
+	assert(gpr < P_GPR_COUNT);
+	ctx->cpu.gpr[gpr] = val;
+}
+
+void p_cpu_rst(struct p_ctx *ctx)
+{
+	memset(ctx->cpu.gpr, 0, sizeof(ctx->cpu.gpr));
+	p_cpu_pc_set(ctx, RST_VECTOR);
+
+	memset(&ctx->cpu.ld_pend, 0, sizeof(ctx->cpu.ld_pend));
+	memset(&ctx->cpu.ld_next, 0, sizeof(ctx->cpu.ld_next));
+
+	LOG_INFO(ctx, "reset");
+}
+
+void p_cpu_run(struct p_ctx *ctx, u64 cycles)
+{
+	cycles += ctx->sched.ts_now;
+
+	while (ctx->sched.ts_now < cycles)
+		step(ctx);
 }

@@ -24,22 +24,16 @@
 
 #include "psycho/ctx.h"
 
-enum {
-	// clang-format off
-
-	SIO0_TX_DATA	= 0x1F801040,
-	SIO0_RX_DATA	= 0x1F801040,
-	SIO0_STAT	= 0x1F801044,
-	SIO0_MODE	= 0x1F801048,
-	SIO0_CTRL	= 0x1F80104A,
-	SIO0_BAUD	= 0x1F80104E
-
-	// clang-format on
-};
+#define SIO0_TX_DATA (0x1F801040)
+#define SIO0_RX_DATA (0x1F801040)
+#define SIO0_STAT    (0x1F801044)
+#define SIO0_MODE    (0x1F801048)
+#define SIO0_CTRL    (0x1F80104A)
+#define SIO0_BAUD    (0x1F80104E)
 
 void p_sio0_rst(struct p_ctx *ctx) P_NONNULL;
 
-void p_sio0_tx(struct p_ctx *ctx, const u8 byte) P_NONNULL;
+void p_sio0_tx(struct p_ctx *ctx, u8 byte) P_NONNULL;
 
 P_NODISCARD u8 p_sio0_rx_pop8(struct p_ctx *ctx) P_NONNULL;
 

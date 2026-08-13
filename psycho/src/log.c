@@ -28,40 +28,30 @@
 #include "log.h"
 #include "str.h"
 
-void p_log_msg(struct p_ctx *const ctx, const enum p_log_mod mod,
-	       const enum p_log_lvl lvl, const char *const fmt, ...)
+void p_log_msg(struct p_ctx *ctx, enum p_log_mod mod, enum p_log_lvl lvl,
+	       const char *fmt, ...)
 {
 	assert(ctx->cfg.log.log_cb != NULL);
 
 	assert(mod < P_LOG_MOD_COUNT);
 	assert((lvl > P_LOG_OFF) && (lvl < P_LOG_COUNT));
 
-	static const char *const lvl_str[P_LOG_COUNT] = {
-		// clang-format off
+	static const char *lvl_str[P_LOG_COUNT] = { [P_LOG_INFO]  = "info",
+						    [P_LOG_WARN]  = "warn",
+						    [P_LOG_ERR]	  = "err",
+						    [P_LOG_DBG]	  = "dbg",
+						    [P_LOG_TRACE] = "trace" };
 
-		[P_LOG_INFO]	= "info",
-		[P_LOG_WARN]	= "warn",
-		[P_LOG_ERR]	= "err",
-		[P_LOG_DBG]	= "dbg",
-		[P_LOG_TRACE]	= "trace"
-
-		// clang-format on
-	};
-
-	static const char *const mod_str[P_LOG_MOD_COUNT] = {
-		// clang-format off
-
-		[P_LOG_CTX]		= "ctx",
-		[P_LOG_CPU]		= "cpu",
-		[P_LOG_BUS]		= "bus",
-		[P_LOG_BIOS]		= "bios",
-		[P_LOG_SCHED]		= "sched",
-		[P_LOG_GPU]		= "gpu",
-		[P_LOG_INTCTRL]		= "intctrl",
-		[P_LOG_DIGITAL_CTRL]	= "digital controller",
-		[P_LOG_SIO0]		= "sio0"
-
-		// clang-format on
+	static const char *mod_str[P_LOG_MOD_COUNT] = {
+		[P_LOG_CTX]	     = "ctx",
+		[P_LOG_CPU]	     = "cpu",
+		[P_LOG_BUS]	     = "bus",
+		[P_LOG_BIOS]	     = "bios",
+		[P_LOG_SCHED]	     = "sched",
+		[P_LOG_GPU]	     = "gpu",
+		[P_LOG_INTCTRL]	     = "intctrl",
+		[P_LOG_DIGITAL_CTRL] = "digital controller",
+		[P_LOG_SIO0]	     = "sio0"
 	};
 
 	char buf[512];
@@ -75,14 +65,10 @@ void p_log_msg(struct p_ctx *const ctx, const enum p_log_mod mod,
 	p_str_vappend(&str, NULL, fmt, args);
 	va_end(args);
 
-	const struct p_log_msg msg = {
-		// clang-format off
-
-		.str	= str,
-		.mod	= mod,
-		.lvl	= lvl
-
-		// clang-format on
+	struct p_log_msg msg = {
+		.str = str,
+		.mod = mod,
+		.lvl = lvl,
 	};
 	ctx->cfg.log.log_cb(ctx, &msg);
 }

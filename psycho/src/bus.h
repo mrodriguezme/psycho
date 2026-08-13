@@ -24,25 +24,18 @@
 
 #include "psycho/ctx.h"
 
-void p_bus_init(struct p_ctx *ctx) __attribute__((nonnull));
+void p_bus_init(struct p_ctx *ctx) P_NONNULL;
 
-P_NODISCARD u32 p_load_word(struct p_ctx *ctx, const u32 paddr)
-	__attribute__((nonnull));
+P_NODISCARD u32 p_load32(struct p_ctx *ctx, u32 paddr) P_NONNULL;
 
-P_NODISCARD u16 p_load_halfword(struct p_ctx *ctx, const u32 paddr)
-	__attribute__((nonnull));
+P_NODISCARD u16 p_load16(struct p_ctx *ctx, u32 paddr) P_NONNULL;
 
-P_NODISCARD u8 p_load_byte(struct p_ctx *ctx, const u32 paddr)
-	__attribute__((nonnull));
+P_NODISCARD u8 p_load8(struct p_ctx *ctx, const u32 paddr) P_NONNULL;
 
-void p_store_word(struct p_ctx *ctx, const u32 paddr, const u32 word)
-	__attribute__((nonnull));
+void p_store32(struct p_ctx *ctx, u32 paddr, u32 word) P_NONNULL;
 
-void p_store_halfword(struct p_ctx *ctx, const u32 paddr, const u16 halfword)
-	__attribute__((nonnull));
+void p_store16(struct p_ctx *ctx, u32 paddr, u16 halfword) P_NONNULL;
 
-void p_store_byte(struct p_ctx *ctx, const u32 paddr, const u8 byte)
-	__attribute__((nonnull));
+void p_store8(struct p_ctx *ctx, u32 paddr, u8 byte) P_NONNULL;
 
-void *p_get_mem_area(struct p_ctx *ctx, const u32 paddr)
-	__attribute__((nonnull));
+P_PURE void *p_get_mem_area(struct p_ctx *ctx, u32 paddr) P_NONNULL;

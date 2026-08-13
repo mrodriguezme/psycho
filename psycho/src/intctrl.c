@@ -26,25 +26,13 @@
 
 LOG_MOD(P_LOG_INTCTRL);
 
-static const char *const irq_names[IRQ_COUNT] = {
-	// clang-format off
-
-	[0]	= "vblank",
-	[1]	= "gpu",
-	[2]	= "cdrom",
-	[3]	= "dma",
-	[4]	= "tmr0",
-	[5]	= "tmr1",
-	[6]	= "tmr2",
-	[7]	= "sio0",
-	[8]	= "sio1",
-	[9]	= "spu",
-	[10]	= "lightpen"
-
-	// clang-format on
+static const char *irq_names[IRQ_COUNT] = {
+	[0] = "vblank", [1] = "gpu",  [2] = "cdrom",	[3] = "dma",
+	[4] = "tmr0",	[5] = "tmr1", [6] = "tmr2",	[7] = "sio0",
+	[8] = "sio1",	[9] = "spu",  [10] = "lightpen"
 };
 
-void p_irq_mask_set(struct p_ctx *const ctx, const u32 mask)
+void p_irq_mask_set(struct p_ctx *ctx, u32 mask)
 {
 	u32 m_mask = mask;
 
@@ -56,7 +44,7 @@ void p_irq_mask_set(struct p_ctx *const ctx, const u32 mask)
 	p_cpu_irq_mux_set(ctx, (ctx->intctrl.i_mask & ctx->intctrl.i_stat));
 }
 
-void p_irq_ack(struct p_ctx *const ctx, const u32 mask)
+void p_irq_ack(struct p_ctx *ctx, u32 mask)
 {
 	u32 m_mask = mask;
 
@@ -68,7 +56,7 @@ void p_irq_ack(struct p_ctx *const ctx, const u32 mask)
 	p_cpu_irq_mux_set(ctx, (ctx->intctrl.i_mask & ctx->intctrl.i_stat));
 }
 
-void p_irq_pending(struct p_ctx *const ctx, const u32 mask)
+void p_irq_pend(struct p_ctx *ctx, u32 mask)
 {
 	u32 m_mask = mask;
 
