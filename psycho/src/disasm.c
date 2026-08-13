@@ -455,63 +455,80 @@ void p_disasm_instr(struct p_ctx *const ctx, const u32 pc,
 	case LB:
 		fmt("lb %s, %d(%s)", gpr[rt], offset, gpr[base]);
 		trace_add(traces, P_DISASM_TRACE_GPR_RT);
+		trace_add(traces, P_DISASM_TRACE_CPU_PADDR);
 
 		return;
 
 	case LH:
 		fmt("lh %s, %d(%s)", gpr[rt], offset, gpr[base]);
 		trace_add(traces, P_DISASM_TRACE_GPR_RT);
+		trace_add(traces, P_DISASM_TRACE_CPU_PADDR);
 
 		return;
 
 	case LWL:
 		fmt("lwl %s, %d(%s)", gpr[rt], offset, gpr[base]);
 		trace_add(traces, P_DISASM_TRACE_GPR_RT);
+		trace_add(traces, P_DISASM_TRACE_CPU_PADDR);
 
 		return;
 
 	case LW:
 		fmt("lw %s, %d(%s)", gpr[rt], offset, gpr[base]);
 		trace_add(traces, P_DISASM_TRACE_GPR_RT);
+		trace_add(traces, P_DISASM_TRACE_CPU_PADDR);
 
 		return;
 
 	case LBU:
 		fmt("lbu %s, %d(%s)", gpr[rt], offset, gpr[base]);
 		trace_add(traces, P_DISASM_TRACE_GPR_RT);
+		trace_add(traces, P_DISASM_TRACE_CPU_PADDR);
 
 		return;
 
 	case LHU:
 		fmt("lhu %s, %d(%s)", gpr[rt], offset, gpr[base]);
 		trace_add(traces, P_DISASM_TRACE_GPR_RT);
+		trace_add(traces, P_DISASM_TRACE_CPU_PADDR);
 
 		return;
 
 	case LWR:
 		fmt("lwr %s, %d(%s)", gpr[rt], offset, gpr[base]);
 		trace_add(traces, P_DISASM_TRACE_GPR_RT);
+		trace_add(traces, P_DISASM_TRACE_CPU_PADDR);
 
 		return;
 
 	case SB:
 		fmt("sb %s, %d(%s)", gpr[rt], offset, gpr[base]);
+
+		trace_add(traces, P_DISASM_TRACE_CPU_PADDR);
 		return;
 
 	case SH:
 		fmt("sh %s, %d(%s)", gpr[rt], offset, gpr[base]);
+
+		trace_add(traces, P_DISASM_TRACE_CPU_PADDR);
 		return;
 
 	case SWL:
 		fmt("swl %s, %d(%s)", gpr[rt], offset, gpr[base]);
+
+		trace_add(traces, P_DISASM_TRACE_CPU_PADDR);
 		return;
 
 	case SW:
 		fmt("sw %s, %d(%s)", gpr[rt], offset, gpr[base]);
+		trace_add(traces, P_DISASM_TRACE_CPU_PADDR);
+
 		return;
 
 	case SWR:
 		fmt("swr %s, %d(%s)", gpr[rt], offset, gpr[base]);
+		trace_add(traces, P_DISASM_TRACE_CPU_PADDR);
+
 		return;
 
 	default:
@@ -561,6 +578,7 @@ void p_disasm_trace_end(struct p_ctx *const ctx)
 
 #define rt (instr_rt(ctx->disasm.res.instr))
 #define rd (instr_rd(ctx->disasm.res.instr))
+#define rs (instr_rs(ctx->disasm.res.instr))
 
 	for (size_t trace = 0; trace < ctx->disasm.traces.count; ++trace) {
 		if (trace)
@@ -581,6 +599,12 @@ void p_disasm_trace_end(struct p_ctx *const ctx)
 
 		case P_DISASM_TRACE_CPU_HI:
 			fmt("HI=0x%08X", ctx->cpu.hi);
+			break;
+
+		case P_DISASM_TRACE_CPU_PADDR:
+			fmt("paddr=0x%08X",
+			    (instr_imm(ctx->disasm.res.instr) +
+				    ctx->cpu.gpr[rs]) & 0x1FFFFFFF);
 			break;
 
 		case P_DISASM_TRACE_COUNT:

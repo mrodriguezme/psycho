@@ -31,6 +31,7 @@
 
 #include "ansi-color-codes.h"
 #include "psycho/ctx.h"
+#include "psycho/digital_ctrl.h"
 
 static struct p_ctx m_ctx;
 static u8 *exe_data;
@@ -42,6 +43,7 @@ static SDL_Texture *texture;
 static bool running;
 static Uint64 fps_last_update_ns;
 static Uint32 frame;
+struct p_digital_ctrl ctrl;
 
 static void log_cb(struct p_ctx *const ctx, const struct p_log_msg *const msg)
 {
@@ -243,20 +245,22 @@ static void emu_init(void)
 
 	// clang-format off
 
-	cfg->log.mod[P_LOG_CTX]     = P_LOG_TRACE;
-	cfg->log.mod[P_LOG_CPU]     = P_LOG_OFF;
-	cfg->log.mod[P_LOG_BUS]     = P_LOG_TRACE;
-	cfg->log.mod[P_LOG_BIOS]    = P_LOG_TRACE;
-	cfg->log.mod[P_LOG_SCHED]   = P_LOG_TRACE;
-	cfg->log.mod[P_LOG_GPU]     = P_LOG_OFF;
-	cfg->log.mod[P_LOG_INTCTRL] = P_LOG_TRACE;
+	#if 0
+	//cfg->log.mod[P_LOG_CTX]			= P_LOG_TRACE;
+	cfg->log.mod[P_LOG_BUS]			= P_LOG_TRACE;
+	//cfg->log.mod[P_LOG_BIOS]		= P_LOG_TRACE;
+	//cfg->log.mod[P_LOG_SCHED]		= P_LOG_TRACE;
+	//cfg->log.mod[P_LOG_GPU]			= P_LOG_OFF;
+	//cfg->log.mod[P_LOG_INTCTRL]		= P_LOG_TRACE;
+	cfg->log.mod[P_LOG_DIGITAL_CTRL]	= P_LOG_TRACE;
+	cfg->log.mod[P_LOG_SIO0]		= P_LOG_TRACE;
+#endif
+	//cfg->log.mod[P_LOG_SCHED] = P_LOG_TRACE;
 
 	// clang-format on
 
 	cfg->bios_trace.stdout_line = on_stdout_line;
 	cfg->bios_trace.deref_ptrs = true;
-
-	//cfg->disasm.tracing = true;
 
 	cfg->on_vblank = on_vblank;
 
@@ -272,11 +276,118 @@ static void gfx_fini(void)
 	SDL_Quit();
 }
 
+static void press_emu_btn(SDL_Event *ev)
+{
+	if (ev->key.repeat)
+		return;
+
+	switch (ev->key.key) {
+	case SDLK_DOWN:
+		p_digital_ctrl_btn_press(&ctrl, P_DIGITAL_CTRL_DN);
+		break;
+
+	case SDLK_UP:
+		p_digital_ctrl_btn_press(&ctrl, P_DIGITAL_CTRL_UP);
+		break;
+
+	case SDLK_LEFT:
+		p_digital_ctrl_btn_press(&ctrl, P_DIGITAL_CTRL_LT);
+		break;
+
+	case SDLK_RIGHT:
+		p_digital_ctrl_btn_press(&ctrl, P_DIGITAL_CTRL_RT);
+		break;
+
+	case SDLK_X:
+		p_digital_ctrl_btn_press(&ctrl, P_DIGITAL_CTRL_CROSS);
+		break;
+
+	case SDLK_O:
+		p_digital_ctrl_btn_press(&ctrl, P_DIGITAL_CTRL_CIR);
+		break;
+
+	case SDLK_S:
+		p_digital_ctrl_btn_press(&ctrl, P_DIGITAL_CTRL_SQR);
+		break;
+
+	case SDLK_T:
+		p_digital_ctrl_btn_press(&ctrl, P_DIGITAL_CTRL_TRI);
+		break;
+
+	case SDLK_RETURN:
+		p_digital_ctrl_btn_press(&ctrl, P_DIGITAL_CTRL_START);
+		break;
+
+	case SDLK_SPACE:
+		p_digital_ctrl_btn_press(&ctrl, P_DIGITAL_CTRL_SEL);
+		break;
+
+	default:
+		break;
+	}
+}
+
+static void rel_emu_btn(SDL_Event *ev)
+{
+	switch (ev->key.key) {
+	case SDLK_DOWN:
+		p_digital_ctrl_button_rel(&ctrl, P_DIGITAL_CTRL_DN);
+		break;
+
+	case SDLK_UP:
+		p_digital_ctrl_button_rel(&ctrl, P_DIGITAL_CTRL_UP);
+		break;
+
+	case SDLK_LEFT:
+		p_digital_ctrl_button_rel(&ctrl, P_DIGITAL_CTRL_LT);
+		break;
+
+	case SDLK_RIGHT:
+		p_digital_ctrl_button_rel(&ctrl, P_DIGITAL_CTRL_RT);
+		break;
+
+	case SDLK_X:
+		p_digital_ctrl_button_rel(&ctrl, P_DIGITAL_CTRL_CROSS);
+		break;
+
+	case SDLK_O:
+		p_digital_ctrl_button_rel(&ctrl, P_DIGITAL_CTRL_CIR);
+		break;
+
+	case SDLK_S:
+		p_digital_ctrl_button_rel(&ctrl, P_DIGITAL_CTRL_SQR);
+		break;
+
+	case SDLK_T:
+		p_digital_ctrl_button_rel(&ctrl, P_DIGITAL_CTRL_TRI);
+		break;
+
+	case SDLK_RETURN:
+		p_digital_ctrl_button_rel(&ctrl, P_DIGITAL_CTRL_START);
+		break;
+
+	case SDLK_SPACE:
+		p_digital_ctrl_button_rel(&ctrl, P_DIGITAL_CTRL_SEL);
+		break;
+
+	default:
+		break;
+	}
+}
+
 static void sdl_process_ev(SDL_Event *const ev)
 {
 	switch (ev->type) {
 	case SDL_EVENT_QUIT:
 		running = false;
+		break;
+
+	case SDL_EVENT_KEY_DOWN:
+		press_emu_btn(ev);
+		break;
+
+	case SDL_EVENT_KEY_UP:
+		rel_emu_btn(ev);
 		break;
 
 	default:
@@ -297,6 +408,9 @@ int main(int argc, char **argv)
 	prog_name = argv[0];
 
 	emu_init();
+
+	p_digital_ctrl_init(&m_ctx, &ctrl);
+	p_attach_dev_to_sio0(&m_ctx, &ctrl.dev, 0);
 
 	if (!load_bios_file(argv[1]))
 		return EXIT_FAILURE;

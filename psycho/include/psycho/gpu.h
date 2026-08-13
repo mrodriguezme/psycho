@@ -23,6 +23,7 @@
 #pragma once
 
 #include <stddef.h>
+#include "sched.h"
 #include "types.h"
 
 #ifdef __cplusplus
@@ -68,6 +69,8 @@ struct p_gpu {
 
 	u16 *vram;
 	void (*cmd_fn)(struct p_ctx *ctx, u32 packet);
+
+	struct p_sched_ev ev_vblank;
 
 	u32 gpustat;
 	u32 gpuread;

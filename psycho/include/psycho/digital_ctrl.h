@@ -22,66 +22,57 @@
 
 #pragma once
 
+#include "compiler.h"
+#include "sio0_dev.h"
+
 #ifdef __cplusplus
 extern "C" {
 #endif // __cplusplus
 
-#include "cpu.h"
-#include "bios_trace.h"
-#include "bus.h"
-#include "disasm.h"
-#include "log.h"
-#include "gpu.h"
-#include "intctrl.h"
-#include "sched.h"
-#include "sio0.h"
-
-struct p_ctx_cfg {
-	struct p_cpu_cfg cpu;
-	struct p_bios_trace_cfg bios_trace;
-	struct p_disasm_cfg disasm;
-	struct p_log_cfg log;
-
-	void (*on_vblank)(struct p_ctx *ctx);
+enum p_digital_ctrl_state {
+	P_DIGITAL_CTRL_STATE_ID_LO,
+	P_DIGITAL_CTRL_STATE_ID_HI,
+	P_DIGITAL_CTRL_STATE_SW_LO,
+	P_DIGITAL_CTRL_STATE_SW_HI
 };
 
-struct p_ctx {
-	struct p_cpu cpu;
-	struct p_bios_trace bios_trace;
-	struct p_bus bus;
-	struct p_disasm disasm;
-	struct p_sched sched;
-	struct p_gpu gpu;
-	struct p_intctrl intctrl;
-	struct p_sio0 sio0;
+enum p_digital_ctrl_btns {
+	// clang-format off
 
-	struct p_ctx_cfg cfg;
+	P_DIGITAL_CTRL_SEL	= 1 << 0,
+	P_DIGITAL_CTRL_START	= 1 << 3,
+	P_DIGITAL_CTRL_UP	= 1 << 4,
+	P_DIGITAL_CTRL_RT	= 1 << 5,
+	P_DIGITAL_CTRL_DN	= 1 << 6,
+	P_DIGITAL_CTRL_LT	= 1 << 7,
+	P_DIGITAL_CTRL_L2	= 1 << 8,
+	P_DIGITAL_CTRL_R2	= 1 << 9,
+	P_DIGITAL_CTRL_L1	= 1 << 10,
+	P_DIGITAL_CTRL_R1	= 1 << 11,
+	P_DIGITAL_CTRL_TRI	= 1 << 12,
+	P_DIGITAL_CTRL_CIR	= 1 << 13,
+	P_DIGITAL_CTRL_CROSS	= 1 << 14,
+	P_DIGITAL_CTRL_SQR	= 1 << 15
 
-	struct {
-		const u8 *data;
-		size_t size;
-	} exe;
+	// clang-format on
 };
 
-enum p_ctx_ret {
-	P_EXE_FILE_SIZE_INVALID = -3,
-	P_EXE_SIZE_INVALID = -2,
-	P_EXE_ID_INVALID = -1,
-	P_OK = 1,
+struct p_digital_ctrl {
+	struct p_ctx *ctx;
+	struct p_sio0_dev dev;
+	enum p_digital_ctrl_state state;
+	u16 buttons;
 };
 
-P_NODISCARD struct p_ctx_cfg *p_cfg_get(struct p_ctx *ctx) P_NONNULL;
+void p_digital_ctrl_init(struct p_ctx *ctx, struct p_digital_ctrl *ctrl);
 
-void p_init(struct p_ctx *ctx) P_NONNULL;
+void p_digital_ctrl_btn_press(struct p_digital_ctrl *ctrl,
+			      const enum p_digital_ctrl_btns btns)
+	__attribute__((nonnull));
 
-void p_rst(struct p_ctx *ctx) P_NONNULL;
-
-void p_step(struct p_ctx *ctx) P_NONNULL;
-
-void p_run_until_ev(struct p_ctx *ctx) P_NONNULL;
-
-P_NODISCARD enum p_ctx_ret p_run_exe(struct p_ctx *ctx, u8 *exe,
-				     size_t size) P_NONNULL;
+void p_digital_ctrl_button_rel(struct p_digital_ctrl *ctrl,
+			       const enum p_digital_ctrl_btns btns)
+	__attribute__((nonnull));
 
 #ifdef __cplusplus
 }

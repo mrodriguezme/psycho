@@ -22,67 +22,47 @@
 
 #pragma once
 
-#ifdef __cplusplus
-extern "C" {
-#endif // __cplusplus
+#include <stddef.h>
 
-#include "cpu.h"
-#include "bios_trace.h"
-#include "bus.h"
-#include "disasm.h"
-#include "log.h"
-#include "gpu.h"
-#include "intctrl.h"
+#include "sio0_dev.h"
 #include "sched.h"
-#include "sio0.h"
 
-struct p_ctx_cfg {
-	struct p_cpu_cfg cpu;
-	struct p_bios_trace_cfg bios_trace;
-	struct p_disasm_cfg disasm;
-	struct p_log_cfg log;
-
-	void (*on_vblank)(struct p_ctx *ctx);
+enum sio0_slot {
+	SLOT_1,
+	SLOT_2,
+	NUM_SLOTS,
 };
 
-struct p_ctx {
-	struct p_cpu cpu;
-	struct p_bios_trace bios_trace;
-	struct p_bus bus;
-	struct p_disasm disasm;
-	struct p_sched sched;
-	struct p_gpu gpu;
-	struct p_intctrl intctrl;
-	struct p_sio0 sio0;
+enum sio0_dev_type {
+	MEMCARD,
+	CTRL,
+	NUM_DEVS,
+};
 
-	struct p_ctx_cfg cfg;
+struct p_sio0 {
+	struct p_sio0_dev *dev[NUM_SLOTS][NUM_DEVS];
+	struct p_sio0_dev *curr_dev;
+
+	u32 tx;
+	u32 curr_tx;
+	bool need_tx;
 
 	struct {
-		const u8 *data;
-		size_t size;
-	} exe;
+		size_t num_entries;
+
+		union {
+			u8 entries[4];
+		};
+		u32 raw;
+	} rxfifo;
+
+	u32 stat;
+	u16 mode;
+	u16 ctrl;
+	u16 baud;
+
+	struct p_sched_ev tx_ev;
 };
 
-enum p_ctx_ret {
-	P_EXE_FILE_SIZE_INVALID = -3,
-	P_EXE_SIZE_INVALID = -2,
-	P_EXE_ID_INVALID = -1,
-	P_OK = 1,
-};
-
-P_NODISCARD struct p_ctx_cfg *p_cfg_get(struct p_ctx *ctx) P_NONNULL;
-
-void p_init(struct p_ctx *ctx) P_NONNULL;
-
-void p_rst(struct p_ctx *ctx) P_NONNULL;
-
-void p_step(struct p_ctx *ctx) P_NONNULL;
-
-void p_run_until_ev(struct p_ctx *ctx) P_NONNULL;
-
-P_NODISCARD enum p_ctx_ret p_run_exe(struct p_ctx *ctx, u8 *exe,
-				     size_t size) P_NONNULL;
-
-#ifdef __cplusplus
-}
-#endif // __cplusplus
+void p_attach_dev_to_sio0(struct p_ctx *ctx, struct p_sio0_dev *dev,
+			  const enum sio0_slot slot) __attribute__((nonnull));

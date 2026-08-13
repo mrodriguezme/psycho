@@ -32,23 +32,24 @@ extern "C" {
 
 struct p_ctx;
 
-enum p_sched_ev_type;
-
-enum {
-	P_SCHED_NUM_EVENTS = 10,
-};
+#define P_SCHED_NUM_EVENTS (25)
 
 enum p_sched_ev_type {
 	P_SCHED_EV_VBLANK,
+	P_SCHED_EV_SIO0_TX,
 	P_SCHED_EV_COUNT,
 };
 
 struct p_sched_ev {
+	u64 ts;
+	u64 period;
+
 	void (*cb)(struct p_ctx *ctx);
 	enum p_sched_ev_type type;
+	bool permanent;
+
 	size_t idx;
 	bool valid;
-	u64 ts;
 };
 
 struct p_sched {

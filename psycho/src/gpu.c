@@ -38,8 +38,6 @@ LOG_MOD(P_LOG_GPU);
 
 // clang-format on
 
-static struct p_sched_ev ev_vblank;
-
 struct vram_xfer {
 	union {
 		struct {
@@ -78,12 +76,6 @@ static void on_vblank(struct p_ctx *const ctx)
 		ctx->cfg.on_vblank(ctx);
 
 	p_irq_pending(ctx, IRQ_VBLANK);
-
-	ev_vblank.type = P_SCHED_EV_VBLANK;
-	ev_vblank.cb = on_vblank;
-	ev_vblank.ts = P_CPU_CLKFREQ_HZ / 60;
-
-	p_sched_add(ctx, &ev_vblank);
 }
 
 __attribute__((nonnull)) static void copy_adv(struct p_ctx *const ctx)
@@ -223,16 +215,12 @@ void p_gpu_init(struct p_ctx *const ctx)
 
 void p_gpu_rst(struct p_ctx *const ctx)
 {
-	memset(&ev_vblank, 0, sizeof(ev_vblank));
+	ctx->gpu.ev_vblank.type = P_SCHED_EV_VBLANK;
+	ctx->gpu.ev_vblank.cb = on_vblank;
+	ctx->gpu.ev_vblank.ts = P_CPU_CLKFREQ_HZ / 60;
+	ctx->gpu.ev_vblank.permanent = true;
 
-	// All PlayStation GPUs default to NTSC, so initialize the VBLANK event
-	// treating it as such.
-
-	ev_vblank.type = P_SCHED_EV_VBLANK;
-	ev_vblank.cb = on_vblank;
-	ev_vblank.ts = P_CPU_CLKFREQ_HZ / 60;
-
-	p_sched_add(ctx, &ev_vblank);
+	p_sched_add(ctx, &ctx->gpu.ev_vblank);
 }
 
 void p_gpu_gp0(struct p_ctx *const ctx, const u32 packet)

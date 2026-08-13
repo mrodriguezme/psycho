@@ -31,6 +31,7 @@ extern "C" {
 
 #define P_NODISCARD __attribute__((warn_unused_result))
 #define P_ALWAYS_INLINE __attribute__((always_inline)) static inline
+#define P_NONNULL __attribute__((nonnull))
 
 #pragma GCC diagnostic pop
 

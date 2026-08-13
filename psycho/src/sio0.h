@@ -24,14 +24,25 @@
 
 #include "psycho/ctx.h"
 
-P_ALWAYS_INLINE void p_sched_adv_ts(struct p_ctx *ctx, u64 ts)
-{
-	ctx->sched.ts_now += ts;
-}
+enum {
+	// clang-format off
 
-void p_sched_rst(struct p_ctx *ctx) P_NONNULL;
+	SIO0_TX_DATA	= 0x1F801040,
+	SIO0_RX_DATA	= 0x1F801040,
+	SIO0_STAT	= 0x1F801044,
+	SIO0_MODE	= 0x1F801048,
+	SIO0_CTRL	= 0x1F80104A,
+	SIO0_BAUD	= 0x1F80104E
 
-bool p_sched_run(struct p_ctx *ctx) P_NONNULL;
+	// clang-format on
+};
 
-void p_sched_add(struct p_ctx *ctx, struct p_sched_ev *ev) P_NONNULL;
-void p_sched_del(struct p_ctx *ctx, struct p_sched_ev *ev) P_NONNULL;
+void p_sio0_rst(struct p_ctx *ctx) P_NONNULL;
+
+void p_sio0_tx(struct p_ctx *ctx, const u8 byte) P_NONNULL;
+
+P_NODISCARD u8 p_sio0_rx_pop8(struct p_ctx *ctx) P_NONNULL;
+
+void p_sio0_mode_set(struct p_ctx *ctx, u16 mode) P_NONNULL;
+
+void p_sio0_ctrl_set(struct p_ctx *ctx, u16 ctrl) P_NONNULL;

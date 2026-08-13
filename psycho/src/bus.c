@@ -21,6 +21,7 @@
 // SOFTWARE.
 
 #include <assert.h>
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
@@ -28,6 +29,7 @@
 #include "gpu.h"
 #include "intctrl.h"
 #include "log.h"
+#include "sio0.h"
 
 LOG_MOD(P_LOG_BUS);
 
@@ -91,6 +93,14 @@ u32 p_load_word(struct p_ctx *const ctx, const u32 paddr)
 		       sizeof(u32));
 		return word;
 
+	case SIO0_STAT:
+	case SIO0_MODE:
+	case SIO0_CTRL:
+	case SIO0_BAUD:
+	case SIO0_RX_DATA:
+		asm("nop");
+		return 0;
+
 	default:
 		LOG_WARN(ctx,
 			 "unknown word load: 0x%08X; returning 0xFFFF'FFFF",
@@ -114,6 +124,9 @@ u16 p_load_halfword(struct p_ctx *const ctx, const u32 paddr)
 		       sizeof(u16));
 		return halfword;
 
+	case SIO0_CTRL:
+		return ctx->sio0.ctrl;
+
 	default:
 		LOG_WARN(ctx, "unknown halfword load: 0x%08X; returning 0xFFFF",
 			 paddr);
@@ -132,6 +145,12 @@ u8 p_load_byte(struct p_ctx *const ctx, const u32 paddr)
 
 	case BIOS_PADDR_BEGIN ... BIOS_PADDR_END:
 		return ctx->bus.bios[paddr & BIOS_PADDR_MASK];
+
+	case SIO0_RX_DATA: {
+		u8 data = p_sio0_rx_pop8(ctx);
+		LOG_WARN(ctx, "rxdata -> 0x%02X", data);
+		return data;
+	}
 
 	default:
 		LOG_WARN(ctx, "unknown byte load: 0x%08X; returning 0xFF",
@@ -191,6 +210,14 @@ void p_store_halfword(struct p_ctx *const ctx, const u32 paddr,
 		       sizeof(u16));
 		return;
 
+	case SIO0_CTRL:
+		p_sio0_ctrl_set(ctx, halfword);
+		return;
+
+	case SIO0_BAUD:
+		asm("nop");
+		return;
+
 	default:
 		break;
 	}
@@ -198,7 +225,7 @@ void p_store_halfword(struct p_ctx *const ctx, const u32 paddr,
 		 paddr, halfword);
 }
 
-void p_store_byte(struct p_ctx *const ctx, const u32 paddr, const u8 byte)
+void p_store_byte(struct p_ctx *const ctx, u32 paddr, u8 byte)
 {
 	switch (paddr) {
 	case RAM_PADDR_BEGIN ... RAM_PADDR_END:
@@ -207,6 +234,12 @@ void p_store_byte(struct p_ctx *const ctx, const u32 paddr, const u8 byte)
 
 	case SCRATCHPAD_PADDR_BEGIN ... SCRATCHPAD_PADDR_END:
 		ctx->bus.spad[paddr & SCRATCHPAD_PADDR_MASK] = byte;
+		return;
+
+	case SIO0_TX_DATA:
+		LOG_INFO(ctx, "txdata <- 0x%02X", byte);
+
+		p_sio0_tx(ctx, byte);
 		return;
 
 	default:

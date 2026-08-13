@@ -51,13 +51,15 @@ void p_log_msg(struct p_ctx *const ctx, const enum p_log_mod mod,
 	static const char *const mod_str[P_LOG_MOD_COUNT] = {
 		// clang-format off
 
-		[P_LOG_CTX]	= "ctx",
-		[P_LOG_CPU]	= "cpu",
-		[P_LOG_BUS]	= "bus",
-		[P_LOG_BIOS]	= "bios",
-		[P_LOG_SCHED]	= "sched",
-		[P_LOG_GPU]	= "gpu",
-		[P_LOG_INTCTRL]	= "intctrl"
+		[P_LOG_CTX]		= "ctx",
+		[P_LOG_CPU]		= "cpu",
+		[P_LOG_BUS]		= "bus",
+		[P_LOG_BIOS]		= "bios",
+		[P_LOG_SCHED]		= "sched",
+		[P_LOG_GPU]		= "gpu",
+		[P_LOG_INTCTRL]		= "intctrl",
+		[P_LOG_DIGITAL_CTRL]	= "digital controller",
+		[P_LOG_SIO0]		= "sio0"
 
 		// clang-format on
 	};

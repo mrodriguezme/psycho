@@ -22,67 +22,21 @@
 
 #pragma once
 
-#ifdef __cplusplus
-extern "C" {
-#endif // __cplusplus
+#include <stdbool.h>
+#include "types.h"
 
-#include "cpu.h"
-#include "bios_trace.h"
-#include "bus.h"
-#include "disasm.h"
-#include "log.h"
-#include "gpu.h"
-#include "intctrl.h"
-#include "sched.h"
-#include "sio0.h"
+struct p_ctx;
 
-struct p_ctx_cfg {
-	struct p_cpu_cfg cpu;
-	struct p_bios_trace_cfg bios_trace;
-	struct p_disasm_cfg disasm;
-	struct p_log_cfg log;
-
-	void (*on_vblank)(struct p_ctx *ctx);
+enum p_sio0_dev_type {
+	P_SIO0_DEV_TYPE_CTRL,
+	P_SIO0_DEV_TYPE_MEMCARD,
 };
 
-struct p_ctx {
-	struct p_cpu cpu;
-	struct p_bios_trace bios_trace;
-	struct p_bus bus;
-	struct p_disasm disasm;
-	struct p_sched sched;
-	struct p_gpu gpu;
-	struct p_intctrl intctrl;
-	struct p_sio0 sio0;
+struct p_sio0_dev {
+	u8 (*transceive)(void *dev, const u8 mosi, bool *done);
+	bool (*addressed)(const u8 addr);
 
-	struct p_ctx_cfg cfg;
-
-	struct {
-		const u8 *data;
-		size_t size;
-	} exe;
+	enum p_sio0_dev_type type;
+	const char *name;
+	void *handle;
 };
-
-enum p_ctx_ret {
-	P_EXE_FILE_SIZE_INVALID = -3,
-	P_EXE_SIZE_INVALID = -2,
-	P_EXE_ID_INVALID = -1,
-	P_OK = 1,
-};
-
-P_NODISCARD struct p_ctx_cfg *p_cfg_get(struct p_ctx *ctx) P_NONNULL;
-
-void p_init(struct p_ctx *ctx) P_NONNULL;
-
-void p_rst(struct p_ctx *ctx) P_NONNULL;
-
-void p_step(struct p_ctx *ctx) P_NONNULL;
-
-void p_run_until_ev(struct p_ctx *ctx) P_NONNULL;
-
-P_NODISCARD enum p_ctx_ret p_run_exe(struct p_ctx *ctx, u8 *exe,
-				     size_t size) P_NONNULL;
-
-#ifdef __cplusplus
-}
-#endif // __cplusplus

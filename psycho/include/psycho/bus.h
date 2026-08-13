@@ -49,7 +49,7 @@ struct p_bus {
 	u8 *ram;
 };
 
-P_NODISCARD u8 *p_bios_data_get(struct p_ctx *ctx) __attribute__((nonnull));
+P_NODISCARD u8 *p_bios_data_get(struct p_ctx *ctx) P_NONNULL;
 
 #ifdef __cplusplus
 }

@@ -46,6 +46,7 @@ target_sources(
 	src/cpu.c
 	src/cpu.h
 	src/ctx.c
+	src/digital_ctrl.c
 	src/disasm.c
 	src/gpu_sw.c
 	src/gpu_sw.h
@@ -56,6 +57,8 @@ target_sources(
 	src/log.c
 	src/log.h
 	src/sched.c
+	src/sched.h
+	src/sio0.c
 	src/str.c
 	src/str.h
 	src/util.h

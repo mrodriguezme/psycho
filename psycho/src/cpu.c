@@ -282,6 +282,11 @@ __attribute__((nonnull)) static void do_cop0_instr(struct p_ctx *const ctx,
 __attribute__((nonnull)) static void dly_slot_process(struct p_ctx *const ctx)
 {
 	ctx->cpu.gpr[ctx->cpu.ld_next.dst] = ctx->cpu.ld_next.val;
+
+	if (ctx->cpu.ld_next.dst)
+		LOG_TRACE(ctx, "load delay eviction: %zu <- 0x%08X",
+			  ctx->cpu.ld_next.dst, ctx->cpu.ld_next.val);
+
 	memset(&ctx->cpu.ld_next, 0, sizeof(ctx->cpu.ld_next));
 	swap(&ctx->cpu.ld_pend, &ctx->cpu.ld_next);
 }
@@ -296,6 +301,8 @@ __attribute__((nonnull)) static void load_dly(struct p_ctx *const ctx,
 
 	ctx->cpu.ld_pend.dst = dst;
 	ctx->cpu.ld_pend.val = val;
+
+	LOG_TRACE(ctx, "load delay pending: dst=%zu, val=0x%08X", dst, val);
 
 	if (unlikely(ctx->cpu.ld_next.dst == dst))
 		memset(&ctx->cpu.ld_next, 0, sizeof(ctx->cpu.ld_next));
@@ -362,6 +369,10 @@ static void step(struct p_ctx *const ctx)
 	p_bios_trace_begin(ctx);
 
 	dly_slot_process(ctx);
+
+	for (size_t i = 0; i < 5; ++i)
+		LOG_TRACE(ctx, "jpad[0x0004A1B%zu] = 0x%02X", i,
+			  ctx->bus.ram[0x0004A1B0 + i]);
 
 	switch (op) {
 	case GRP_SPECIAL:

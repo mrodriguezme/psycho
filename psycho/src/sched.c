@@ -21,6 +21,7 @@
 // SOFTWARE.
 
 #include <assert.h>
+#include <inttypes.h>
 #include <string.h>
 
 #include "sched.h"
@@ -29,42 +30,38 @@
 
 LOG_MOD(P_LOG_SCHED);
 
-static const char *const ev_names[P_SCHED_EV_COUNT] = {
-	// clang-format off
-
-	[P_SCHED_EV_VBLANK]	= "vblank"
-
-	// clang-format on
+static const char *ev_names[P_SCHED_EV_COUNT] = {
+	[P_SCHED_EV_VBLANK] = "vblank",
+	[P_SCHED_EV_SIO0_TX] = "sio0 tx"
 };
 
-P_NODISCARD static size_t node_parent(const size_t node)
+P_NODISCARD static size_t node_parent(size_t node)
 {
 	return (node - 1) / 2;
 }
 
-P_NODISCARD static size_t node_left(const size_t node)
+P_NODISCARD static size_t node_left(size_t node)
 {
 	return (node * 2) + 1;
 }
 
-P_NODISCARD static size_t node_right(const size_t node)
+P_NODISCARD static size_t node_right(size_t node)
 {
 	return node_left(node) + 1;
 }
 
-__attribute__((nonnull)) static void heap_swap(struct p_ctx *const ctx,
-					       const size_t a, const size_t b)
+P_NONNULL static void heap_swap(struct p_ctx *ctx, size_t a, size_t b)
 {
-	swap(ctx->sched.ev[a], ctx->sched.ev[b]);
+	swap(&ctx->sched.ev[a], &ctx->sched.ev[b]);
+
 	ctx->sched.ev[a]->idx = a;
 	ctx->sched.ev[b]->idx = b;
 }
 
-__attribute__((nonnull)) static void sift_up(struct p_ctx *const ctx,
-					     size_t node)
+P_NONNULL static void sift_up(struct p_ctx *ctx, size_t node)
 {
 	while (node) {
-		const size_t parent = node_parent(node);
+		size_t parent = node_parent(node);
 
 		if (ctx->sched.ev[parent]->ts <= ctx->sched.ev[node]->ts)
 			break;
@@ -74,8 +71,7 @@ __attribute__((nonnull)) static void sift_up(struct p_ctx *const ctx,
 	}
 }
 
-__attribute__((nonnull)) static void sift_down(struct p_ctx *const ctx,
-					       size_t node)
+P_NONNULL static void sift_down(struct p_ctx *ctx, size_t node)
 {
 	for (;;) {
 		size_t smallest = node;
@@ -98,66 +94,79 @@ __attribute__((nonnull)) static void sift_down(struct p_ctx *const ctx,
 	}
 }
 
-void p_sched_rst(struct p_ctx *const ctx)
+void p_sched_rst(struct p_ctx *ctx)
 {
 	memset(&ctx->sched, 0, sizeof(ctx->sched));
 	LOG_INFO(ctx, "reset");
 }
 
-bool p_sched_run(struct p_ctx *const ctx)
+bool p_sched_run(struct p_ctx *ctx)
 {
 	bool ev_ran = false;
 
-	while ((ctx->sched.num_ev) &&
-	       ctx->sched.ev[0]->ts <= ctx->sched.ts_now) {
+	while (likely(ctx->sched.num_ev) &&
+	       (ctx->sched.ev[0]->ts <= ctx->sched.ts_now)) {
 		ev_ran = true;
 
-		struct p_sched_ev *const ev = ctx->sched.ev[0];
-
-		const u64 jitter = ctx->sched.ts_now -  ev->ts;
+		struct p_sched_ev *ev = ctx->sched.ev[0];
+		u64 latency = ctx->sched.ts_now - ev->ts;
 
 		LOG_TRACE(ctx,
-			  "servicing event \"%s\" (current timestamp=%lu), "
-			  "jitter cycles=%lu",
-			  ev_names[ev->type], ctx->sched.ts_now, jitter);
+			  "servicing event \"%s\" (ts_now=%" PRIu64 "), "
+			  "latency=%" PRIu64,
+			  ev_names[ev->type], ctx->sched.ts_now, latency);
 
-		p_sched_del(ctx, ev);
+		if (unlikely(ev->permanent)) {
+			ev->ts += ev->period;
+			sift_down(ctx, ev->idx);
+		} else
+			p_sched_del(ctx, ev);
+
 		ev->cb(ctx);
 	}
+
 	return ev_ran;
 }
 
-void p_sched_add(struct p_ctx *const ctx, struct p_sched_ev *const ev)
+void p_sched_add(struct p_ctx *ctx, struct p_sched_ev *ev)
 {
 	assert(ctx->sched.num_ev < ARRAY_SIZE(ctx->sched.ev));
 
-	const size_t node = ctx->sched.num_ev;
+	size_t node = ctx->sched.num_ev;
 
 	ev->idx = node;
 	ev->valid = true;
+
+	if (unlikely(ev->permanent)) {
+		assert(ev->ts > 0);
+		ev->period = ev->ts;
+	}
+
 	ev->ts += ctx->sched.ts_now;
 
 	ctx->sched.ev[ctx->sched.num_ev++] = ev;
 
-	const u64 expiry = ev->ts - ctx->sched.ts_now;
+	u64 expiry = ev->ts - ctx->sched.ts_now;
+	const char *plural = likely(expiry != 1) ? "s" : "";
 
-	LOG_TRACE(
-		ctx,
-		"adding event \"%s\"; will be serviced in %lu cycle%s; current "
-		"time is %lu",
-		ev_names[ev->type], expiry, (expiry != 0) ? "s" : "",
-		ctx->sched.ts_now);
+	LOG_TRACE(ctx,
+		  "adding event \"%s\"; will be serviced within %lu cycle%s; "
+		  "ts_now=%lu",
+		  ev_names[ev->type], expiry, plural, ctx->sched.ts_now);
 
 	sift_up(ctx, node);
 }
 
-void p_sched_del(struct p_ctx *const ctx, struct p_sched_ev *const ev)
+void p_sched_del(struct p_ctx *ctx, struct p_sched_ev *ev)
 {
-	if (!ev->valid)
+	if (unlikely(!ev->valid))
 		return;
 
-	const size_t idx = ev->idx;
-	const size_t last = --ctx->sched.num_ev;
+	assert(ev->permanent != true);
+
+	size_t idx = ev->idx;
+	size_t last = --ctx->sched.num_ev;
+
 	ev->valid = false;
 
 	if (idx != last) {
