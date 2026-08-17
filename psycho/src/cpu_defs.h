@@ -26,61 +26,97 @@
 #include "psycho/compiler.h"
 #include "util.h"
 
-#define RST_VECTOR (UINT32_C(0xBFC00000))
+#define RST_VECTOR	      (UINT32_C(0xBFC00000))
 
-#define SR_ISC	   (1 << 16)
+#define SR_ISC		      (1 << 16)
+
+#define GTE_FLAG_ERR	      (UINT32_C(1) << 31)
+#define GTE_FLAG_MAC1_OVF_POS (1 << 30)
+#define GTE_FLAG_MAC2_OVF_POS (1 << 29)
+#define GTE_FLAG_MAC3_OVF_POS (1 << 28)
+#define GTE_FLAG_MAC1_OVF_NEG (1 << 27)
+#define GTE_FLAG_MAC2_OVF_NEG (1 << 26)
+#define GTE_FLAG_MAC3_OVF_NEG (1 << 25)
+#define GTE_FLAG_IR1_SAT      (1 << 24)
+#define GTE_FLAG_IR2_SAT      (1 << 23)
+#define GTE_FLAG_IR3_SAT      (1 << 22)
+#define GTE_FLAG_RGB_R_SAT    (1 << 21)
+#define GTE_FLAG_RGB_G_SAT    (1 << 20)
+#define GTE_FLAG_RGB_B_SAT    (1 << 19)
+#define GTE_FLAG_SZ3_OTZ_SAT  (1 << 18)
+#define GTE_FLAG_DIV_OVF      (1 << 17)
+#define GTE_FLAG_MAC0_POS_OVF (1 << 16)
+#define GTE_FLAG_MAC0_NEG_OVF (1 << 15)
+#define GTE_FLAG_SX2_SAT      (1 << 14)
+#define GTE_FLAG_SY2_SAT      (1 << 13)
+#define GTE_FLAG_IR0_SAT      (1 << 12)
+
+#define GTE_FLAG_MASK                                                       \
+	(GTE_FLAG_MAC1_OVF_POS | GTE_FLAG_MAC2_OVF_POS |                    \
+	 GTE_FLAG_MAC3_OVF_POS | GTE_FLAG_MAC1_OVF_NEG |                    \
+	 GTE_FLAG_MAC2_OVF_NEG | GTE_FLAG_MAC3_OVF_NEG | GTE_FLAG_IR1_SAT | \
+	 GTE_FLAG_IR2_SAT | GTE_FLAG_IR3_SAT | GTE_FLAG_RGB_R_SAT |         \
+	 GTE_FLAG_RGB_G_SAT | GTE_FLAG_RGB_B_SAT | GTE_FLAG_SZ3_OTZ_SAT |   \
+	 GTE_FLAG_DIV_OVF | GTE_FLAG_MAC0_POS_OVF | GTE_FLAG_MAC0_NEG_OVF | \
+	 GTE_FLAG_SX2_SAT | GTE_FLAG_SY2_SAT | GTE_FLAG_IR0_SAT)
+
+#define GTE_ERR_FLAG_MASK                                                   \
+	(GTE_FLAG_MAC1_OVF_POS | GTE_FLAG_MAC2_OVF_POS |                    \
+	 GTE_FLAG_MAC3_OVF_POS | GTE_FLAG_MAC1_OVF_NEG |                    \
+	 GTE_FLAG_MAC2_OVF_NEG | GTE_FLAG_MAC3_OVF_NEG | GTE_FLAG_IR1_SAT | \
+	 GTE_FLAG_IR2_SAT | GTE_FLAG_SZ3_OTZ_SAT | GTE_FLAG_DIV_OVF |       \
+	 GTE_FLAG_MAC0_POS_OVF | GTE_FLAG_MAC0_NEG_OVF | GTE_FLAG_SX2_SAT | \
+	 GTE_FLAG_SY2_SAT)
+
+#define GTE_MAC123_MAX	 ((INT64_C(1) << 43) - 1)
+#define GTE_MAC123_MIN	 (-(INT64_C(1) << 43))
+
+#define GTE_IR123_MIN	 (0x0000)
+#define GTE_IR123_MAX	 ((INT16_C(1) << 15) - 1)
+#define GTE_IR123_LM_MIN (-(INT16_C(1) << 15))
 
 enum cpu_exc {
-	// clang-format off
-
-	EXC_ADEL	= 4,
-	EXC_ADES	= 5,
-	EXC_SYSCALL	= 8,
-	EXC_BP		= 9,
-	EXC_OV		= 12,
-
-	// clang-format on
+	EXC_ADEL    = 4,
+	EXC_ADES    = 5,
+	EXC_SYSCALL = 8,
+	EXC_BP	    = 9,
+	EXC_OV	    = 12,
 };
 
 enum instr_grp_op {
-	// clang-format off
-
-	GRP_SPECIAL	= 0x00,
-	GRP_REGIMM	= 0x01,
-	J		= 0x02,
-	JAL		= 0x03,
-	BEQ		= 0x04,
-	BNE		= 0x05,
-	BLEZ		= 0x06,
-	BGTZ		= 0x07,
-	ADDI		= 0x08,
-	ADDIU		= 0x09,
-	SLTI		= 0x0A,
-	SLTIU		= 0x0B,
-	ANDI		= 0x0C,
-	ORI		= 0x0D,
-	XORI		= 0x0E,
-	LUI		= 0x0F,
-	GRP_COP0	= 0x10,
-	LB		= 0x20,
-	LH		= 0x21,
-	LWL		= 0x22,
-	LW		= 0x23,
-	LBU		= 0x24,
-	LHU		= 0x25,
-	LWR		= 0x26,
-	SB		= 0x28,
-	SH		= 0x29,
-	SWL		= 0x2A,
-	SW		= 0x2B,
-	SWR		= 0x2E,
-
-	// clang-format on
+	GRP_SPECIAL = 0x00,
+	GRP_REGIMM  = 0x01,
+	J	    = 0x02,
+	JAL	    = 0x03,
+	BEQ	    = 0x04,
+	BNE	    = 0x05,
+	BLEZ	    = 0x06,
+	BGTZ	    = 0x07,
+	ADDI	    = 0x08,
+	ADDIU	    = 0x09,
+	SLTI	    = 0x0A,
+	SLTIU	    = 0x0B,
+	ANDI	    = 0x0C,
+	ORI	    = 0x0D,
+	XORI	    = 0x0E,
+	LUI	    = 0x0F,
+	GRP_COP0    = 0x10,
+	GRP_COP2    = 0x12,
+	LB	    = 0x20,
+	LH	    = 0x21,
+	LWL	    = 0x22,
+	LW	    = 0x23,
+	LBU	    = 0x24,
+	LHU	    = 0x25,
+	LWR	    = 0x26,
+	SB	    = 0x28,
+	SH	    = 0x29,
+	SWL	    = 0x2A,
+	SW	    = 0x2B,
+	SWR	    = 0x2E,
 };
 
 enum instr_grp_special {
-	// clang-format off
-
 	SLL	= 0x00,
 	SRL	= 0x02,
 	SRA	= 0x03,
@@ -89,7 +125,7 @@ enum instr_grp_special {
 	SRAV	= 0x07,
 	JR	= 0x08,
 	JALR	= 0x09,
-	SYSCALL	= 0x0C,
+	SYSCALL = 0x0C,
 	BREAK	= 0x0D,
 	MFHI	= 0x10,
 	MTHI	= 0x11,
@@ -109,16 +145,22 @@ enum instr_grp_special {
 	NOR	= 0x27,
 	SLT	= 0x2A,
 	SLTU	= 0x2B
-
-	// clang-format on
 };
 
 enum instr_grp_cop {
 	MFC = 0x00,
+	CFC = 0x02,
 	MTC = 0x04,
+	CTC = 0x06,
 };
 
-enum instr_grp_cop0 { RFE = 0x10 };
+enum instr_grp_cop0 {
+	RFE = 0x10,
+};
+
+enum instr_grp_cop2 {
+	RTPT = 0x01,
+};
 
 P_NODISCARD P_ALWAYS_INLINE u32 vaddr_to_paddr(u32 vaddr)
 {

@@ -60,6 +60,24 @@ static const char *cop0[P_COP0_COUNT] = {
 	[30] = "REG30",	   [31] = "REG31"
 };
 
+static const char *cop2_cpr[P_COP2_CPR_CNT] = {
+	[P_VXY0] = "VXY0", [P_VZ0] = "VZ0",   [P_VXY1] = "VXY1",
+	[P_VZ1] = "VZ1",   [P_RGBC] = "RGBC", [P_OTZ] = "OTZ",
+	[P_IR0] = "IR0",   [P_IR1] = "IR1",   [P_IR2] = "IR2",
+	[P_IR3] = "IR3",   [P_SXY0] = "SXY0", [P_SXY1] = "SXY1",
+	[P_SXY2] = "SXY2", [P_SXYP] = "SXYP", [P_SZ0] = "SZ0",
+	[P_SZ1] = "SZ1",   [P_SZ2] = "SZ2",   [P_SZ3] = "SZ3",
+	[P_RGB0] = "RGB0", [P_RGB1] = "RGB1", [P_RGB2] = "RGB2",
+	[P_RES1] = "RES1", [P_MAC0] = "MAC0", [P_MAC1] = "MAC1",
+	[P_MAC2] = "MAC2", [P_MAC3] = "MAC3", [P_IRGB] = "IRGB",
+	[P_ORGB] = "ORGB", [P_LZCS] = "LZCS", [P_LZCR] = "LZCR"
+};
+
+static const char *cop2_ccr[P_COP2_CCR_CNT] = {
+	[P_R11R12] = "R11R12",
+	[P_R13R21] = "R13R21"
+};
+
 P_NODISCARD P_NONNULL static u32 instr_get(struct p_ctx *ctx, u32 pc)
 {
 	pc = vaddr_to_paddr(pc);
@@ -390,6 +408,21 @@ void p_disasm_instr(struct p_ctx *ctx, u32 pc, struct p_disasm_traces *traces)
 			default:
 				break;
 			}
+			break;
+		}
+		break;
+
+	case GRP_COP2:
+		switch (rs) {
+		case MTC:
+			fmt("mtc2 %s, %s", gpr[rt], cop2_cpr[rd]);
+			return;
+
+		case CTC:
+			fmt("ctc2 %s, %s", gpr[rt], cop2_ccr[rd]);
+			return;
+
+		default:
 			break;
 		}
 		break;

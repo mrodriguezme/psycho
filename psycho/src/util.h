@@ -57,6 +57,14 @@
 		*(b)		 = _tmp; \
 	})
 
+#define clamp(val, min, max)                                      \
+	({                                                        \
+		__typeof__(val) _val = (val);                     \
+		__typeof__(min) _min = (min);                     \
+		__typeof__(max) _max = (max);                     \
+		_val < _min ? _min : (_val > _max ? _max : _val); \
+	})
+
 #define static_assert_offset(x, memb, off) \
 	_Static_assert(offsetof(x, memb) == (off), "Offset is not correct.")
 
