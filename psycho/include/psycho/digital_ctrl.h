@@ -62,6 +62,7 @@ struct p_digital_ctrl {
 	struct p_sio0_dev dev;
 	enum p_digital_ctrl_state state;
 	u16 btns;
+	u16 latched_btns;
 };
 
 void p_digital_ctrl_init(struct p_ctx *ctx,

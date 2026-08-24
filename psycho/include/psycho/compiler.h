@@ -34,7 +34,8 @@ extern "C" {
 #define P_PURE		__attribute__((pure))
 #define P_ALWAYS_INLINE __attribute__((always_inline)) static inline
 #define P_NONNULL	__attribute__((nonnull))
-
+#define P_UNREACHABLE	__builtin_unreachable()
+#define P_FALLTHROUGH	__attribute__((fallthrough))
 #pragma GCC diagnostic pop
 
 #ifdef __cplusplus

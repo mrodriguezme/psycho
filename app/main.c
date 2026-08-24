@@ -430,8 +430,8 @@ int main(int argc, char **argv)
 
 		const Uint64 diff = end_ns - start_ns;
 
-		if (diff < (1000000000 / 60))
-			SDL_DelayNS((1000000000 / 60) - diff);
+		//if (diff < (1000000000 / 60))
+		//	SDL_DelayNS((1000000000 / 60) - diff);
 
 		fps_update();
 	}
