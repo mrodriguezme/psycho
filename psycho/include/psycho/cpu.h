@@ -72,6 +72,7 @@ struct p_cop2_rgb {
 			u8 code;
 		};
 		u32 raw;
+		u8 arr[4];
 	};
 };
 
@@ -159,9 +160,7 @@ struct p_cop2_ccr {
 			s32 bk[3];
 			s16 lcm[3][3];
 			const u16 pad2;
-			s32 rfc;
-			s32 gfc;
-			s32 bfc;
+			s32 fc[3];
 			s32 ofx;
 			s32 ofy;
 			u16 h;
@@ -223,9 +222,9 @@ static_assert_same_word(struct p_cop2_ccr, lcm[2][0], 19); // LB1
 static_assert_same_word(struct p_cop2_ccr, lcm[2][1], 19); // LB2
 static_assert_same_word(struct p_cop2_ccr, lcm[2][2], 20); // LB3
 
-static_assert_same_word(struct p_cop2_ccr, rfc, 21);
-static_assert_same_word(struct p_cop2_ccr, gfc, 22);
-static_assert_same_word(struct p_cop2_ccr, bfc, 23);
+static_assert_same_word(struct p_cop2_ccr, fc[0], 21);
+static_assert_same_word(struct p_cop2_ccr, fc[1], 22);
+static_assert_same_word(struct p_cop2_ccr, fc[2], 23);
 static_assert_same_word(struct p_cop2_ccr, ofx, 24);
 static_assert_same_word(struct p_cop2_ccr, ofy, 25);
 static_assert_same_word(struct p_cop2_ccr, h, 26);

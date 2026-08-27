@@ -538,26 +538,38 @@ P_NONNULL static void rtp(struct p_ctx *ctx, struct p_cop2_vec *vec, bool dq)
 #undef DQB
 }
 
-P_NONNULL static void nc(struct p_ctx *ctx, struct p_cop2_vec *vec)
+P_NONNULL static void matmulvec3(struct p_ctx *ctx, s16 (*m)[3],
+				 struct p_cop2_vec *v)
 {
-#define MAC (ctx->cpu.cop2.cpr.mac)
-#define LLM (ctx->cpu.cop2.ccr.llm)
 #define IR  (ctx->cpu.cop2.cpr.ir)
-#define BK  (ctx->cpu.cop2.ccr.bk)
-#define LCM (ctx->cpu.cop2.ccr.lcm)
+#define MAC (ctx->cpu.cop2.cpr.mac)
 
 	const uint sf = shift_frac(ctx->cpu.instr);
 	const bool lm = ir123_lm(ctx->cpu.instr);
 
 	for (size_t i = 1, j = 0; i < ARRAY_SIZE(MAC); ++i, ++j) {
 		s64 sum = 0;
-		sum	= mac123_add(ctx, i, sum, LLM[j][0] * vec->x);
-		sum	= mac123_add(ctx, i, sum, LLM[j][1] * vec->y);
-		sum	= mac123_add(ctx, i, sum, LLM[j][2] * vec->z);
+		sum	= mac123_add(ctx, i, sum, m[j][0] * v->x);
+		sum	= mac123_add(ctx, i, sum, m[j][1] * v->y);
+		sum	= mac123_add(ctx, i, sum, m[j][2] * v->z);
 
 		MAC[i] = sum >> sf;
 		IR[i]  = ir123_sat(ctx, i, MAC[i], lm);
 	}
+
+#undef IR
+#undef MAC
+}
+
+P_NONNULL static void intpl_bk_lcm(struct p_ctx *ctx)
+{
+#define BK  (ctx->cpu.cop2.ccr.bk)
+#define IR  (ctx->cpu.cop2.cpr.ir)
+#define LCM (ctx->cpu.cop2.ccr.lcm)
+#define MAC (ctx->cpu.cop2.cpr.mac)
+
+	const uint sf = shift_frac(ctx->cpu.instr);
+	const bool lm = ir123_lm(ctx->cpu.instr);
 
 	for (size_t i = 1, j = 0; i < ARRAY_SIZE(MAC); ++i, ++j) {
 		s64 sum = 0;
@@ -572,13 +584,114 @@ P_NONNULL static void nc(struct p_ctx *ctx, struct p_cop2_vec *vec)
 	for (size_t i = 1; i < ARRAY_SIZE(MAC); ++i)
 		IR[i] = ir123_sat(ctx, i, MAC[i], lm);
 
+#undef BK
+#undef IR
+#undef LCM
+#undef MAC
+}
+
+P_NONNULL static void intpl_rgb(struct p_ctx *ctx)
+{
+#define IR   (ctx->cpu.cop2.cpr.ir)
+#define MAC  (ctx->cpu.cop2.cpr.mac)
+#define RGBC (ctx->cpu.cop2.cpr.rgbc.arr)
+
+	const uint sf = shift_frac(ctx->cpu.instr);
+	const bool lm = ir123_lm(ctx->cpu.instr);
+
+	for (size_t i = 1, j = 0; i < ARRAY_SIZE(MAC); ++i, ++j) {
+		MAC[i] = (((u64)(RGBC[j] * IR[i])) << 4) >> sf;
+		IR[i]  = ir123_sat(ctx, i, MAC[i], lm);
+	}
+
+#undef IR
+#undef MAC
+#undef RGBC
+}
+
+P_NONNULL static void intpl_fc(struct p_ctx *ctx, s64 *sums)
+{
+#define MAC (ctx->cpu.cop2.cpr.mac)
+#define IR  (ctx->cpu.cop2.cpr.ir)
+#define FC  (ctx->cpu.cop2.ccr.fc)
+
+	const uint sf = shift_frac(ctx->cpu.instr);
+	const bool lm = ir123_lm(ctx->cpu.instr);
+
+	for (size_t i = 1, j = 0; i < ARRAY_SIZE(MAC); ++i, ++j) {
+		s64 sum = 0;
+		sum	= mac123_add(ctx, i, sum, ((u64)FC[j] << 12) - sums[j]);
+
+		MAC[i] = sum >> sf;
+		IR[i]  = ir123_sat(ctx, i, MAC[i], false);
+
+		sum = 0;
+		sum = mac123_add(ctx, i, sum, (IR[i] * IR[0]) + sums[j]);
+
+		MAC[i] = sum >> sf;
+		IR[i]  = ir123_sat(ctx, i, MAC[i], lm);
+	}
+
+#undef MAC
+}
+
+P_NONNULL static void dpc(struct p_ctx *ctx, u8 *rgb)
+{
+#define MAC (ctx->cpu.cop2.cpr.mac)
+
+	s64 sums[3];
+
+	for (size_t i = 0; i < ARRAY_SIZE(sums); ++i)
+		sums[i] = (s64)((u32)rgb[i] << 16);
+
+	intpl_fc(ctx, sums);
 	color_fifo_push(ctx);
 
 #undef MAC
+#undef RGBC
+}
+
+P_NONNULL static void nc(struct p_ctx *ctx, struct p_cop2_vec *vec)
+{
+#define LLM (ctx->cpu.cop2.ccr.llm)
+
+	matmulvec3(ctx, LLM, vec);
+	intpl_bk_lcm(ctx);
+	color_fifo_push(ctx);
+
 #undef LLM
-#undef IR
-#undef BK
-#undef LCM
+}
+
+P_NONNULL static void ncc(struct p_ctx *ctx, struct p_cop2_vec *vec)
+{
+#define LLM (ctx->cpu.cop2.ccr.llm)
+
+	matmulvec3(ctx, LLM, vec);
+	intpl_bk_lcm(ctx);
+	intpl_rgb(ctx);
+	color_fifo_push(ctx);
+
+#undef LLM
+}
+
+P_NONNULL static void ncd(struct p_ctx *ctx, struct p_cop2_vec *vec)
+{
+#define LLM  (ctx->cpu.cop2.ccr.llm)
+#define RGBC (ctx->cpu.cop2.cpr.rgbc.arr)
+
+	matmulvec3(ctx, LLM, vec);
+	intpl_bk_lcm(ctx);
+
+	s64 sums[3];
+
+	for (size_t i = 0, j = 1; i < ARRAY_SIZE(sums); ++i, ++j)
+		sums[i] = ((u64)(RGBC[i] * IR[j])) << 4;
+
+	intpl_fc(ctx, sums);
+	color_fifo_push(ctx);
+
+#undef LLM
+#undef RGBC
 }
 
 P_NONNULL static void sqr(struct p_ctx *ctx)
@@ -759,6 +872,9 @@ P_NONNULL static void do_cop2_instr(struct p_ctx *ctx, uint funct)
 #define D2   (ctx->cpu.cop2.ccr.r[1][1])
 #define D3   (ctx->cpu.cop2.ccr.r[2][2])
 #define IR   (ctx->cpu.cop2.cpr.ir)
+#define LLM  (ctx->cpu.cop2.ccr.llm)
+#define RGBC (ctx->cpu.cop2.cpr.rgbc.arr)
+#define RGB0 (ctx->cpu.cop2.cpr.rgb[0].arr)
 
 	switch (funct) {
 	case RTPS:
@@ -806,12 +922,96 @@ P_NONNULL static void do_cop2_instr(struct p_ctx *ctx, uint funct)
 		return;
 	}
 
+	case DPCS:
+		FLAG = 0;
+
+		dpc(ctx, RGBC);
+
+		//update_flag(ctx);
+		return;
+
+	case INTPL: {
+		FLAG = 0;
+
+		s64 sums[3];
+
+		for (size_t i = 0, j = 1; i < ARRAY_SIZE(sums); ++i, ++j)
+			sums[i] = (s64)((u64)IR[j] << 12);
+
+		intpl_fc(ctx, sums);
+		color_fifo_push(ctx);
+
+		//update_flag(ctx);
+		return;
+	}
+
+	case NCDS:
+		FLAG = 0;
+
+		ncd(ctx, &ctx->cpu.cop2.cpr.v[0]);
+
+		//update_flag(ctx);
+		return;
+
+	case CDP: {
+		FLAG = 0;
+
+		intpl_bk_lcm(ctx);
+
+		s64 sums[3];
+
+		for (size_t i = 0, j = 1; i < ARRAY_SIZE(sums); ++i, ++j)
+			sums[i] = ((u64)(RGBC[i] * IR[j])) << 4;
+
+		intpl_fc(ctx, sums);
+		color_fifo_push(ctx);
+
+		//update_flag(ctx);
+		return;
+	}
+
+	case NCDT:
+		FLAG = 0;
+
+		for (size_t i = 0; i < ARRAY_SIZE(ctx->cpu.cop2.cpr.v); ++i)
+			ncd(ctx, &ctx->cpu.cop2.cpr.v[i]);
+
+		//update_flag(ctx);
+		return;
+
+	case NCCS:
+		FLAG = 0;
+
+		ncc(ctx, &ctx->cpu.cop2.cpr.v[0]);
+
+		//update_flag(ctx);
+		return;
+
+	case CC:
+		FLAG = 0;
+
+		intpl_bk_lcm(ctx);
+		intpl_rgb(ctx);
+		color_fifo_push(ctx);
+
+		//update_flag(ctx);
+		return;
+
 	case NCS:
 		FLAG = 0;
 
 		nc(ctx, &ctx->cpu.cop2.cpr.v[0]);
 
-		update_flag(ctx);
+		//update_flag(ctx);
+		return;
+
+	case NCT:
+		FLAG = 0;
+
+		for (size_t i = 0; i < ARRAY_SIZE(ctx->cpu.cop2.cpr.v); ++i)
+			nc(ctx, &ctx->cpu.cop2.cpr.v[i]);
+
+		//update_flag(ctx);
 		return;
 
 	case SQR:
@@ -822,6 +1022,30 @@ P_NONNULL static void do_cop2_instr(struct p_ctx *ctx, uint funct)
 		update_flag(ctx);
 #endif
 
+		return;
+
+	case DPCL: {
+		FLAG = 0;
+
+		s64 sums[3];
+
+		for (size_t i = 0, j = 1; i < ARRAY_SIZE(sums); ++i, ++j)
+			sums[i] = ((u64)(RGBC[i] * IR[j])) << 4;
+
+		intpl_fc(ctx, sums);
+		color_fifo_push(ctx);
+
+		update_flag(ctx);
+		return;
+	}
+
+	case DPCT:
+		FLAG = 0;
+
+		for (uint i = 0; i < 3; ++i)
+			dpc(ctx, RGB0);
+
+		update_flag(ctx);
 		return;
 
 	case AVSZ3:
@@ -871,6 +1095,15 @@ P_NONNULL static void do_cop2_instr(struct p_ctx *ctx, uint funct)
 #endif
 		return;
 	}
+
+	case NCCT:
+		FLAG = 0;
+
+		for (size_t i = 0; i < ARRAY_SIZE(ctx->cpu.cop2.cpr.v); ++i)
+			ncc(ctx, &ctx->cpu.cop2.cpr.v[i]);
+
+		//update_flag(ctx);
+		return;
 
 	default:
 		illegal_instr(ctx);

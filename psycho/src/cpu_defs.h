@@ -162,13 +162,24 @@ enum instr_grp_cop2 {
 	RTPS  = 0x01,
 	NCLIP = 0x06,
 	OP    = 0x0C,
+	DPCS  = 0x10,
+	INTPL = 0x11,
+	NCDS  = 0x13,
+	CDP   = 0x14,
+	NCDT  = 0x16,
+	NCCS  = 0x1B,
+	CC    = 0x1C,
 	NCS   = 0x1E,
+	NCT   = 0x20,
 	SQR   = 0x28,
+	DPCL  = 0x29,
+	DPCT  = 0x2A,
 	AVSZ3 = 0x2D,
 	AVSZ4 = 0x2E,
 	RTPT  = 0x30,
 	GPF   = 0x3D,
-	GPL   = 0x3E
+	GPL   = 0x3E,
+	NCCT  = 0x3F
 };
 
 P_NODISCARD P_ALWAYS_INLINE u32 vaddr_to_paddr(u32 vaddr)
