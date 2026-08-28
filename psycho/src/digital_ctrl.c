@@ -40,6 +40,8 @@ static u8 transceive(void *dev, u8 mosi, bool *done)
 	switch (ctrl->state) {
 	case P_DIGITAL_CTRL_ID_LO:
 		if (mosi == 0x42) {
+			ctrl->latched_btns = ctrl->btns;
+
 			ctrl->state = P_DIGITAL_CTRL_ID_HI;
 			return CTRL_ID & UINT8_MAX;
 		}
@@ -51,13 +53,13 @@ static u8 transceive(void *dev, u8 mosi, bool *done)
 
 	case P_DIGITAL_CTRL_SW_LO:
 		ctrl->state = P_DIGITAL_CTRL_SW_HI;
-		return ctrl->btns & UINT8_MAX;
+		return ctrl->latched_btns & UINT8_MAX;
 
 	case P_DIGITAL_CTRL_SW_HI:
 		ctrl->state = P_DIGITAL_CTRL_ID_LO;
 		*done	    = true;
 
-		return ctrl->btns >> 8;
+		return ctrl->latched_btns >> 8;
 
 	default:
 		__builtin_unreachable();

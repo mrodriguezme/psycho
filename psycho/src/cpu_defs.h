@@ -68,12 +68,12 @@
 	 GTE_FLAG_MAC0_POS_OVF | GTE_FLAG_MAC0_NEG_OVF | GTE_FLAG_SX2_SAT | \
 	 GTE_FLAG_SY2_SAT)
 
-#define GTE_MAC123_MAX	 ((INT64_C(1) << 43) - 1)
-#define GTE_MAC123_MIN	 (-(INT64_C(1) << 43))
+#define GTE_MAC123_MAX ((INT64_C(1) << 43) - 1)
+#define GTE_MAC123_MIN (-(INT64_C(1) << 43))
 
-#define GTE_IR123_MIN	 (0x0000)
-#define GTE_IR123_MAX	 ((INT16_C(1) << 15) - 1)
-#define GTE_IR123_LM_MIN (-(INT16_C(1) << 15))
+#define IR123_MIN      (-(INT16_C(1) << 15))
+#define IR123_MAX      ((INT16_C(1) << 15) - 1)
+#define IR123_LM_MIN   (0x0000)
 
 enum cpu_exc {
 	EXC_ADEL    = 4,
@@ -159,7 +159,28 @@ enum instr_grp_cop0 {
 };
 
 enum instr_grp_cop2 {
-	RTPT = 0x01,
+	RTPS  = 0x01,
+	NCLIP = 0x06,
+	OP    = 0x0C,
+	DPCS  = 0x10,
+	INTPL = 0x11,
+	MVMVA = 0x12,
+	NCDS  = 0x13,
+	CDP   = 0x14,
+	NCDT  = 0x16,
+	NCCS  = 0x1B,
+	CC    = 0x1C,
+	NCS   = 0x1E,
+	NCT   = 0x20,
+	SQR   = 0x28,
+	DPCL  = 0x29,
+	DPCT  = 0x2A,
+	AVSZ3 = 0x2D,
+	AVSZ4 = 0x2E,
+	RTPT  = 0x30,
+	GPF   = 0x3D,
+	GPL   = 0x3E,
+	NCCT  = 0x3F
 };
 
 P_NODISCARD P_ALWAYS_INLINE u32 vaddr_to_paddr(u32 vaddr)

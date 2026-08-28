@@ -193,8 +193,8 @@ void p_store8(struct p_ctx *ctx, u32 paddr, u8 data)
 	switch (paddr) {
 	case RAM_BEGIN ... RAM_END:
 		if (paddr == 0x0004d474) {
-			ctx->bus.ram[paddr] = 1;
-			return;
+			//ctx->bus.ram[paddr] = 1;
+			//return;
 		}
 		ctx->bus.ram[paddr & RAM_MASK] = data;
 		return;
