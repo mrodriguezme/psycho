@@ -793,6 +793,9 @@ P_NONNULL static void do_cop2_cfc(struct p_ctx *ctx, size_t rt, size_t rd)
 
 P_NONNULL static void do_cop2_mtc(struct p_ctx *ctx, size_t rd, size_t rt)
 {
+#define IR (ctx->cpu.cop2.cpr.ir)
+#define SXY (ctx->cpu.cop2.cpr.sxy)
+
 	switch (rd) {
 	case P_OTZ:
 	case P_SZ0:
@@ -812,12 +815,19 @@ P_NONNULL static void do_cop2_mtc(struct p_ctx *ctx, size_t rd, size_t rt)
 		ctx->cpu.cop2.cpr.raw[rd] = sext_16_32(ctx->cpu.gpr[rt]);
 		break;
 
-		//case P_SXYP:
-		//SXY[0] = SXY[1];
-		//SXY[1] = SXY[2];
-		//memcpy(&SXY[2], &ctx->cpu.gpr[rt], sizeof(SXY[2]));
+	case P_IRGB:
+		IR[1] = ((ctx->cpu.gpr[rt] >> 0) & 0x1F) << 7;
+		IR[2] = ((ctx->cpu.gpr[rt] >> 5) & 0x1F) << 7;
+		IR[3] = ((ctx->cpu.gpr[rt] >> 10) & 0x1F) << 7;
 
-		//break;
+		break;
+
+	case P_SXYP:
+		SXY[0] = SXY[1];
+		SXY[1] = SXY[2];
+		memcpy(&SXY[2], &ctx->cpu.gpr[rt], sizeof(SXY[2]));
+
+		break;
 
 	default:
 		ctx->cpu.cop2.cpr.raw[rd] = ctx->cpu.gpr[rt];
@@ -847,6 +857,76 @@ P_NONNULL static void do_cop2_ctc(struct p_ctx *ctx, size_t rd, size_t rt)
 		ctx->cpu.cop2.ccr.raw[rd] = ctx->cpu.gpr[rt];
 		break;
 	}
+}
+
+struct vec {
+	s16 x;
+	s16 y;
+	s16 z;
+};
+
+static struct p_cop2_vec vec_get(struct p_ctx *ctx, size_t n)
+{
+	if (n <= 2)
+		return ctx->cpu.cop2.cpr.v[n];
+
+	s32 *ir = ctx->cpu.cop2.cpr.ir;
+	return (struct p_cop2_vec){ .x = (s16)ir[1],
+				    .y = (s16)ir[2],
+				    .z = (s16)ir[3] };
+}
+
+static void mvmva_matmul(struct p_ctx *ctx, s16 (*Mx)[3], struct p_cop2_vec *Vx,
+			 s32 *Tx)
+{
+#define MAC (ctx->cpu.cop2.cpr.mac)
+#define IR  (ctx->cpu.cop2.cpr.ir)
+
+	const uint sf = shift_frac(ctx->cpu.instr);
+	const bool lm = ir123_lm(ctx->cpu.instr);
+
+	for (size_t i = 1, j = 0; i < ARRAY_SIZE(MAC); ++i, ++j) {
+		s64 sum = 0;
+		sum	= mac123_add(ctx, i, sum, (u64)Tx[j] << 12);
+		sum	= mac123_add(ctx, i, sum, Mx[j][0] * Vx->x);
+		sum	= mac123_add(ctx, i, sum, Mx[j][1] * Vx->y);
+		sum	= mac123_add(ctx, i, sum, Mx[j][2] * Vx->z);
+
+		MAC[i] = sum >> sf;
+		IR[i]  = ir123_sat(ctx, i, MAC[i], lm);
+	}
+
+#undef MAC
+#undef IR
+}
+
+static void mvmva_matmul_bugged(struct p_ctx *ctx, s16 (*Mx)[3],
+				struct p_cop2_vec *Vx, s32 *Tx)
+{
+#define MAC (ctx->cpu.cop2.cpr.mac)
+#define IR  (ctx->cpu.cop2.cpr.ir)
+
+	const uint sf = shift_frac(ctx->cpu.instr);
+	const bool lm = ir123_lm(ctx->cpu.instr);
+
+	for (size_t i = 1, j = 0; i < ARRAY_SIZE(MAC); ++i, ++j) {
+		s64 sum = 0;
+		sum	= mac123_add(ctx, i, sum, (u64)Tx[j] << 12);
+		sum	= mac123_add(ctx, i, sum, Mx[j][0] * Vx->x);
+
+		MAC[i] = sum >> sf;
+		IR[i]  = ir123_sat(ctx, i, MAC[i], false);
+
+		sum = 0;
+		sum	= mac123_add(ctx, i, sum, Mx[j][1] * Vx->y);
+		sum	= mac123_add(ctx, i, sum, Mx[j][2] * Vx->z);
+
+		MAC[i] = sum >> sf;
+		IR[i]  = ir123_sat(ctx, i, MAC[i], lm);
+	}
+
+#undef MAC
+#undef IR
 }
 
 P_NONNULL static void do_cop2_instr(struct p_ctx *ctx, uint funct)
@@ -881,25 +961,23 @@ P_NONNULL static void do_cop2_instr(struct p_ctx *ctx, uint funct)
 		FLAG = 0;
 
 		rtp(ctx, &ctx->cpu.cop2.cpr.v[0], true);
-		//update_flag(ctx);
+		update_flag(ctx);
 
 		return;
 
 	case NCLIP:
-#if 0
 		FLAG = 0;
 
-		MAC0 = mac0_add(ctx, (SX0 * SY1) + (SX1 * SY2) + (SX2 * SY0) -
-					     (SX0 * SY2) - (SX1 * SY0) -
-					     (SX2 * SY1));
+		MAC0 = mac0_add(
+			ctx,
+			((u64)SX0 * (u64)SY1) + ((u64)SX1 * (u64)SY2) +
+				((u64)SX2 * (u64)SY0) - ((u64)SX0 * (u64)SY2) -
+				((u64)SX1 * (u64)SY0) - ((u64)SX2 * (u64)SY1));
 
-		// Might not be necessary?
-		//update_flag(ctx);
-#endif
+		update_flag(ctx);
 		return;
 
 	case OP: {
-#if 0
 		FLAG = 0;
 
 		const uint sf = shift_frac(ctx->cpu.instr);
@@ -918,7 +996,6 @@ P_NONNULL static void do_cop2_instr(struct p_ctx *ctx, uint funct)
 		}
 
 		update_flag(ctx);
-#endif
 		return;
 	}
 
@@ -927,7 +1004,7 @@ P_NONNULL static void do_cop2_instr(struct p_ctx *ctx, uint funct)
 
 		dpc(ctx, RGBC);
 
-		//update_flag(ctx);
+		update_flag(ctx);
 		return;
 
 	case INTPL: {
@@ -941,7 +1018,78 @@ P_NONNULL static void do_cop2_instr(struct p_ctx *ctx, uint funct)
 		intpl_fc(ctx, sums);
 		color_fifo_push(ctx);
 
-		//update_flag(ctx);
+		update_flag(ctx);
+		return;
+	}
+
+	case MVMVA: {
+		FLAG = 0;
+
+		s16(*Mx)[3];
+		s32 *Tx;
+
+		s32 tx_zero[3] = { [0 ... 2] = 0 };
+
+		s16 bugged[3][3] = { [0][0]	  = (u32)-RGBC[0] << 4,
+				     [0][1]	  = +RGBC[0] << 4,
+				     [0][2]	  = IR[0],
+				     [1][0 ... 2] = ctx->cpu.cop2.ccr.r[0][2],
+				     [2][0 ... 2] = ctx->cpu.cop2.ccr.r[1][1] };
+
+		const uint mx_sel = (ctx->cpu.instr >> 17) & 0x3;
+		const uint vx_sel = (ctx->cpu.instr >> 15) & 0x3;
+		const uint tx_sel = (ctx->cpu.instr >> 13) & 0x3;
+
+		switch (mx_sel) {
+		case 0:
+			Mx = ctx->cpu.cop2.ccr.r;
+			break;
+
+		case 1:
+			Mx = ctx->cpu.cop2.ccr.llm;
+			break;
+
+		case 2:
+			Mx = ctx->cpu.cop2.ccr.lcm;
+			break;
+
+		case 3:
+			Mx = bugged;
+			break;
+
+		default:
+			P_UNREACHABLE;
+		}
+
+		struct p_cop2_vec Vx = vec_get(ctx, vx_sel);
+
+		switch (tx_sel) {
+		case 0:
+			Tx = ctx->cpu.cop2.ccr.tr;
+			break;
+
+		case 1:
+			Tx = ctx->cpu.cop2.ccr.bk;
+			break;
+
+		case 2:
+			Tx = ctx->cpu.cop2.ccr.fc;
+			break;
+
+		case 3:
+			Tx = tx_zero;
+			break;
+
+		default:
+			P_UNREACHABLE;
+		}
+
+		if (tx_sel != 2)
+			mvmva_matmul(ctx, Mx, &Vx, Tx);
+		else
+			mvmva_matmul_bugged(ctx, Mx, &Vx, Tx);
+
+		update_flag(ctx);
 		return;
 	}
 
@@ -950,7 +1098,7 @@ P_NONNULL static void do_cop2_instr(struct p_ctx *ctx, uint funct)
 
 		ncd(ctx, &ctx->cpu.cop2.cpr.v[0]);
 
-		//update_flag(ctx);
+		update_flag(ctx);
 		return;
 
 	case CDP: {
@@ -966,7 +1114,7 @@ P_NONNULL static void do_cop2_instr(struct p_ctx *ctx, uint funct)
 		intpl_fc(ctx, sums);
 		color_fifo_push(ctx);
 
-		//update_flag(ctx);
+		update_flag(ctx);
 		return;
 	}
 
@@ -976,7 +1124,7 @@ P_NONNULL static void do_cop2_instr(struct p_ctx *ctx, uint funct)
 		for (size_t i = 0; i < ARRAY_SIZE(ctx->cpu.cop2.cpr.v); ++i)
 			ncd(ctx, &ctx->cpu.cop2.cpr.v[i]);
 
-		//update_flag(ctx);
+		update_flag(ctx);
 		return;
 
 	case NCCS:
@@ -984,7 +1132,7 @@ P_NONNULL static void do_cop2_instr(struct p_ctx *ctx, uint funct)
 
 		ncc(ctx, &ctx->cpu.cop2.cpr.v[0]);
 
-		//update_flag(ctx);
+		update_flag(ctx);
 		return;
 
 	case CC:
@@ -994,7 +1142,7 @@ P_NONNULL static void do_cop2_instr(struct p_ctx *ctx, uint funct)
 		intpl_rgb(ctx);
 		color_fifo_push(ctx);
 
-		//update_flag(ctx);
+		update_flag(ctx);
 		return;
 
 	case NCS:
@@ -1002,7 +1150,7 @@ P_NONNULL static void do_cop2_instr(struct p_ctx *ctx, uint funct)
 
 		nc(ctx, &ctx->cpu.cop2.cpr.v[0]);
 
-		//update_flag(ctx);
+		update_flag(ctx);
 		return;
 
 	case NCT:
@@ -1011,16 +1159,14 @@ P_NONNULL static void do_cop2_instr(struct p_ctx *ctx, uint funct)
 		for (size_t i = 0; i < ARRAY_SIZE(ctx->cpu.cop2.cpr.v); ++i)
 			nc(ctx, &ctx->cpu.cop2.cpr.v[i]);
 
-		//update_flag(ctx);
+		update_flag(ctx);
 		return;
 
 	case SQR:
-#if 0
 		FLAG = 0;
 
 		sqr(ctx);
 		update_flag(ctx);
-#endif
 
 		return;
 
@@ -1049,15 +1195,14 @@ P_NONNULL static void do_cop2_instr(struct p_ctx *ctx, uint funct)
 		return;
 
 	case AVSZ3:
-		//avsz(ctx, ZSF3, 0, SZ1, SZ2, SZ3);
+		avsz(ctx, ZSF3, 0, SZ1, SZ2, SZ3);
 		return;
 
 	case AVSZ4:
-		//avsz(ctx, ZSF4, SZ0, SZ1, SZ2, SZ3);
+		avsz(ctx, ZSF4, SZ0, SZ1, SZ2, SZ3);
 		return;
 
 	case RTPT:
-#if 0
 		FLAG = 0;
 
 		rtp(ctx, &ctx->cpu.cop2.cpr.v[0], false);
@@ -1065,7 +1210,6 @@ P_NONNULL static void do_cop2_instr(struct p_ctx *ctx, uint funct)
 		rtp(ctx, &ctx->cpu.cop2.cpr.v[2], true);
 
 		update_flag(ctx);
-#endif
 		return;
 
 	case GPF:
@@ -1073,7 +1217,6 @@ P_NONNULL static void do_cop2_instr(struct p_ctx *ctx, uint funct)
 		P_FALLTHROUGH;
 
 	case GPL: {
-#if 0
 		FLAG = 0;
 
 		const uint sf = shift_frac(ctx->cpu.instr);
@@ -1092,7 +1235,7 @@ P_NONNULL static void do_cop2_instr(struct p_ctx *ctx, uint funct)
 
 		color_fifo_push(ctx);
 		update_flag(ctx);
-#endif
+
 		return;
 	}
 
@@ -1102,7 +1245,7 @@ P_NONNULL static void do_cop2_instr(struct p_ctx *ctx, uint funct)
 		for (size_t i = 0; i < ARRAY_SIZE(ctx->cpu.cop2.cpr.v); ++i)
 			ncc(ctx, &ctx->cpu.cop2.cpr.v[i]);
 
-		//update_flag(ctx);
+		update_flag(ctx);
 		return;
 
 	default:

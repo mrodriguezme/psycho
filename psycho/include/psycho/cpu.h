@@ -53,9 +53,14 @@ struct p_cop2_sz {
 };
 
 struct p_cop2_vec {
-	s16 x;
-	s16 y;
-	s32 z;
+	union {
+		struct {
+			s16 x;
+			s16 y;
+			s32 z;
+		};
+		s16 arr[3];
+	};
 };
 
 struct p_cop2_sxy {

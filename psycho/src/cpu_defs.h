@@ -164,6 +164,7 @@ enum instr_grp_cop2 {
 	OP    = 0x0C,
 	DPCS  = 0x10,
 	INTPL = 0x11,
+	MVMVA = 0x12,
 	NCDS  = 0x13,
 	CDP   = 0x14,
 	NCDT  = 0x16,
