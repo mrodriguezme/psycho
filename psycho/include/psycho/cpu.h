@@ -52,7 +52,7 @@ struct p_cop2_sz {
 	const u16 pad;
 };
 
-struct p_cop2_vec {
+struct p_gte_vec {
 	union {
 		struct {
 			s16 x;
@@ -64,8 +64,13 @@ struct p_cop2_vec {
 };
 
 struct p_cop2_sxy {
-	s16 x;
-	s16 y;
+	union {
+		struct {
+			s16 x;
+			s16 y;
+		};
+		s32 raw;
+	};
 };
 
 struct p_cop2_rgb {
@@ -84,7 +89,7 @@ struct p_cop2_rgb {
 struct p_cop2_cpr {
 	union {
 		struct {
-			struct p_cop2_vec v[3];
+			struct p_gte_vec v[3];
 			struct p_cop2_rgb rgbc;
 			u16 otz;
 			const u16 pad0;

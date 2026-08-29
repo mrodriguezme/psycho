@@ -278,15 +278,23 @@ P_NONNULL static void do_cop0_instr(struct p_ctx *ctx, uint funct)
 
 P_NONNULL static void update_flag(struct p_ctx *ctx)
 {
-	if (ctx->cpu.cop2.ccr.flag & GTE_ERR_FLAG_MASK)
-		ctx->cpu.cop2.ccr.flag |= GTE_FLAG_ERR;
+#define FLAG (ctx->cpu.cop2.ccr.flag)
+
+	if (FLAG & FLAG_ERR_MASK)
+		FLAG |= FLAG_ERR;
 	else
-		ctx->cpu.cop2.ccr.flag &= ~GTE_FLAG_ERR;
+		FLAG &= ~FLAG_ERR;
+
+#undef FLAG
 }
 
 P_NONNULL static void flag_set(struct p_ctx *ctx, u32 flags)
 {
-	ctx->cpu.cop2.ccr.flag |= flags;
+#define FLAG (ctx->cpu.cop2.ccr.flag)
+
+	FLAG |= flags;
+
+#undef FLAG
 }
 
 P_NONNULL static s64 mac123_chk(struct p_ctx *ctx, s64 sum, s64 addend,
@@ -294,9 +302,9 @@ P_NONNULL static s64 mac123_chk(struct p_ctx *ctx, s64 sum, s64 addend,
 {
 	sum += addend;
 
-	if (sum > GTE_MAC123_MAX)
+	if (sum > MAC123_MAX)
 		flag_set(ctx, pos_flag);
-	else if (sum < GTE_MAC123_MIN)
+	else if (sum < MAC123_MIN)
 		flag_set(ctx, neg_flag);
 
 	return (s64)((u64)sum << 20) >> 20;
@@ -305,9 +313,9 @@ P_NONNULL static s64 mac123_chk(struct p_ctx *ctx, s64 sum, s64 addend,
 P_NONNULL static s64 mac0_add(struct p_ctx *ctx, s64 res)
 {
 	if (res > INT32_MAX)
-		flag_set(ctx, GTE_FLAG_MAC0_POS_OVF);
+		flag_set(ctx, MAC0_POS_OVF);
 	else if (res < INT32_MIN)
-		flag_set(ctx, GTE_FLAG_MAC0_NEG_OVF);
+		flag_set(ctx, MAC0_NEG_OVF);
 
 	return res;
 }
@@ -317,16 +325,13 @@ P_NONNULL static s64 mac123_add(struct p_ctx *ctx, size_t mac, s64 sum,
 {
 	switch (mac) {
 	case 1:
-		return mac123_chk(ctx, sum, addend, GTE_FLAG_MAC1_OVF_NEG,
-				  GTE_FLAG_MAC1_OVF_POS);
+		return mac123_chk(ctx, sum, addend, MAC1_OVF_NEG, MAC1_OVF_POS);
 
 	case 2:
-		return mac123_chk(ctx, sum, addend, GTE_FLAG_MAC2_OVF_NEG,
-				  GTE_FLAG_MAC2_OVF_POS);
+		return mac123_chk(ctx, sum, addend, MAC2_OVF_NEG, MAC2_OVF_POS);
 
 	case 3:
-		return mac123_chk(ctx, sum, addend, GTE_FLAG_MAC3_OVF_NEG,
-				  GTE_FLAG_MAC3_OVF_POS);
+		return mac123_chk(ctx, sum, addend, MAC3_OVF_NEG, MAC3_OVF_POS);
 
 	default:
 		P_UNREACHABLE;
@@ -335,7 +340,7 @@ P_NONNULL static s64 mac123_add(struct p_ctx *ctx, size_t mac, s64 sum,
 
 P_NONNULL P_NODISCARD static s16 ir0_sat(struct p_ctx *ctx, s64 val)
 {
-	return gte_clamp(ctx, val, +0x0000, +0x1000, GTE_FLAG_IR0_SAT);
+	return gte_clamp(ctx, val, IR0_MIN, IR0_MAX, IR0_SAT);
 }
 
 P_NONNULL static s16 ir123_sat(struct p_ctx *ctx, uint ir, s64 val, bool lm)
@@ -344,27 +349,17 @@ P_NONNULL static s16 ir123_sat(struct p_ctx *ctx, uint ir, s64 val, bool lm)
 
 	switch (ir) {
 	case 1:
-		return gte_clamp(ctx, val, min, IR123_MAX, GTE_FLAG_IR1_SAT);
+		return gte_clamp(ctx, val, min, IR123_MAX, IR1_SAT);
 
 	case 2:
-		return gte_clamp(ctx, val, min, IR123_MAX, GTE_FLAG_IR2_SAT);
+		return gte_clamp(ctx, val, min, IR123_MAX, IR2_SAT);
 
 	case 3:
-		return gte_clamp(ctx, val, min, IR123_MAX, GTE_FLAG_IR3_SAT);
+		return gte_clamp(ctx, val, min, IR123_MAX, IR3_SAT);
 
 	default:
 		P_UNREACHABLE;
 	}
-}
-
-P_NODISCARD static uint shift_frac(const uint instr)
-{
-	return (instr & (1 << 19)) ? 12 : 0;
-}
-
-P_NODISCARD static bool ir123_lm(const uint instr)
-{
-	return instr & (1 << 10);
 }
 
 P_NONNULL static void sx_push(struct p_ctx *ctx, s64 val)
@@ -374,7 +369,7 @@ P_NONNULL static void sx_push(struct p_ctx *ctx, s64 val)
 	for (size_t i = 0; i < ARRAY_SIZE(SXY) - 1; ++i)
 		SXY[i].x = SXY[i + 1].x;
 
-	SXY[2].x = gte_clamp(ctx, val, -0x0400, +0x03FF, GTE_FLAG_SX2_SAT);
+	SXY[2].x = gte_clamp(ctx, val, SXY_MIN, SXY_MAX, SX2_SAT);
 
 #undef SXY
 }
@@ -386,7 +381,7 @@ P_NONNULL static void sy_push(struct p_ctx *ctx, s64 val)
 	for (size_t i = 0; i < ARRAY_SIZE(SXY) - 1; ++i)
 		SXY[i].y = SXY[i + 1].y;
 
-	SXY[2].y = gte_clamp(ctx, val, -0x0400, +0x03FF, GTE_FLAG_SY2_SAT);
+	SXY[2].y = gte_clamp(ctx, val, SXY_MIN, SXY_MAX, SY2_SAT);
 
 #undef SXY
 }
@@ -398,27 +393,27 @@ P_NONNULL static void sz_push(struct p_ctx *ctx, s64 val)
 	for (size_t i = 0; i < ARRAY_SIZE(SZ) - 1; ++i)
 		SZ[i].v = SZ[i + 1].v;
 
-	SZ[3].v = gte_clamp(ctx, val, 0x0000, 0xFFFF, GTE_FLAG_SZ3_OTZ_SAT);
+	SZ[3].v = gte_clamp(ctx, val, SZ_OTZ_MIN, SZ_OTZ_MAX, SZ3_OTZ_SAT);
 
 #undef SZ
 }
 
 P_NONNULL static u16 otz_set(struct p_ctx *ctx, s64 val)
 {
-	return gte_clamp(ctx, val, +0x0000, +0xFFFF, GTE_FLAG_SZ3_OTZ_SAT);
+	return gte_clamp(ctx, val, SZ_OTZ_MIN, SZ_OTZ_MAX, SZ3_OTZ_SAT);
 }
 
 P_NONNULL static u32 rgb_set(struct p_ctx *ctx, uint color, s32 val)
 {
 	switch (color) {
 	case 0:
-		return gte_clamp(ctx, val, +0x00, +0xFF, GTE_FLAG_RGB_R_SAT);
+		return gte_clamp(ctx, val, RGB_MIN, RGB_MAX, RGB_R_SAT);
 
 	case 1:
-		return gte_clamp(ctx, val, +0x00, +0xFF, GTE_FLAG_RGB_G_SAT);
+		return gte_clamp(ctx, val, RGB_MIN, RGB_MAX, RGB_G_SAT);
 
 	case 2:
-		return gte_clamp(ctx, val, +0x00, +0xFF, GTE_FLAG_RGB_B_SAT);
+		return gte_clamp(ctx, val, RGB_MIN, RGB_MAX, RGB_B_SAT);
 
 	default:
 		P_UNREACHABLE;
@@ -441,7 +436,7 @@ P_NONNULL P_NODISCARD static s64 gte_div(struct p_ctx *ctx)
 		d      = ((0x0000080 + (d * u)) >> 8);
 		n      = min(0x1FFFF, (((n * d) + 0x8000) >> 16));
 	} else {
-		flag_set(ctx, GTE_FLAG_DIV_OVF);
+		flag_set(ctx, DIV_OVF);
 		n = 0x1FFFF;
 	}
 	return n;
@@ -470,17 +465,16 @@ P_NONNULL static void color_fifo_push(struct p_ctx *ctx)
 #undef RGBC
 }
 
-P_NONNULL static void rtp(struct p_ctx *ctx, struct p_cop2_vec *vec, bool dq)
+P_NONNULL static void rtp(struct p_ctx *ctx, struct p_gte_vec *vec, bool dq)
 {
-#define TR   (ctx->cpu.cop2.ccr.tr)
-#define RT   (ctx->cpu.cop2.ccr.r)
-#define IR   (ctx->cpu.cop2.cpr.ir)
-#define MAC  (ctx->cpu.cop2.cpr.mac)
-#define MAC3 (MAC[3])
-#define OFX  (ctx->cpu.cop2.ccr.ofx)
-#define OFY  (ctx->cpu.cop2.ccr.ofy)
-#define DQA  (ctx->cpu.cop2.ccr.dqa)
-#define DQB  (ctx->cpu.cop2.ccr.dqb)
+#define DQA (ctx->cpu.cop2.ccr.dqa)
+#define DQB (ctx->cpu.cop2.ccr.dqb)
+#define IR  (ctx->cpu.cop2.cpr.ir)
+#define MAC (ctx->cpu.cop2.cpr.mac)
+#define OFX (ctx->cpu.cop2.ccr.ofx)
+#define OFY (ctx->cpu.cop2.ccr.ofy)
+#define RT  (ctx->cpu.cop2.ccr.r)
+#define TR  (ctx->cpu.cop2.ccr.tr)
 
 	const uint sf = shift_frac(ctx->cpu.instr);
 	const bool lm = ir123_lm(ctx->cpu.instr);
@@ -489,7 +483,7 @@ P_NONNULL static void rtp(struct p_ctx *ctx, struct p_cop2_vec *vec, bool dq)
 
 	for (size_t i = 1, j = 0; i < ARRAY_SIZE(MAC); ++i, ++j) {
 		sum = 0;
-		sum = mac123_add(ctx, i, sum, (s64)((u64)TR[j] << 12));
+		sum = mac123_add(ctx, i, sum, (u64)TR[j] << 12);
 		sum = mac123_add(ctx, i, sum, RT[j][0] * vec->x);
 		sum = mac123_add(ctx, i, sum, RT[j][1] * vec->y);
 		sum = mac123_add(ctx, i, sum, RT[j][2] * vec->z);
@@ -505,7 +499,7 @@ P_NONNULL static void rtp(struct p_ctx *ctx, struct p_cop2_vec *vec, bool dq)
 		IR[i] = ir123_sat(ctx, i, MAC[i], lm);
 
 	(void)ir123_sat(ctx, 3, sum, false);
-	IR[3] = clamp(MAC3, lm ? IR123_LM_MIN : IR123_MIN, IR123_MAX);
+	IR[3] = clamp(MAC[3], lm ? IR123_LM_MIN : IR123_MIN, IR123_MAX);
 
 	sz_push(ctx, sum);
 
@@ -523,25 +517,20 @@ P_NONNULL static void rtp(struct p_ctx *ctx, struct p_cop2_vec *vec, bool dq)
 	}
 	MAC[0] = sum;
 
-#undef TR
-#undef RT
-#undef IR
-#undef MAC
-#undef MAC3
-#undef IR0
-#undef IR1
-#undef IR2
-#undef IR3
-#undef OFX
-#undef OFY
 #undef DQA
 #undef DQB
+#undef IR
+#undef MAC
+#undef OFX
+#undef OFY
+#undef RT
+#undef TR
 }
 
-P_NONNULL static void matmulvec3(struct p_ctx *ctx, s16 (*m)[3],
-				 struct p_cop2_vec *v)
+P_NONNULL static void intpl_llm_vec(struct p_ctx *ctx, struct p_gte_vec *vec)
 {
 #define IR  (ctx->cpu.cop2.cpr.ir)
+#define LLM (ctx->cpu.cop2.ccr.llm)
 #define MAC (ctx->cpu.cop2.cpr.mac)
 
 	const uint sf = shift_frac(ctx->cpu.instr);
@@ -549,15 +538,16 @@ P_NONNULL static void matmulvec3(struct p_ctx *ctx, s16 (*m)[3],
 
 	for (size_t i = 1, j = 0; i < ARRAY_SIZE(MAC); ++i, ++j) {
 		s64 sum = 0;
-		sum	= mac123_add(ctx, i, sum, m[j][0] * v->x);
-		sum	= mac123_add(ctx, i, sum, m[j][1] * v->y);
-		sum	= mac123_add(ctx, i, sum, m[j][2] * v->z);
+		sum	= mac123_add(ctx, i, sum, LLM[j][0] * vec->x);
+		sum	= mac123_add(ctx, i, sum, LLM[j][1] * vec->y);
+		sum	= mac123_add(ctx, i, sum, LLM[j][2] * vec->z);
 
 		MAC[i] = sum >> sf;
 		IR[i]  = ir123_sat(ctx, i, MAC[i], lm);
 	}
 
 #undef IR
+#undef LLM
 #undef MAC
 }
 
@@ -573,7 +563,7 @@ P_NONNULL static void intpl_bk_lcm(struct p_ctx *ctx)
 
 	for (size_t i = 1, j = 0; i < ARRAY_SIZE(MAC); ++i, ++j) {
 		s64 sum = 0;
-		sum	= mac123_add(ctx, i, sum, (s64)((u64)BK[j] << 12));
+		sum	= mac123_add(ctx, i, sum, (u64)BK[j] << 12);
 		sum	= mac123_add(ctx, i, sum, LCM[j][0] * IR[1]);
 		sum	= mac123_add(ctx, i, sum, LCM[j][1] * IR[2]);
 		sum	= mac123_add(ctx, i, sum, LCM[j][2] * IR[3]);
@@ -611,9 +601,9 @@ P_NONNULL static void intpl_rgb(struct p_ctx *ctx)
 
 P_NONNULL static void intpl_fc(struct p_ctx *ctx, s64 *sums)
 {
-#define MAC (ctx->cpu.cop2.cpr.mac)
-#define IR  (ctx->cpu.cop2.cpr.ir)
 #define FC  (ctx->cpu.cop2.ccr.fc)
+#define IR  (ctx->cpu.cop2.cpr.ir)
+#define MAC (ctx->cpu.cop2.cpr.mac)
 
 	const uint sf = shift_frac(ctx->cpu.instr);
 	const bool lm = ir123_lm(ctx->cpu.instr);
@@ -632,54 +622,43 @@ P_NONNULL static void intpl_fc(struct p_ctx *ctx, s64 *sums)
 		IR[i]  = ir123_sat(ctx, i, MAC[i], lm);
 	}
 
+#undef FC
+#undef IR
 #undef MAC
 }
 
 P_NONNULL static void dpc(struct p_ctx *ctx, u8 *rgb)
 {
-#define MAC (ctx->cpu.cop2.cpr.mac)
-
 	s64 sums[3];
 
 	for (size_t i = 0; i < ARRAY_SIZE(sums); ++i)
-		sums[i] = (s64)((u32)rgb[i] << 16);
+		sums[i] = (u32)rgb[i] << 16;
 
 	intpl_fc(ctx, sums);
 	color_fifo_push(ctx);
-
-#undef MAC
-#undef RGBC
 }
 
-P_NONNULL static void nc(struct p_ctx *ctx, struct p_cop2_vec *vec)
+P_NONNULL static void nc(struct p_ctx *ctx, struct p_gte_vec *vec)
 {
-#define LLM (ctx->cpu.cop2.ccr.llm)
-
-	matmulvec3(ctx, LLM, vec);
+	intpl_llm_vec(ctx, vec);
 	intpl_bk_lcm(ctx);
 	color_fifo_push(ctx);
-
-#undef LLM
 }
 
-P_NONNULL static void ncc(struct p_ctx *ctx, struct p_cop2_vec *vec)
+P_NONNULL static void ncc(struct p_ctx *ctx, struct p_gte_vec *vec)
 {
-#define LLM (ctx->cpu.cop2.ccr.llm)
-
-	matmulvec3(ctx, LLM, vec);
+	intpl_llm_vec(ctx, vec);
 	intpl_bk_lcm(ctx);
 	intpl_rgb(ctx);
 	color_fifo_push(ctx);
-
-#undef LLM
 }
 
-P_NONNULL static void ncd(struct p_ctx *ctx, struct p_cop2_vec *vec)
+P_NONNULL static void ncd(struct p_ctx *ctx, struct p_gte_vec *vec)
 {
-#define LLM  (ctx->cpu.cop2.ccr.llm)
+#define IR   (ctx->cpu.cop2.cpr.ir)
 #define RGBC (ctx->cpu.cop2.cpr.rgbc.arr)
 
-	matmulvec3(ctx, LLM, vec);
+	intpl_llm_vec(ctx, vec);
 	intpl_bk_lcm(ctx);
 
 	s64 sums[3];
@@ -690,7 +669,7 @@ P_NONNULL static void ncd(struct p_ctx *ctx, struct p_cop2_vec *vec)
 	intpl_fc(ctx, sums);
 	color_fifo_push(ctx);
 
-#undef LLM
+#undef IR
 #undef RGBC
 }
 
@@ -716,7 +695,7 @@ P_NONNULL static void avsz(struct p_ctx *ctx, s16 scale, size_t sz_off)
 #define FLAG (ctx->cpu.cop2.ccr.flag)
 #define MAC0 (ctx->cpu.cop2.cpr.mac[0])
 #define OTZ  (ctx->cpu.cop2.cpr.otz)
-#define SZ (ctx->cpu.cop2.cpr.sz)
+#define SZ   (ctx->cpu.cop2.cpr.sz)
 
 	FLAG = 0;
 
@@ -740,12 +719,13 @@ P_NONNULL static void avsz(struct p_ctx *ctx, s16 scale, size_t sz_off)
 
 P_NONNULL static void do_cop2_mfc(struct p_ctx *ctx, size_t rt, size_t rd)
 {
-#define LZCS (ctx->cpu.cop2.cpr.lzcs)
 #define IR   (ctx->cpu.cop2.cpr.ir)
+#define LZCS (ctx->cpu.cop2.cpr.lzcs)
+#define SXY2 (ctx->cpu.cop2.cpr.sxy[2].raw)
 
 	switch (rd) {
 	case P_SXYP:
-		gpr_set(ctx, rt, ctx->cpu.cop2.cpr.raw[P_SXY2]);
+		gpr_set(ctx, rt, SXY2);
 		break;
 
 	case P_IRGB:
@@ -780,26 +760,27 @@ P_NONNULL static void do_cop2_mfc(struct p_ctx *ctx, size_t rt, size_t rd)
 		break;
 	}
 
-#undef LZCS
 #undef IR
+#undef LZCS
+#undef SXY2
 }
 
 P_NONNULL static void do_cop2_cfc(struct p_ctx *ctx, size_t rt, size_t rd)
 {
 	switch (rd) {
 	case P_H:
-		ctx->cpu.gpr[rt] = sext_16_32(ctx->cpu.cop2.ccr.h);
+		gpr_set(ctx, rt, sext_16_32(ctx->cpu.cop2.ccr.h));
 		break;
 
 	default:
-		ctx->cpu.gpr[rt] = ctx->cpu.cop2.ccr.raw[rd];
+		gpr_set(ctx, rt, ctx->cpu.cop2.ccr.raw[rd]);
 		break;
 	}
 }
 
 P_NONNULL static void do_cop2_mtc(struct p_ctx *ctx, size_t rd, size_t rt)
 {
-#define IR (ctx->cpu.cop2.cpr.ir)
+#define IR  (ctx->cpu.cop2.cpr.ir)
 #define SXY (ctx->cpu.cop2.cpr.sxy)
 
 	switch (rd) {
@@ -829,9 +810,9 @@ P_NONNULL static void do_cop2_mtc(struct p_ctx *ctx, size_t rd, size_t rt)
 		break;
 
 	case P_SXYP:
-		SXY[0] = SXY[1];
-		SXY[1] = SXY[2];
-		memcpy(&SXY[2], &ctx->cpu.gpr[rt], sizeof(SXY[2]));
+		SXY[0]	   = SXY[1];
+		SXY[1]	   = SXY[2];
+		SXY[2].raw = ctx->cpu.gpr[rt];
 
 		break;
 
@@ -843,6 +824,8 @@ P_NONNULL static void do_cop2_mtc(struct p_ctx *ctx, size_t rd, size_t rt)
 
 P_NONNULL static void do_cop2_ctc(struct p_ctx *ctx, size_t rd, size_t rt)
 {
+#define FLAG (ctx->cpu.cop2.ccr.flag)
+
 	switch (rd) {
 	case P_R33:
 	case P_L33:
@@ -854,7 +837,7 @@ P_NONNULL static void do_cop2_ctc(struct p_ctx *ctx, size_t rd, size_t rt)
 		break;
 
 	case P_FLAG:
-		ctx->cpu.cop2.ccr.flag = ctx->cpu.gpr[rt] & GTE_FLAG_MASK;
+		FLAG = ctx->cpu.gpr[rt] & FLAG_MASK;
 		update_flag(ctx);
 
 		break;
@@ -863,30 +846,14 @@ P_NONNULL static void do_cop2_ctc(struct p_ctx *ctx, size_t rd, size_t rt)
 		ctx->cpu.cop2.ccr.raw[rd] = ctx->cpu.gpr[rt];
 		break;
 	}
+
+#undef FLAG
 }
 
-struct vec {
-	s16 x;
-	s16 y;
-	s16 z;
-};
-
-static struct p_cop2_vec vec_get(struct p_ctx *ctx, size_t n)
+static void mvmva(struct p_ctx *ctx, s16 (*Mx)[3], s16 *Vx, s32 *Tx)
 {
-	if (n <= 2)
-		return ctx->cpu.cop2.cpr.v[n];
-
-	s32 *ir = ctx->cpu.cop2.cpr.ir;
-	return (struct p_cop2_vec){ .x = (s16)ir[1],
-				    .y = (s16)ir[2],
-				    .z = (s16)ir[3] };
-}
-
-static void mvmva_matmul(struct p_ctx *ctx, s16 (*Mx)[3], struct p_cop2_vec *Vx,
-			 s32 *Tx)
-{
-#define MAC (ctx->cpu.cop2.cpr.mac)
 #define IR  (ctx->cpu.cop2.cpr.ir)
+#define MAC (ctx->cpu.cop2.cpr.mac)
 
 	const uint sf = shift_frac(ctx->cpu.instr);
 	const bool lm = ir123_lm(ctx->cpu.instr);
@@ -894,23 +861,22 @@ static void mvmva_matmul(struct p_ctx *ctx, s16 (*Mx)[3], struct p_cop2_vec *Vx,
 	for (size_t i = 1, j = 0; i < ARRAY_SIZE(MAC); ++i, ++j) {
 		s64 sum = 0;
 		sum	= mac123_add(ctx, i, sum, (u64)Tx[j] << 12);
-		sum	= mac123_add(ctx, i, sum, Mx[j][0] * Vx->x);
-		sum	= mac123_add(ctx, i, sum, Mx[j][1] * Vx->y);
-		sum	= mac123_add(ctx, i, sum, Mx[j][2] * Vx->z);
+		sum	= mac123_add(ctx, i, sum, Mx[j][0] * Vx[0]);
+		sum	= mac123_add(ctx, i, sum, Mx[j][1] * Vx[1]);
+		sum	= mac123_add(ctx, i, sum, Mx[j][2] * Vx[2]);
 
 		MAC[i] = sum >> sf;
 		IR[i]  = ir123_sat(ctx, i, MAC[i], lm);
 	}
 
-#undef MAC
 #undef IR
+#undef MAC
 }
 
-static void mvmva_matmul_bugged(struct p_ctx *ctx, s16 (*Mx)[3],
-				struct p_cop2_vec *Vx, s32 *Tx)
+static void mvmva_bugged(struct p_ctx *ctx, s16 (*Mx)[3], s16 *Vx, s32 *Tx)
 {
-#define MAC (ctx->cpu.cop2.cpr.mac)
 #define IR  (ctx->cpu.cop2.cpr.ir)
+#define MAC (ctx->cpu.cop2.cpr.mac)
 
 	const uint sf = shift_frac(ctx->cpu.instr);
 	const bool lm = ir123_lm(ctx->cpu.instr);
@@ -918,51 +884,54 @@ static void mvmva_matmul_bugged(struct p_ctx *ctx, s16 (*Mx)[3],
 	for (size_t i = 1, j = 0; i < ARRAY_SIZE(MAC); ++i, ++j) {
 		s64 sum = 0;
 		sum	= mac123_add(ctx, i, sum, (u64)Tx[j] << 12);
-		sum	= mac123_add(ctx, i, sum, Mx[j][0] * Vx->x);
+		sum	= mac123_add(ctx, i, sum, Mx[j][0] * Vx[0]);
 
 		MAC[i] = sum >> sf;
 		IR[i]  = ir123_sat(ctx, i, MAC[i], false);
 
 		sum = 0;
-		sum	= mac123_add(ctx, i, sum, Mx[j][1] * Vx->y);
-		sum	= mac123_add(ctx, i, sum, Mx[j][2] * Vx->z);
+		sum = mac123_add(ctx, i, sum, Mx[j][1] * Vx[1]);
+		sum = mac123_add(ctx, i, sum, Mx[j][2] * Vx[2]);
 
 		MAC[i] = sum >> sf;
 		IR[i]  = ir123_sat(ctx, i, MAC[i], lm);
 	}
 
-#undef MAC
 #undef IR
+#undef MAC
 }
 
 P_NONNULL static void do_cop2_instr(struct p_ctx *ctx, uint funct)
 {
-#define FLAG (ctx->cpu.cop2.ccr.flag)
-#define SX0  (ctx->cpu.cop2.cpr.sxy[0].x)
-#define SY0  (ctx->cpu.cop2.cpr.sxy[0].y)
-#define SX1  (ctx->cpu.cop2.cpr.sxy[1].x)
-#define SY1  (ctx->cpu.cop2.cpr.sxy[1].y)
-#define SY2  (ctx->cpu.cop2.cpr.sxy[2].y)
-#define SX2  (ctx->cpu.cop2.cpr.sxy[2].x)
-#define MAC  (ctx->cpu.cop2.cpr.mac)
-#define MAC0 (ctx->cpu.cop2.cpr.mac[0])
-#define MAC1 (ctx->cpu.cop2.cpr.mac[1])
-#define ZSF3 (ctx->cpu.cop2.ccr.zsf3)
-#define ZSF4 (ctx->cpu.cop2.ccr.zsf4)
-#define OTZ  (ctx->cpu.cop2.cpr.otz)
+#define BK   (ctx->cpu.cop2.ccr.bk)
 #define D1   (ctx->cpu.cop2.ccr.r[0][0])
 #define D2   (ctx->cpu.cop2.ccr.r[1][1])
 #define D3   (ctx->cpu.cop2.ccr.r[2][2])
+#define FC   (ctx->cpu.cop2.ccr.fc)
+#define FLAG (ctx->cpu.cop2.ccr.flag)
 #define IR   (ctx->cpu.cop2.cpr.ir)
+#define LCM  (ctx->cpu.cop2.ccr.lcm)
 #define LLM  (ctx->cpu.cop2.ccr.llm)
-#define RGBC (ctx->cpu.cop2.cpr.rgbc.arr)
+#define MAC  (ctx->cpu.cop2.cpr.mac)
 #define RGB0 (ctx->cpu.cop2.cpr.rgb[0].arr)
+#define RGBC (ctx->cpu.cop2.cpr.rgbc.arr)
+#define RT   (ctx->cpu.cop2.ccr.r)
+#define SX0  (ctx->cpu.cop2.cpr.sxy[0].x)
+#define SX1  (ctx->cpu.cop2.cpr.sxy[1].x)
+#define SX2  (ctx->cpu.cop2.cpr.sxy[2].x)
+#define SY0  (ctx->cpu.cop2.cpr.sxy[0].y)
+#define SY1  (ctx->cpu.cop2.cpr.sxy[1].y)
+#define SY2  (ctx->cpu.cop2.cpr.sxy[2].y)
+#define TR   (ctx->cpu.cop2.ccr.tr)
+#define V    (ctx->cpu.cop2.cpr.v)
+#define ZSF3 (ctx->cpu.cop2.ccr.zsf3)
+#define ZSF4 (ctx->cpu.cop2.ccr.zsf4)
 
 	switch (funct) {
 	case RTPS:
 		FLAG = 0;
 
-		rtp(ctx, &ctx->cpu.cop2.cpr.v[0], true);
+		rtp(ctx, &V[0], true);
 		update_flag(ctx);
 
 		return;
@@ -970,7 +939,7 @@ P_NONNULL static void do_cop2_instr(struct p_ctx *ctx, uint funct)
 	case NCLIP:
 		FLAG = 0;
 
-		MAC0 = mac0_add(
+		MAC[0] = mac0_add(
 			ctx,
 			((u64)SX0 * (u64)SY1) + ((u64)SX1 * (u64)SY2) +
 				((u64)SX2 * (u64)SY0) - ((u64)SX0 * (u64)SY2) -
@@ -1015,7 +984,7 @@ P_NONNULL static void do_cop2_instr(struct p_ctx *ctx, uint funct)
 		s64 sums[3];
 
 		for (size_t i = 0, j = 1; i < ARRAY_SIZE(sums); ++i, ++j)
-			sums[i] = (s64)((u64)IR[j] << 12);
+			sums[i] = (u64)IR[j] << 12;
 
 		intpl_fc(ctx, sums);
 		color_fifo_push(ctx);
@@ -1027,69 +996,43 @@ P_NONNULL static void do_cop2_instr(struct p_ctx *ctx, uint funct)
 	case MVMVA: {
 		FLAG = 0;
 
-		s16(*Mx)[3];
-		s32 *Tx;
+		s16 mx_bugged[3][3] = { [0][0]	     = (u32)-RGBC[0] << 4,
+					[0][1]	     = +RGBC[0] << 4,
+					[0][2]	     = IR[0],
+					[1][0 ... 2] = RT[0][2],
+					[2][0 ... 2] = RT[1][1] };
 
-		s32 tx_zero[3] = { [0 ... 2] = 0 };
+		s32 zero[3] = { [0 ... 2] = 0 };
 
-		s16 bugged[3][3] = { [0][0]	  = (u32)-RGBC[0] << 4,
-				     [0][1]	  = +RGBC[0] << 4,
-				     [0][2]	  = IR[0],
-				     [1][0 ... 2] = ctx->cpu.cop2.ccr.r[0][2],
-				     [2][0 ... 2] = ctx->cpu.cop2.ccr.r[1][1] };
+		s16(*const mx_lut[4])[3] = {
+			[0] = RT, [1] = LLM, [2] = LCM, [3] = mx_bugged
+		};
 
-		const uint mx_sel = (ctx->cpu.instr >> 17) & 0x3;
-		const uint vx_sel = (ctx->cpu.instr >> 15) & 0x3;
-		const uint tx_sel = (ctx->cpu.instr >> 13) & 0x3;
+		s32 *tx_lut[4] = { [0] = TR, [1] = BK, [2] = FC, [3] = zero };
 
-		switch (mx_sel) {
-		case 0:
-			Mx = ctx->cpu.cop2.ccr.r;
-			break;
+		uint tx_sel = mvmva_tx(ctx->cpu.instr);
 
-		case 1:
-			Mx = ctx->cpu.cop2.ccr.llm;
-			break;
+		s16(*mx)[3] = mx_lut[mvmva_mx(ctx->cpu.instr)];
+		s32 *tx	    = tx_lut[tx_sel];
 
-		case 2:
-			Mx = ctx->cpu.cop2.ccr.lcm;
-			break;
+		s16 vx[3];
 
-		case 3:
-			Mx = bugged;
-			break;
+		uint vx_sel = mvmva_vx(ctx->cpu.instr);
 
-		default:
-			P_UNREACHABLE;
-		}
-
-		struct p_cop2_vec Vx = vec_get(ctx, vx_sel);
-
-		switch (tx_sel) {
-		case 0:
-			Tx = ctx->cpu.cop2.ccr.tr;
-			break;
-
-		case 1:
-			Tx = ctx->cpu.cop2.ccr.bk;
-			break;
-
-		case 2:
-			Tx = ctx->cpu.cop2.ccr.fc;
-			break;
-
-		case 3:
-			Tx = tx_zero;
-			break;
-
-		default:
-			P_UNREACHABLE;
+		// Note: these memcpy's are likely bullshit - we should ideally
+		// be passing pointers instead of taking copies
+		if (vx_sel <= 2)
+			memcpy(vx, &V[vx_sel].arr, sizeof(vx));
+		else {
+			vx[0] = (s16)IR[1];
+			vx[1] = (s16)IR[2];
+			vx[2] = (s16)IR[3];
 		}
 
 		if (tx_sel != 2)
-			mvmva_matmul(ctx, Mx, &Vx, Tx);
+			mvmva(ctx, mx, vx, tx);
 		else
-			mvmva_matmul_bugged(ctx, Mx, &Vx, Tx);
+			mvmva_bugged(ctx, mx, vx, tx);
 
 		update_flag(ctx);
 		return;
@@ -1098,7 +1041,7 @@ P_NONNULL static void do_cop2_instr(struct p_ctx *ctx, uint funct)
 	case NCDS:
 		FLAG = 0;
 
-		ncd(ctx, &ctx->cpu.cop2.cpr.v[0]);
+		ncd(ctx, &V[0]);
 
 		update_flag(ctx);
 		return;
@@ -1123,8 +1066,8 @@ P_NONNULL static void do_cop2_instr(struct p_ctx *ctx, uint funct)
 	case NCDT:
 		FLAG = 0;
 
-		for (size_t i = 0; i < ARRAY_SIZE(ctx->cpu.cop2.cpr.v); ++i)
-			ncd(ctx, &ctx->cpu.cop2.cpr.v[i]);
+		for (size_t i = 0; i < ARRAY_SIZE(V); ++i)
+			ncd(ctx, &V[i]);
 
 		update_flag(ctx);
 		return;
@@ -1132,7 +1075,7 @@ P_NONNULL static void do_cop2_instr(struct p_ctx *ctx, uint funct)
 	case NCCS:
 		FLAG = 0;
 
-		ncc(ctx, &ctx->cpu.cop2.cpr.v[0]);
+		ncc(ctx, &V[0]);
 
 		update_flag(ctx);
 		return;
@@ -1150,7 +1093,7 @@ P_NONNULL static void do_cop2_instr(struct p_ctx *ctx, uint funct)
 	case NCS:
 		FLAG = 0;
 
-		nc(ctx, &ctx->cpu.cop2.cpr.v[0]);
+		nc(ctx, &V[0]);
 
 		update_flag(ctx);
 		return;
@@ -1158,8 +1101,8 @@ P_NONNULL static void do_cop2_instr(struct p_ctx *ctx, uint funct)
 	case NCT:
 		FLAG = 0;
 
-		for (size_t i = 0; i < ARRAY_SIZE(ctx->cpu.cop2.cpr.v); ++i)
-			nc(ctx, &ctx->cpu.cop2.cpr.v[i]);
+		for (size_t i = 0; i < ARRAY_SIZE(V); ++i)
+			nc(ctx, &V[i]);
 
 		update_flag(ctx);
 		return;
@@ -1207,9 +1150,9 @@ P_NONNULL static void do_cop2_instr(struct p_ctx *ctx, uint funct)
 	case RTPT:
 		FLAG = 0;
 
-		rtp(ctx, &ctx->cpu.cop2.cpr.v[0], false);
-		rtp(ctx, &ctx->cpu.cop2.cpr.v[1], false);
-		rtp(ctx, &ctx->cpu.cop2.cpr.v[2], true);
+		rtp(ctx, &V[0], false);
+		rtp(ctx, &V[1], false);
+		rtp(ctx, &V[2], true);
 
 		update_flag(ctx);
 		return;
@@ -1225,11 +1168,9 @@ P_NONNULL static void do_cop2_instr(struct p_ctx *ctx, uint funct)
 		const bool lm = ir123_lm(ctx->cpu.instr);
 
 		for (size_t i = 1; i < ARRAY_SIZE(MAC); ++i) {
-			s64 sum = (s64)((u64)MAC[i] << sf);
-			mac123_add(ctx, i, sum, 0);
-
-			sum = (IR[i] * IR[0]) + sum;
-			mac123_add(ctx, i, sum, 0);
+			s64 sum = 0;
+			sum = mac123_add(ctx, i, sum, (u64)MAC[i] << sf);
+			sum = mac123_add(ctx, i, sum, IR[i] * IR[0]);
 
 			MAC[i] = sum >> sf;
 			IR[i]  = ir123_sat(ctx, i, MAC[i], lm);
@@ -1244,8 +1185,8 @@ P_NONNULL static void do_cop2_instr(struct p_ctx *ctx, uint funct)
 	case NCCT:
 		FLAG = 0;
 
-		for (size_t i = 0; i < ARRAY_SIZE(ctx->cpu.cop2.cpr.v); ++i)
-			ncc(ctx, &ctx->cpu.cop2.cpr.v[i]);
+		for (size_t i = 0; i < ARRAY_SIZE(V); ++i)
+			ncc(ctx, &V[i]);
 
 		update_flag(ctx);
 		return;
@@ -1254,6 +1195,30 @@ P_NONNULL static void do_cop2_instr(struct p_ctx *ctx, uint funct)
 		illegal_instr(ctx);
 		return;
 	}
+
+#undef BK
+#undef D1
+#undef D2
+#undef D3
+#undef FC
+#undef FLAG
+#undef IR
+#undef LCM
+#undef LLM
+#undef MAC
+#undef RGB0
+#undef RGBC
+#undef RT
+#undef SX0
+#undef SX1
+#undef SX2
+#undef SY0
+#undef SY1
+#undef SY2
+#undef TR
+#undef V
+#undef ZSF3
+#undef ZSF4
 }
 
 P_NONNULL static void dly_slot_process(struct p_ctx *ctx)

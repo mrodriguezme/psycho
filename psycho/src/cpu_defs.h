@@ -26,54 +26,69 @@
 #include "psycho/compiler.h"
 #include "util.h"
 
-#define RST_VECTOR	      (UINT32_C(0xBFC00000))
+#define RST_VECTOR   (UINT32_C(0xBFC00000))
 
-#define SR_ISC		      (1 << 16)
+#define SR_ISC	     (1 << 16)
 
-#define GTE_FLAG_ERR	      (UINT32_C(1) << 31)
-#define GTE_FLAG_MAC1_OVF_POS (1 << 30)
-#define GTE_FLAG_MAC2_OVF_POS (1 << 29)
-#define GTE_FLAG_MAC3_OVF_POS (1 << 28)
-#define GTE_FLAG_MAC1_OVF_NEG (1 << 27)
-#define GTE_FLAG_MAC2_OVF_NEG (1 << 26)
-#define GTE_FLAG_MAC3_OVF_NEG (1 << 25)
-#define GTE_FLAG_IR1_SAT      (1 << 24)
-#define GTE_FLAG_IR2_SAT      (1 << 23)
-#define GTE_FLAG_IR3_SAT      (1 << 22)
-#define GTE_FLAG_RGB_R_SAT    (1 << 21)
-#define GTE_FLAG_RGB_G_SAT    (1 << 20)
-#define GTE_FLAG_RGB_B_SAT    (1 << 19)
-#define GTE_FLAG_SZ3_OTZ_SAT  (1 << 18)
-#define GTE_FLAG_DIV_OVF      (1 << 17)
-#define GTE_FLAG_MAC0_POS_OVF (1 << 16)
-#define GTE_FLAG_MAC0_NEG_OVF (1 << 15)
-#define GTE_FLAG_SX2_SAT      (1 << 14)
-#define GTE_FLAG_SY2_SAT      (1 << 13)
-#define GTE_FLAG_IR0_SAT      (1 << 12)
+#define FLAG_ERR     (UINT32_C(1) << 31)
+#define MAC1_OVF_POS (1 << 30)
+#define MAC2_OVF_POS (1 << 29)
+#define MAC3_OVF_POS (1 << 28)
+#define MAC1_OVF_NEG (1 << 27)
+#define MAC2_OVF_NEG (1 << 26)
+#define MAC3_OVF_NEG (1 << 25)
+#define IR1_SAT	     (1 << 24)
+#define IR2_SAT	     (1 << 23)
+#define IR3_SAT	     (1 << 22)
+#define RGB_R_SAT    (1 << 21)
+#define RGB_G_SAT    (1 << 20)
+#define RGB_B_SAT    (1 << 19)
+#define SZ3_OTZ_SAT  (1 << 18)
+#define DIV_OVF	     (1 << 17)
+#define MAC0_POS_OVF (1 << 16)
+#define MAC0_NEG_OVF (1 << 15)
+#define SX2_SAT	     (1 << 14)
+#define SY2_SAT	     (1 << 13)
+#define IR0_SAT	     (1 << 12)
 
-#define GTE_FLAG_MASK                                                       \
-	(GTE_FLAG_MAC1_OVF_POS | GTE_FLAG_MAC2_OVF_POS |                    \
-	 GTE_FLAG_MAC3_OVF_POS | GTE_FLAG_MAC1_OVF_NEG |                    \
-	 GTE_FLAG_MAC2_OVF_NEG | GTE_FLAG_MAC3_OVF_NEG | GTE_FLAG_IR1_SAT | \
-	 GTE_FLAG_IR2_SAT | GTE_FLAG_IR3_SAT | GTE_FLAG_RGB_R_SAT |         \
-	 GTE_FLAG_RGB_G_SAT | GTE_FLAG_RGB_B_SAT | GTE_FLAG_SZ3_OTZ_SAT |   \
-	 GTE_FLAG_DIV_OVF | GTE_FLAG_MAC0_POS_OVF | GTE_FLAG_MAC0_NEG_OVF | \
-	 GTE_FLAG_SX2_SAT | GTE_FLAG_SY2_SAT | GTE_FLAG_IR0_SAT)
+#define FLAG_MASK                                                    \
+	(MAC1_OVF_POS | MAC2_OVF_POS | MAC3_OVF_POS | MAC1_OVF_NEG | \
+	 MAC2_OVF_NEG | MAC3_OVF_NEG | IR1_SAT | IR2_SAT | IR3_SAT | \
+	 RGB_R_SAT | RGB_G_SAT | RGB_B_SAT | SZ3_OTZ_SAT | DIV_OVF | \
+	 MAC0_POS_OVF | MAC0_NEG_OVF | SX2_SAT | SY2_SAT | IR0_SAT)
 
-#define GTE_ERR_FLAG_MASK                                                   \
-	(GTE_FLAG_MAC1_OVF_POS | GTE_FLAG_MAC2_OVF_POS |                    \
-	 GTE_FLAG_MAC3_OVF_POS | GTE_FLAG_MAC1_OVF_NEG |                    \
-	 GTE_FLAG_MAC2_OVF_NEG | GTE_FLAG_MAC3_OVF_NEG | GTE_FLAG_IR1_SAT | \
-	 GTE_FLAG_IR2_SAT | GTE_FLAG_SZ3_OTZ_SAT | GTE_FLAG_DIV_OVF |       \
-	 GTE_FLAG_MAC0_POS_OVF | GTE_FLAG_MAC0_NEG_OVF | GTE_FLAG_SX2_SAT | \
-	 GTE_FLAG_SY2_SAT)
+#define FLAG_ERR_MASK                                                    \
+	(MAC1_OVF_POS | MAC2_OVF_POS | MAC3_OVF_POS | MAC1_OVF_NEG |     \
+	 MAC2_OVF_NEG | MAC3_OVF_NEG | IR1_SAT | IR2_SAT | SZ3_OTZ_SAT | \
+	 DIV_OVF | MAC0_POS_OVF | MAC0_NEG_OVF | SX2_SAT | SY2_SAT)
 
-#define GTE_MAC123_MAX ((INT64_C(1) << 43) - 1)
-#define GTE_MAC123_MIN (-(INT64_C(1) << 43))
+#define MAC123_MAX	 ((INT64_C(1) << 43) - 1)
+#define MAC123_MIN	 (-(INT64_C(1) << 43))
 
-#define IR123_MIN      (-(INT16_C(1) << 15))
-#define IR123_MAX      ((INT16_C(1) << 15) - 1)
-#define IR123_LM_MIN   (0x0000)
+#define IR0_MIN		 (0x0000)
+#define IR0_MAX		 (0x1000)
+
+#define IR123_MIN	 (-(INT16_C(1) << 15))
+#define IR123_MAX	 ((INT16_C(1) << 15) - 1)
+#define IR123_LM_MIN	 (0x0000)
+
+#define SXY_MIN		 (-0x0400)
+#define SXY_MAX		 (+0x03FF)
+
+#define SZ_OTZ_MIN	 (0x0000)
+#define SZ_OTZ_MAX	 (UINT16_MAX)
+
+#define RGB_MIN		 (0x00)
+#define RGB_MAX		 (UINT8_MAX)
+
+#define MVMVA_MX_SHIFT	 (17)
+#define MVMVA_VX_SHIFT	 (15)
+#define MVMVA_TX_SHIFT	 (13)
+
+#define MVMVA_PARAM_MASK (0x3)
+
+#define INSTR_SF	 (1 << 19)
+#define INSTR_LM	 (1 << 10)
 
 enum cpu_exc {
 	EXC_ADEL    = 4,
@@ -182,6 +197,31 @@ enum instr_grp_cop2 {
 	GPL   = 0x3E,
 	NCCT  = 0x3F
 };
+
+P_NODISCARD P_ALWAYS_INLINE uint mvmva_mx(u32 instr)
+{
+	return (instr >> MVMVA_MX_SHIFT) & MVMVA_PARAM_MASK;
+}
+
+P_NODISCARD P_ALWAYS_INLINE uint mvmva_vx(u32 instr)
+{
+	return (instr >> MVMVA_VX_SHIFT) & MVMVA_PARAM_MASK;
+}
+
+P_NODISCARD P_ALWAYS_INLINE uint mvmva_tx(u32 instr)
+{
+	return (instr >> MVMVA_TX_SHIFT) & MVMVA_PARAM_MASK;
+}
+
+P_NODISCARD P_ALWAYS_INLINE uint shift_frac(u32 instr)
+{
+	return (instr & INSTR_SF) ? 12 : 0;
+}
+
+P_NODISCARD P_ALWAYS_INLINE bool ir123_lm(u32 instr)
+{
+	return instr & INSTR_LM;
+}
 
 P_NODISCARD P_ALWAYS_INLINE u32 vaddr_to_paddr(u32 vaddr)
 {
