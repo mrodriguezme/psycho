@@ -711,16 +711,21 @@ P_NONNULL static void sqr(struct p_ctx *ctx)
 #undef MAC
 }
 
-P_NONNULL static void avsz(struct p_ctx *ctx, s16 scale, u16 sz0, u16 sz1,
-			   u16 sz2, u16 sz3)
+P_NONNULL static void avsz(struct p_ctx *ctx, s16 scale, size_t sz_off)
 {
 #define FLAG (ctx->cpu.cop2.ccr.flag)
 #define MAC0 (ctx->cpu.cop2.cpr.mac[0])
 #define OTZ  (ctx->cpu.cop2.cpr.otz)
+#define SZ (ctx->cpu.cop2.cpr.sz)
 
 	FLAG = 0;
 
-	s64 sum = scale * ((s64)sz0 + (s64)sz1 + (s64)sz2 + (s64)sz3);
+	s64 sum = 0;
+
+	while (sz_off < ARRAY_SIZE(SZ))
+		sum += SZ[sz_off++].v;
+
+	sum *= scale;
 
 	MAC0 = mac0_add(ctx, sum);
 	OTZ  = otz_set(ctx, sum >> 12);
@@ -730,6 +735,7 @@ P_NONNULL static void avsz(struct p_ctx *ctx, s16 scale, u16 sz0, u16 sz1,
 #undef FLAG
 #undef MAC0
 #undef OTZ
+#undef SZ
 }
 
 P_NONNULL static void do_cop2_mfc(struct p_ctx *ctx, size_t rt, size_t rd)
@@ -938,10 +944,6 @@ P_NONNULL static void do_cop2_instr(struct p_ctx *ctx, uint funct)
 #define SY1  (ctx->cpu.cop2.cpr.sxy[1].y)
 #define SY2  (ctx->cpu.cop2.cpr.sxy[2].y)
 #define SX2  (ctx->cpu.cop2.cpr.sxy[2].x)
-#define SZ0  (ctx->cpu.cop2.cpr.sz[0].v)
-#define SZ1  (ctx->cpu.cop2.cpr.sz[1].v)
-#define SZ2  (ctx->cpu.cop2.cpr.sz[2].v)
-#define SZ3  (ctx->cpu.cop2.cpr.sz[3].v)
 #define MAC  (ctx->cpu.cop2.cpr.mac)
 #define MAC0 (ctx->cpu.cop2.cpr.mac[0])
 #define MAC1 (ctx->cpu.cop2.cpr.mac[1])
@@ -1195,11 +1197,11 @@ P_NONNULL static void do_cop2_instr(struct p_ctx *ctx, uint funct)
 		return;
 
 	case AVSZ3:
-		avsz(ctx, ZSF3, 0, SZ1, SZ2, SZ3);
+		avsz(ctx, ZSF3, 1);
 		return;
 
 	case AVSZ4:
-		avsz(ctx, ZSF4, SZ0, SZ1, SZ2, SZ3);
+		avsz(ctx, ZSF4, 0);
 		return;
 
 	case RTPT:
