@@ -903,6 +903,7 @@ P_NONNULL static void do_cop2_instr(struct p_ctx *ctx, uint funct)
 #define D1   (ctx->cpu.cop2.ccr.r[0][0])
 #define D2   (ctx->cpu.cop2.ccr.r[1][1])
 #define D3   (ctx->cpu.cop2.ccr.r[2][2])
+#define FC   (ctx->cpu.cop2.ccr.fc)
 #define FLAG (ctx->cpu.cop2.ccr.flag)
 #define IR   (ctx->cpu.cop2.cpr.ir)
 #define LCM  (ctx->cpu.cop2.ccr.lcm)
@@ -991,42 +992,70 @@ P_NONNULL static void do_cop2_instr(struct p_ctx *ctx, uint funct)
 	case MVMVA: {
 		FLAG = 0;
 
-		s16 mx_bugged[3][3] = { [0][0]	     = (u32)-RGBC[0] << 4,
-					[0][1]	     = +RGBC[0] << 4,
-					[0][2]	     = IR[0],
-					[1][0 ... 2] = RT[0][2],
-					[2][0 ... 2] = RT[1][1] };
+		s16(*mx_lut[3])[3] = {
+			// clang-format off
 
-		s32 zero[3] = { [0 ... 2] = 0 };
+			[0] = RT,
+			[1] = LLM,
+			[2] = LCM
 
-		s16(*const mx_lut[4])[3] = {
-			[0] = RT, [1] = LLM, [2] = LCM, [3] = mx_bugged
+			// clang-format on
 		};
 
-		s32 *tx_lut[4] = { [0] = TR, [1] = BK, [2] = NULL, [3] = zero };
+		s32 *tx_lut[4] = {
+			// clang-format off
+
+			[0] = TR,
+			[1] = BK,
+			[2] = FC,
+			[3] = (s32[3]){ 0 }
+
+			// clang-format on
+		};
+
+		uint mx_sel = mvmva_mx(ctx->cpu.instr);
+
+		s16(*mx)[3];
+		s16 mx_bugged[3][3];
+
+		if (likely(mx_sel <= 2))
+			mx = mx_lut[mx_sel];
+		else {
+			mx_bugged[0][0] = (u32)-RGBC[0] << 4;
+			mx_bugged[0][1] = +RGBC[0] << 4;
+			mx_bugged[0][2] = IR[0];
+			mx_bugged[1][0] = RT[0][2];
+			mx_bugged[1][1] = RT[0][2];
+			mx_bugged[1][2] = RT[0][2];
+			mx_bugged[2][0] = RT[1][1];
+			mx_bugged[2][1] = RT[1][1];
+			mx_bugged[2][2] = RT[1][1];
+
+			mx = mx_bugged;
+		}
 
 		uint tx_sel = mvmva_tx(ctx->cpu.instr);
-
-		s16(*mx)[3] = mx_lut[mvmva_mx(ctx->cpu.instr)];
-		s32 *tx	    = tx_lut[tx_sel];
-
-		s16 vx[3];
+		s32 *tx = tx_lut[tx_sel];
 
 		uint vx_sel = mvmva_vx(ctx->cpu.instr);
 
-		// Note: these memcpy's are likely bullshit - we should ideally
-		// be passing pointers instead of taking copies
+		s16 vx_tmp[3];
+		s16 *vx;
+
 		if (vx_sel <= 2)
-			memcpy(vx, &V[vx_sel].arr, sizeof(vx));
+			vx = V[vx_sel].arr;
 		else {
-			vx[0] = (s16)IR[1];
-			vx[1] = (s16)IR[2];
-			vx[2] = (s16)IR[3];
+			vx_tmp[0] = IR[1];
+			vx_tmp[1] = IR[2];
+			vx_tmp[2] = IR[3];
+			vx	  = vx_tmp;
 		}
 
 		if (tx_sel != 2)
 			mvmva(ctx, mx, vx, tx);
 		else
+			// Don't need to worry about passing Tx - only the FC
+			// vector is buggy
 			mvmva_bugged(ctx, mx, vx);
 
 		update_flag(ctx);
