@@ -57,7 +57,8 @@ struct p_gte_vec {
 		struct {
 			s16 x;
 			s16 y;
-			s32 z;
+			s16 z;
+			const u16 pad0;
 		};
 		s16 arr[3];
 	};

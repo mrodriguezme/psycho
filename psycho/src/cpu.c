@@ -343,7 +343,7 @@ P_NONNULL P_NODISCARD static s16 ir0_sat(struct p_ctx *ctx, s64 val)
 	return gte_clamp(ctx, val, IR0_MIN, IR0_MAX, IR0_SAT);
 }
 
-P_NONNULL static s16 ir123_sat(struct p_ctx *ctx, uint ir, s64 val, bool lm)
+P_NONNULL static s16 ir123_sat(struct p_ctx *ctx, uint ir, s32 val, bool lm)
 {
 	s16 min = lm ? IR123_LM_MIN : IR123_MIN;
 
@@ -616,7 +616,8 @@ P_NONNULL static void intpl_fc(struct p_ctx *ctx, s64 *sums)
 		IR[i]  = ir123_sat(ctx, i, MAC[i], false);
 
 		sum = 0;
-		sum = mac123_add(ctx, i, sum, (IR[i] * IR[0]) + sums[j]);
+		sum = mac123_add(ctx, i, sum, sums[j]);
+		sum = mac123_add(ctx, i, sum, IR[i] * IR[0]);
 
 		MAC[i] = sum >> sf;
 		IR[i]  = ir123_sat(ctx, i, MAC[i], lm);
@@ -673,23 +674,6 @@ P_NONNULL static void ncd(struct p_ctx *ctx, struct p_gte_vec *vec)
 #undef RGBC
 }
 
-P_NONNULL static void sqr(struct p_ctx *ctx)
-{
-#define IR  (ctx->cpu.cop2.cpr.ir)
-#define MAC (ctx->cpu.cop2.cpr.mac)
-
-	const uint sf = shift_frac(ctx->cpu.instr);
-	const bool lm = ir123_lm(ctx->cpu.instr);
-
-	for (size_t i = 1; i < ARRAY_SIZE(IR); ++i) {
-		MAC[i] = ((s64)IR[i] * (s64)IR[i]) >> sf;
-		IR[i]  = ir123_sat(ctx, i, MAC[i], lm);
-	}
-
-#undef IR
-#undef MAC
-}
-
 P_NONNULL static void avsz(struct p_ctx *ctx, s16 scale, size_t sz_off)
 {
 #define FLAG (ctx->cpu.cop2.ccr.flag)
@@ -720,7 +704,6 @@ P_NONNULL static void avsz(struct p_ctx *ctx, s16 scale, size_t sz_off)
 P_NONNULL static void do_cop2_mfc(struct p_ctx *ctx, size_t rt, size_t rd)
 {
 #define IR   (ctx->cpu.cop2.cpr.ir)
-#define LZCS (ctx->cpu.cop2.cpr.lzcs)
 #define SXY2 (ctx->cpu.cop2.cpr.sxy[2].raw)
 
 	switch (rd) {
@@ -738,30 +721,12 @@ P_NONNULL static void do_cop2_mfc(struct p_ctx *ctx, size_t rt, size_t rd)
 		break;
 	}
 
-	case P_LZCR: {
-		u32 res = 32;
-
-		if (LZCS > 0)
-			// Reading LZCR returns the leading 0 count of LZCS if
-			// LZCS is positive...
-			res = __builtin_clz(LZCS);
-		else if (LZCS < 0)
-			// and the leading 1 count of LZCS if LZCS is negative.
-			res = (LZCS == -1) ? 32 : __builtin_clz(~LZCS);
-
-		// The results are in range 1..32.
-
-		gpr_set(ctx, rt, res);
-		break;
-	}
-
 	default:
 		gpr_set(ctx, rt, ctx->cpu.cop2.cpr.raw[rd]);
 		break;
 	}
 
 #undef IR
-#undef LZCS
 #undef SXY2
 }
 
@@ -780,8 +745,10 @@ P_NONNULL static void do_cop2_cfc(struct p_ctx *ctx, size_t rt, size_t rd)
 
 P_NONNULL static void do_cop2_mtc(struct p_ctx *ctx, size_t rd, size_t rt)
 {
-#define IR  (ctx->cpu.cop2.cpr.ir)
-#define SXY (ctx->cpu.cop2.cpr.sxy)
+#define IR   (ctx->cpu.cop2.cpr.ir)
+#define LZCR (ctx->cpu.cop2.cpr.lzcr)
+#define LZCS (ctx->cpu.cop2.cpr.lzcs)
+#define SXY  (ctx->cpu.cop2.cpr.sxy)
 
 	switch (rd) {
 	case P_OTZ:
@@ -816,10 +783,37 @@ P_NONNULL static void do_cop2_mtc(struct p_ctx *ctx, size_t rd, size_t rt)
 
 		break;
 
+	case P_LZCS: {
+		LZCS = ctx->cpu.gpr[rt];
+
+		u32 res = 32;
+
+		if (LZCS > 0)
+			// Reading LZCR returns the leading 0 count of LZCS if
+			// LZCS is positive...
+			res = __builtin_clz(LZCS);
+		else if (LZCS < 0)
+			// and the leading 1 count of LZCS if LZCS is negative.
+			res = (LZCS == -1) ? 32 : __builtin_clz(~LZCS);
+
+		// The results are in range 1..32.
+		LZCR = res;
+		break;
+	}
+
+	case P_LZCR:
+		// Read-only register - ignore
+		break;
+
 	default:
 		ctx->cpu.cop2.cpr.raw[rd] = ctx->cpu.gpr[rt];
 		break;
 	}
+
+#undef IR
+#undef LZCR
+#undef LZCS
+#undef SXY
 }
 
 P_NONNULL static void do_cop2_ctc(struct p_ctx *ctx, size_t rd, size_t rt)
@@ -873,8 +867,9 @@ static void mvmva(struct p_ctx *ctx, s16 (*Mx)[3], s16 *Vx, s32 *Tx)
 #undef MAC
 }
 
-static void mvmva_bugged(struct p_ctx *ctx, s16 (*Mx)[3], s16 *Vx, s32 *Tx)
+static void mvmva_bugged(struct p_ctx *ctx, s16 (*Mx)[3], s16 *Vx)
 {
+#define FC  (ctx->cpu.cop2.ccr.fc)
 #define IR  (ctx->cpu.cop2.cpr.ir)
 #define MAC (ctx->cpu.cop2.cpr.mac)
 
@@ -883,7 +878,7 @@ static void mvmva_bugged(struct p_ctx *ctx, s16 (*Mx)[3], s16 *Vx, s32 *Tx)
 
 	for (size_t i = 1, j = 0; i < ARRAY_SIZE(MAC); ++i, ++j) {
 		s64 sum = 0;
-		sum	= mac123_add(ctx, i, sum, (u64)Tx[j] << 12);
+		sum	= mac123_add(ctx, i, sum, (u64)FC[j] << 12);
 		sum	= mac123_add(ctx, i, sum, Mx[j][0] * Vx[0]);
 
 		MAC[i] = sum >> sf;
@@ -897,6 +892,7 @@ static void mvmva_bugged(struct p_ctx *ctx, s16 (*Mx)[3], s16 *Vx, s32 *Tx)
 		IR[i]  = ir123_sat(ctx, i, MAC[i], lm);
 	}
 
+#undef FC
 #undef IR
 #undef MAC
 }
@@ -907,7 +903,6 @@ P_NONNULL static void do_cop2_instr(struct p_ctx *ctx, uint funct)
 #define D1   (ctx->cpu.cop2.ccr.r[0][0])
 #define D2   (ctx->cpu.cop2.ccr.r[1][1])
 #define D3   (ctx->cpu.cop2.ccr.r[2][2])
-#define FC   (ctx->cpu.cop2.ccr.fc)
 #define FLAG (ctx->cpu.cop2.ccr.flag)
 #define IR   (ctx->cpu.cop2.cpr.ir)
 #define LCM  (ctx->cpu.cop2.ccr.lcm)
@@ -959,9 +954,9 @@ P_NONNULL static void do_cop2_instr(struct p_ctx *ctx, uint funct)
 			       [2] = (IR[2] * D1) - (IR[1] * D2) };
 
 		for (size_t i = 0, reg = 1; i < ARRAY_SIZE(res); ++i, ++reg) {
-			s64 sum = res[i];
+			s64 sum = 0;
+			sum	= mac123_add(ctx, reg, sum, res[i]);
 
-			mac123_add(ctx, reg, sum, 0);
 			MAC[reg] = sum >> sf;
 			IR[reg]	 = ir123_sat(ctx, reg, MAC[reg], lm);
 		}
@@ -1008,7 +1003,7 @@ P_NONNULL static void do_cop2_instr(struct p_ctx *ctx, uint funct)
 			[0] = RT, [1] = LLM, [2] = LCM, [3] = mx_bugged
 		};
 
-		s32 *tx_lut[4] = { [0] = TR, [1] = BK, [2] = FC, [3] = zero };
+		s32 *tx_lut[4] = { [0] = TR, [1] = BK, [2] = NULL, [3] = zero };
 
 		uint tx_sel = mvmva_tx(ctx->cpu.instr);
 
@@ -1032,7 +1027,7 @@ P_NONNULL static void do_cop2_instr(struct p_ctx *ctx, uint funct)
 		if (tx_sel != 2)
 			mvmva(ctx, mx, vx, tx);
 		else
-			mvmva_bugged(ctx, mx, vx, tx);
+			mvmva_bugged(ctx, mx, vx);
 
 		update_flag(ctx);
 		return;
@@ -1107,13 +1102,20 @@ P_NONNULL static void do_cop2_instr(struct p_ctx *ctx, uint funct)
 		update_flag(ctx);
 		return;
 
-	case SQR:
+	case SQR: {
 		FLAG = 0;
 
-		sqr(ctx);
-		update_flag(ctx);
+		const uint sf = shift_frac(ctx->cpu.instr);
+		const bool lm = ir123_lm(ctx->cpu.instr);
 
+		for (size_t i = 1; i < ARRAY_SIZE(IR); ++i) {
+			MAC[i] = ((s64)IR[i] * (s64)IR[i]) >> sf;
+			IR[i]  = ir123_sat(ctx, i, MAC[i], lm);
+		}
+
+		update_flag(ctx);
 		return;
+	}
 
 	case DPCL: {
 		FLAG = 0;
@@ -1169,8 +1171,8 @@ P_NONNULL static void do_cop2_instr(struct p_ctx *ctx, uint funct)
 
 		for (size_t i = 1; i < ARRAY_SIZE(MAC); ++i) {
 			s64 sum = 0;
-			sum = mac123_add(ctx, i, sum, (u64)MAC[i] << sf);
-			sum = mac123_add(ctx, i, sum, IR[i] * IR[0]);
+			sum	= mac123_add(ctx, i, sum, (u64)MAC[i] << sf);
+			sum	= mac123_add(ctx, i, sum, IR[i] * IR[0]);
 
 			MAC[i] = sum >> sf;
 			IR[i]  = ir123_sat(ctx, i, MAC[i], lm);
