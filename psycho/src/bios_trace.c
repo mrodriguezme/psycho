@@ -163,13 +163,13 @@ P_NONNULL static void frame_init(struct p_ctx *ctx, struct p_bios_frame *frame,
 	frame->fn      = fn;
 	frame->arg_pos = 0;
 
-	frame->a0 = ctx->cpu.gpr[P_A0];
-	frame->a1 = ctx->cpu.gpr[P_A1];
-	frame->a2 = ctx->cpu.gpr[P_A2];
-	frame->a3 = ctx->cpu.gpr[P_A3];
+	frame->a0 = ctx->cpu.gpr_get(ctx, P_A0);
+	frame->a1 = ctx->cpu.gpr_get(ctx, P_A1);
+	frame->a2 = ctx->cpu.gpr_get(ctx, P_A2);
+	frame->a3 = ctx->cpu.gpr_get(ctx, P_A3);
 
-	frame->sp = ctx->cpu.gpr[P_SP];
-	frame->ra = ctx->cpu.gpr[P_RA];
+	frame->sp = ctx->cpu.gpr_get(ctx, P_SP);
+	frame->ra = ctx->cpu.gpr_get(ctx, P_RA);
 
 	p_str_init_fixed(&frame->str, frame->str_buf, sizeof(frame->str_buf));
 }
@@ -354,23 +354,24 @@ void p_bios_trace_init(struct p_ctx *ctx)
 
 void p_bios_trace_begin(struct p_ctx *ctx)
 {
-	const u32 fn_num = ctx->cpu.gpr[P_T1];
+	const u32 fn_num = ctx->cpu.gpr_get(ctx, P_T1);
+	const u32 pc	 = ctx->cpu.pc_get(ctx);
 
 	const struct p_bios_fn *fn;
 
-	if (ctx->cpu.pc == 0x000000A0)
+	if (pc == 0x000000A0)
 		fn = func_get(a0_funcs, ARRAY_SIZE(a0_funcs), fn_num);
-	else if (ctx->cpu.pc == 0x000000B0)
+	else if (pc == 0x000000B0)
 		fn = func_get(b0_funcs, ARRAY_SIZE(b0_funcs), fn_num);
-	else if (ctx->cpu.pc == 0x000000C0)
+	else if (pc == 0x000000C0)
 		fn = func_get(c0_funcs, ARRAY_SIZE(c0_funcs), fn_num);
 	else
 		return;
 
 	if (!fn) {
 		LOG_WARN(ctx,
-			 "Unimplemented BIOS call: 0x%02X:0x%08X; ignoring",
-			 ctx->cpu.pc, fn_num);
+			 "Unimplemented BIOS call: 0x%02X:0x%08X; ignoring", pc,
+			 fn_num);
 		return;
 	}
 
@@ -390,7 +391,9 @@ void p_bios_trace_begin(struct p_ctx *ctx)
 
 void p_bios_trace_end(struct p_ctx *const ctx)
 {
-	if (ctx->cpu.instr != JR_RA)
+	u32 instr = ctx->cpu.instr_get(ctx);
+
+	if (instr != JR_RA)
 		return;
 
 	struct p_bios_frame *frame = stack_pop(ctx);
@@ -398,7 +401,7 @@ void p_bios_trace_end(struct p_ctx *const ctx)
 	if (!frame)
 		return;
 
-	const u32 v0 = ctx->cpu.gpr[P_V0];
+	const u32 v0 = ctx->cpu.gpr_get(ctx, P_V0);
 
 	switch (frame->fn->ret) {
 	case P_BIOS_FN_RET_CHAR:

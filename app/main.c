@@ -239,7 +239,7 @@ static void emu_init(void)
 
 	cfg->log.log_cb = log_cb;
 
-	//cfg->log.mod[P_LOG_CTX]		 = P_LOG_TRACE;
+	cfg->log.mod[P_LOG_CTX]		 = P_LOG_TRACE;
 	//cfg->log.mod[P_LOG_BUS]		 = P_LOG_TRACE;
 	cfg->log.mod[P_LOG_BIOS]	 = P_LOG_INFO;
 	//cfg->log.mod[P_LOG_SCHED]	 = P_LOG_TRACE;

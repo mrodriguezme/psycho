@@ -29,7 +29,8 @@ target_sources(
 	include/psycho/bus.h
 	include/psycho/compiler.h
 	include/psycho/cpu_defs.h
-	include/psycho/cpu.h
+	include/psycho/cpu_int.h
+	include/psycho/cpu_ops.h
 	include/psycho/ctx.h
 	include/psycho/disasm.h
 	include/psycho/gpu.h
@@ -42,9 +43,10 @@ target_sources(
 	src/bios_trace.h
 	src/bus.c
 	src/bus.h
+	src/cpu_defs.c
 	src/cpu_defs.h
-	src/cpu.c
-	src/cpu.h
+	src/cpu_int.c
+	src/cpu_int.h
 	src/ctx.c
 	src/digital_ctrl.c
 	src/disasm.c

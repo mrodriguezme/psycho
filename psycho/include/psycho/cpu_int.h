@@ -22,14 +22,50 @@
 
 #pragma once
 
-#include "psycho/ctx.h"
+#include <stdbool.h>
+#include <stddef.h>
 
-void p_cpu_irq_mux_set(struct p_ctx *ctx, bool set) P_NONNULL;
+#include "cpu_defs.h"
+#include "types.h"
 
-void p_cpu_pc_set(struct p_ctx *ctx, u32 pc) P_NONNULL;
+#ifdef __cplusplus
+extern "C" {
+#endif // __cplusplus
 
-void p_cpu_gpr_set(struct p_ctx *ctx, enum p_cpu_gpr gpr, u32 val) P_NONNULL;
+struct p_ctx;
 
-void p_cpu_rst(struct p_ctx *ctx) P_NONNULL;
+struct p_cpu_cfg {
+	void (*illegal_instr)(struct p_ctx *ctx, u32 instr);
+};
 
-void p_cpu_run(struct p_ctx *ctx, u64 cycles) P_NONNULL;
+struct p_cpu_dly_slot {
+	size_t dst;
+	u32 val;
+};
+
+struct p_cpu_int {
+	u32 gpr[P_GPR_COUNT];
+	u32 cop0[P_COP0_COUNT];
+
+	struct {
+		struct p_cop2_cpr cpr;
+		struct p_cop2_ccr ccr;
+	} cop2;
+
+	u32 pc;
+	u32 npc;
+	u32 dly_pc;
+	u32 instr;
+	u32 lo;
+	u32 hi;
+
+	struct p_cpu_dly_slot ld_pend;
+	struct p_cpu_dly_slot ld_next;
+
+	bool in_bd;
+	bool next_in_bd;
+};
+
+#ifdef __cplusplus
+}
+#endif // __cplusplus

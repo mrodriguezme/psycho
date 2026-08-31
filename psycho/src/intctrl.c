@@ -20,7 +20,6 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-#include "cpu.h"
 #include "intctrl.h"
 #include "log.h"
 
@@ -41,7 +40,7 @@ void p_irq_mask_set(struct p_ctx *ctx, u32 mask)
 			(m_mask & 1) ? "enabled" : "disabled");
 
 	ctx->intctrl.i_mask = mask;
-	p_cpu_irq_mux_set(ctx, (ctx->intctrl.i_mask & ctx->intctrl.i_stat));
+	ctx->cpu.irq_mux_set(ctx, (ctx->intctrl.i_mask & ctx->intctrl.i_stat));
 }
 
 void p_irq_ack(struct p_ctx *ctx, u32 mask)
@@ -53,7 +52,7 @@ void p_irq_ack(struct p_ctx *ctx, u32 mask)
 			LOG_DBG(ctx, "irq \"%s\" acked", irq_names[bit]);
 
 	ctx->intctrl.i_stat &= mask;
-	p_cpu_irq_mux_set(ctx, (ctx->intctrl.i_mask & ctx->intctrl.i_stat));
+	ctx->cpu.irq_mux_set(ctx, (ctx->intctrl.i_mask & ctx->intctrl.i_stat));
 }
 
 void p_irq_pend(struct p_ctx *ctx, u32 mask)
@@ -65,5 +64,5 @@ void p_irq_pend(struct p_ctx *ctx, u32 mask)
 			LOG_DBG(ctx, "irq \"%s\" pending", irq_names[bit]);
 
 	ctx->intctrl.i_stat |= mask;
-	p_cpu_irq_mux_set(ctx, (ctx->intctrl.i_mask & ctx->intctrl.i_stat));
+	ctx->cpu.irq_mux_set(ctx, (ctx->intctrl.i_mask & ctx->intctrl.i_stat));
 }

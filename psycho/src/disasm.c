@@ -560,27 +560,37 @@ void p_disasm_trace_end(struct p_ctx *ctx)
 			fmt(", ");
 
 		switch (ctx->disasm.traces.data[trace]) {
-		case P_DISASM_TRACE_GPR_RT:
-			fmt("%s=0x%08X", gpr[rt], ctx->cpu.gpr[rt]);
-			break;
+		case P_DISASM_TRACE_GPR_RT: {
+			u32 val = ctx->cpu.gpr_get(ctx, rt);
 
-		case P_DISASM_TRACE_GPR_RD:
-			fmt("%s=0x%08X", gpr[rd], ctx->cpu.gpr[rd]);
+			fmt("%s=0x%08X", gpr[rt], val);
 			break;
+		}
+
+		case P_DISASM_TRACE_GPR_RD: {
+			u32 val = ctx->cpu.gpr_get(ctx, rd);
+			fmt("%s=0x%08X", gpr[rd], val);
+
+			break;
+		}
 
 		case P_DISASM_TRACE_CPU_LO:
-			fmt("LO=0x%08X", ctx->cpu.lo);
+			fmt("LO=0x%08X", ctx->cpu.lo_get(ctx));
 			break;
 
 		case P_DISASM_TRACE_CPU_HI:
-			fmt("HI=0x%08X", ctx->cpu.hi);
+			fmt("HI=0x%08X", ctx->cpu.hi_get(ctx));
 			break;
 
-		case P_DISASM_TRACE_CPU_PADDR:
-			fmt("paddr=0x%08X", (instr_imm(ctx->disasm.res.instr) +
-					     ctx->cpu.gpr[rs]) &
-						    0x1FFFFFFF);
+		case P_DISASM_TRACE_CPU_PADDR: {
+			u32 instr = ctx->cpu.instr_get(ctx);
+			u32 vaddr = ctx->cpu.gpr_get(ctx, rs);
+
+			u32 val = instr_imm(instr) + (vaddr & 0x1FFFFFFF);
+
+			fmt("paddr=0x%08X", val);
 			break;
+		}
 
 		case P_DISASM_TRACE_COUNT:
 		default:

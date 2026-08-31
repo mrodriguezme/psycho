@@ -277,3 +277,5 @@ P_NODISCARD P_ALWAYS_INLINE u32 branch_addr(u32 pc, u32 instr)
 {
 	return sext_16_32(instr_imm(instr) << 2) + pc + sizeof(instr);
 }
+
+extern const u8 unr[0x101];

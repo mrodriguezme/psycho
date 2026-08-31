@@ -22,68 +22,34 @@
 
 #pragma once
 
+#include <stdbool.h>
+#include "cpu_defs.h"
+
 #ifdef __cplusplus
 extern "C" {
 #endif // __cplusplus
 
-#include "bios_trace.h"
-#include "bus.h"
-#include "cpu_int.h"
-#include "cpu_ops.h"
-#include "disasm.h"
-#include "gpu.h"
-#include "intctrl.h"
-#include "log.h"
-#include "sched.h"
-#include "sio0.h"
+struct p_ctx;
 
-struct p_ctx_cfg {
-	struct p_cpu_cfg cpu;
-	struct p_bios_trace_cfg bios_trace;
-	struct p_disasm_cfg disasm;
-	struct p_log_cfg log;
+struct p_cpu_ops {
+	void (*irq_mux_set)(struct p_ctx *ctx, bool state);
 
-	void (*on_vblank)(struct p_ctx *ctx);
+	void (*gpr_set)(struct p_ctx *ctx, enum p_cpu_gpr gpr, u32 val);
+	u32 (*gpr_get)(struct p_ctx *ctx, enum p_cpu_gpr gpr);
+
+	u32 (*lo_get)(struct p_ctx *ctx);
+	u32 (*hi_get)(struct p_ctx *ctx);
+
+	void (*pc_set)(struct p_ctx *ctx, u32 pc);
+	u32 (*pc_get)(struct p_ctx *ctx);
+
+	void (*run)(struct p_ctx *ctx, u64 cycles, u64 instr_limit,
+		    bool end_on_event);
+
+	u32 (*instr_get)(struct p_ctx *ctx);
+
+	void (*rst)(struct p_ctx *ctx);
 };
-
-struct p_ctx {
-	struct p_cpu_int cpu_int;
-	struct p_cpu_ops cpu;
-	struct p_bios_trace bios_trace;
-	struct p_bus bus;
-	struct p_disasm disasm;
-	struct p_sched sched;
-	struct p_gpu gpu;
-	struct p_intctrl intctrl;
-	struct p_sio0 sio0;
-
-	struct p_ctx_cfg cfg;
-
-	struct {
-		const u8 *data;
-		size_t size;
-	} exe;
-};
-
-enum p_ctx_ret {
-	P_EXE_FILE_SIZE_INVALID = -3,
-	P_EXE_SIZE_INVALID	= -2,
-	P_EXE_ID_INVALID	= -1,
-	P_OK			= 1,
-};
-
-P_NODISCARD P_CONST struct p_ctx_cfg *p_cfg_get(struct p_ctx *ctx) P_NONNULL;
-
-void p_init(struct p_ctx *ctx) P_NONNULL;
-
-void p_rst(struct p_ctx *ctx) P_NONNULL;
-
-void p_step(struct p_ctx *ctx) P_NONNULL;
-
-P_NODISCARD enum p_ctx_ret p_run_exe(struct p_ctx *ctx, u8 *exe,
-				     size_t size) P_NONNULL;
-
-void p_run_until_ev(struct p_ctx *ctx) P_NONNULL;
 
 #ifdef __cplusplus
 }

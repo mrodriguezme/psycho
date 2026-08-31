@@ -26,7 +26,7 @@
 
 #include "bios_trace.h"
 #include "bus.h"
-#include "cpu.h"
+#include "cpu_int.h"
 #include "cpu_defs.h"
 #include "gpu.h"
 #include "log.h"
@@ -80,14 +80,14 @@ static void exe_inject(struct p_ctx *ctx)
 	LOG_INFO(ctx, "injecting exe (dst=0x%08X, size=%u)", exe->dst_ram,
 		 exe->file_size);
 
-	p_cpu_pc_set(ctx, exe->pc);
-	p_cpu_gpr_set(ctx, P_GP, exe->gp);
+	ctx->cpu.pc_set(ctx, exe->pc);
+	ctx->cpu.gpr_set(ctx, P_GP, exe->gp);
 
 	if (exe->sp_fp_base) {
 		const u32 val = exe->sp_fp_base + exe->sp_fp_offs;
 
-		p_cpu_gpr_set(ctx, P_SP, val);
-		p_cpu_gpr_set(ctx, P_FP, val);
+		ctx->cpu.gpr_set(ctx, P_SP, val);
+		ctx->cpu.gpr_set(ctx, P_FP, val);
 	}
 
 	const u32 paddr = vaddr_to_paddr(exe->dst_ram);
@@ -107,6 +107,7 @@ void p_init(struct p_ctx *ctx)
 	p_bus_init(ctx);
 	p_gpu_init(ctx);
 
+	p_cpu_int_init(ctx);
 	p_rst(ctx);
 
 	LOG_INFO(ctx, "initialized");
@@ -115,19 +116,21 @@ void p_init(struct p_ctx *ctx)
 void p_rst(struct p_ctx *ctx)
 {
 	p_sched_rst(ctx);
-	p_cpu_rst(ctx);
 	p_gpu_rst(ctx);
 	p_sio0_rst(ctx);
 
+	ctx->cpu.rst(ctx);
 	LOG_INFO(ctx, "reset");
 }
 
 void p_step(struct p_ctx *ctx)
 {
-	if (unlikely((ctx->exe.data) && (ctx->cpu.pc == KERNEL_INIT_PC)))
+	u32 pc = ctx->cpu.pc_get(ctx);
+
+	if (unlikely((ctx->exe.data) && (pc == KERNEL_INIT_PC)))
 		exe_inject(ctx);
 
-	p_cpu_run(ctx, 1);
+	ctx->cpu.run(ctx, 1, UINT64_MAX, false);
 }
 
 P_NODISCARD enum p_ctx_ret p_run_exe(struct p_ctx *ctx, u8 *exe, size_t size)
@@ -157,15 +160,17 @@ void p_run_until_ev(struct p_ctx *ctx)
 	bool inject = false;
 
 	while (!p_sched_run(ctx)) {
-		if (unlikely((inject) && ctx->cpu.pc == KERNEL_INIT_PC)) {
+		u32 pc = ctx->cpu.pc_get(ctx);
+
+		if (unlikely((inject) && pc == KERNEL_INIT_PC)) {
 			exe_inject(ctx);
 			inject = false;
 		}
 
 		if (unlikely(ctx->exe.data)) {
 			inject = true;
-			p_cpu_run(ctx, 1);
+			ctx->cpu.run(ctx, 1, UINT64_MAX, true);
 		} else
-			p_cpu_run(ctx, 100);
+			ctx->cpu.run(ctx, 100, UINT64_MAX, true);
 	}
 }
