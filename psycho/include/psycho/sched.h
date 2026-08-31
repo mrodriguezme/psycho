@@ -56,6 +56,7 @@ struct p_sched {
 	struct p_sched_ev *ev[P_SCHED_NUM_EVENTS];
 	size_t num_ev;
 	u64 ts_now;
+	u64 next_ev_ts;
 };
 
 #ifdef __cplusplus

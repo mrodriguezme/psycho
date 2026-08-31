@@ -100,32 +100,23 @@ void p_sched_rst(struct p_ctx *ctx)
 	LOG_INFO(ctx, "reset");
 }
 
-bool p_sched_run(struct p_ctx *ctx)
+void p_sched_run(struct p_ctx *ctx)
 {
-	bool ev_ran = false;
+	struct p_sched_ev *ev = ctx->sched.ev[0];
+	u64 latency	      = ctx->sched.ts_now - ev->ts;
 
-	while (likely(ctx->sched.num_ev) &&
-	       (ctx->sched.ev[0]->ts <= ctx->sched.ts_now)) {
-		ev_ran = true;
+	LOG_TRACE(ctx,
+		  "servicing event \"%s\" (ts_now=%" PRIu64 "), "
+		  "drift=%" PRIu64,
+		  ev_names[ev->type], ctx->sched.ts_now, latency);
 
-		struct p_sched_ev *ev = ctx->sched.ev[0];
-		u64 latency	      = ctx->sched.ts_now - ev->ts;
+	if (unlikely(ev->permanent)) {
+		ev->ts += ev->period;
+		sift_down(ctx, ev->idx);
+	} else
+		p_sched_del(ctx, ev);
 
-		LOG_TRACE(ctx,
-			  "servicing event \"%s\" (ts_now=%" PRIu64 "), "
-			  "latency=%" PRIu64,
-			  ev_names[ev->type], ctx->sched.ts_now, latency);
-
-		if (unlikely(ev->permanent)) {
-			ev->ts += ev->period;
-			sift_down(ctx, ev->idx);
-		} else
-			p_sched_del(ctx, ev);
-
-		ev->cb(ctx);
-	}
-
-	return ev_ran;
+	ev->cb(ctx);
 }
 
 void p_sched_add(struct p_ctx *ctx, struct p_sched_ev *ev)

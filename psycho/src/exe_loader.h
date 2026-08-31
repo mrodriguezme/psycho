@@ -20,55 +20,10 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-#include <assert.h>
-#include <stddef.h>
-#include <string.h>
+#pragma once
 
-#include "bios_trace.h"
-#include "bus.h"
-#include "cpu_int.h"
-#include "cpu_defs.h"
-#include "gpu.h"
-#include "log.h"
-#include "sched.h"
-#include "util.h"
-#include "sio0.h"
+#include "psycho/ctx.h"
 
-LOG_MOD(P_LOG_CTX);
+#define KERNEL_INIT_PC (UINT32_C(0x80030000))
 
-struct p_ctx_cfg *p_cfg_get(struct p_ctx *ctx)
-{
-	return &ctx->cfg;
-}
-
-void p_init(struct p_ctx *ctx)
-{
-	p_bios_trace_init(ctx);
-	p_bus_init(ctx);
-	p_gpu_init(ctx);
-
-	p_cpu_int_init(ctx);
-	p_rst(ctx);
-
-	LOG_INFO(ctx, "initialized");
-}
-
-void p_rst(struct p_ctx *ctx)
-{
-	p_sched_rst(ctx);
-	p_gpu_rst(ctx);
-	p_sio0_rst(ctx);
-
-	ctx->cpu.rst(ctx);
-	LOG_INFO(ctx, "reset");
-}
-
-void p_step(struct p_ctx *ctx)
-{
-}
-
-void p_run_until_ev(struct p_ctx *ctx)
-{
-	ctx->running = true;
-	ctx->cpu.run(ctx, UINT64_MAX, true);
-}
+void p_exe_inject(struct p_ctx *ctx) P_NONNULL;

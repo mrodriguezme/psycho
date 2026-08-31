@@ -43,8 +43,7 @@ struct p_cpu_ops {
 	void (*pc_set)(struct p_ctx *ctx, u32 pc);
 	u32 (*pc_get)(struct p_ctx *ctx);
 
-	void (*run)(struct p_ctx *ctx, u64 cycles, u64 instr_limit,
-		    bool end_on_event);
+	void (*run)(struct p_ctx *ctx, u64 instr_limit, bool stop_on_ev);
 
 	u32 (*instr_get)(struct p_ctx *ctx);
 

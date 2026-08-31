@@ -27,6 +27,7 @@
 #include "bus.h"
 #include "cpu_int.h"
 #include "cpu_defs.h"
+#include "exe_loader.h"
 #include "log.h"
 #include "util.h"
 #include "sched.h"
@@ -49,10 +50,10 @@ LOG_MOD(P_LOG_CPU);
 P_NONNULL static void irq_mux_set(struct p_ctx *ctx, bool set)
 {
 	if (set) {
-		ctx->cpu_int.cop0[P_SR] |= (1 << 10);
+		ctx->cpu_int.cop0[P_SR] |= SR_IM2;
 		LOG_DBG(ctx, "irq mux line asserted");
 	} else {
-		ctx->cpu_int.cop0[P_SR] &= ~(1 << 10);
+		ctx->cpu_int.cop0[P_SR] &= ~SR_IM2;
 		LOG_DBG(ctx, "irq mux line not asserted");
 	}
 }
@@ -74,7 +75,8 @@ P_NONNULL static u32 instr_get(struct p_ctx *ctx)
 	return ctx->cpu_int.instr;
 }
 
-P_NONNULL static void gpr_write_direct(struct p_ctx *ctx, enum p_cpu_gpr gpr, u32 val)
+P_NONNULL static void gpr_write_direct(struct p_ctx *ctx, enum p_cpu_gpr gpr,
+				       u32 val)
 {
 	assert(gpr < P_GPR_COUNT);
 	ctx->cpu_int.gpr[gpr] = val;
@@ -948,361 +950,6 @@ static void mvmva_bugged(struct p_ctx *ctx, s16 (*Mx)[3], s16 *Vx)
 #undef MAC
 }
 
-P_NONNULL static void do_cop2_instr(struct p_ctx *ctx, uint funct)
-{
-#define BK   (ctx->cpu_int.cop2.ccr.bk)
-#define D1   (ctx->cpu_int.cop2.ccr.r[0][0])
-#define D2   (ctx->cpu_int.cop2.ccr.r[1][1])
-#define D3   (ctx->cpu_int.cop2.ccr.r[2][2])
-#define FC   (ctx->cpu_int.cop2.ccr.fc)
-#define FLAG (ctx->cpu_int.cop2.ccr.flag)
-#define IR   (ctx->cpu_int.cop2.cpr.ir)
-#define LCM  (ctx->cpu_int.cop2.ccr.lcm)
-#define LLM  (ctx->cpu_int.cop2.ccr.llm)
-#define MAC  (ctx->cpu_int.cop2.cpr.mac)
-#define RGB0 (ctx->cpu_int.cop2.cpr.rgb[0].arr)
-#define RGBC (ctx->cpu_int.cop2.cpr.rgbc.arr)
-#define RT   (ctx->cpu_int.cop2.ccr.r)
-#define SX0  (ctx->cpu_int.cop2.cpr.sxy[0].x)
-#define SX1  (ctx->cpu_int.cop2.cpr.sxy[1].x)
-#define SX2  (ctx->cpu_int.cop2.cpr.sxy[2].x)
-#define SY0  (ctx->cpu_int.cop2.cpr.sxy[0].y)
-#define SY1  (ctx->cpu_int.cop2.cpr.sxy[1].y)
-#define SY2  (ctx->cpu_int.cop2.cpr.sxy[2].y)
-#define TR   (ctx->cpu_int.cop2.ccr.tr)
-#define V    (ctx->cpu_int.cop2.cpr.v)
-#define ZSF3 (ctx->cpu_int.cop2.ccr.zsf3)
-#define ZSF4 (ctx->cpu_int.cop2.ccr.zsf4)
-
-	switch (funct) {
-	case RTPS:
-		FLAG = 0;
-
-		rtp(ctx, &V[0], true);
-		update_flag(ctx);
-
-		return;
-
-	case NCLIP:
-		FLAG = 0;
-
-		MAC[0] = mac0_add(
-			ctx,
-			((u64)SX0 * (u64)SY1) + ((u64)SX1 * (u64)SY2) +
-				((u64)SX2 * (u64)SY0) - ((u64)SX0 * (u64)SY2) -
-				((u64)SX1 * (u64)SY0) - ((u64)SX2 * (u64)SY1));
-
-		update_flag(ctx);
-		return;
-
-	case OP: {
-		FLAG = 0;
-
-		const uint sf = shift_frac(ctx->cpu_int.instr);
-		const bool lm = ir123_lm(ctx->cpu_int.instr);
-
-		s64 res[3] = { [0] = (IR[3] * D2) - (IR[2] * D3),
-			       [1] = (IR[1] * D3) - (IR[3] * D1),
-			       [2] = (IR[2] * D1) - (IR[1] * D2) };
-
-		for (size_t i = 0, reg = 1; i < ARRAY_SIZE(res); ++i, ++reg) {
-			s64 sum = 0;
-			sum	= mac123_add(ctx, reg, sum, res[i]);
-
-			MAC[reg] = sum >> sf;
-			IR[reg]	 = ir123_sat(ctx, reg, MAC[reg], lm);
-		}
-
-		update_flag(ctx);
-		return;
-	}
-
-	case DPCS:
-		FLAG = 0;
-
-		dpc(ctx, RGBC);
-
-		update_flag(ctx);
-		return;
-
-	case INTPL: {
-		FLAG = 0;
-
-		s64 sums[3];
-
-		for (size_t i = 0, j = 1; i < ARRAY_SIZE(sums); ++i, ++j)
-			sums[i] = (u64)IR[j] << 12;
-
-		intpl_fc(ctx, sums);
-		color_fifo_push(ctx);
-
-		update_flag(ctx);
-		return;
-	}
-
-	case MVMVA: {
-		FLAG = 0;
-
-		s16(*mx_lut[3])[3] = {
-			// clang-format off
-
-			[0] = RT,
-			[1] = LLM,
-			[2] = LCM
-
-			// clang-format on
-		};
-
-		s32 *tx_lut[4] = {
-			// clang-format off
-
-			[0] = TR,
-			[1] = BK,
-			[2] = FC,
-			[3] = (s32[3]){ 0 }
-
-			// clang-format on
-		};
-
-		uint mx_sel = mvmva_mx(ctx->cpu_int.instr);
-
-		s16(*mx)[3];
-		s16 mx_bugged[3][3];
-
-		if (likely(mx_sel <= 2))
-			mx = mx_lut[mx_sel];
-		else {
-			mx_bugged[0][0] = (u32)-RGBC[0] << 4;
-			mx_bugged[0][1] = +RGBC[0] << 4;
-			mx_bugged[0][2] = IR[0];
-			mx_bugged[1][0] = RT[0][2];
-			mx_bugged[1][1] = RT[0][2];
-			mx_bugged[1][2] = RT[0][2];
-			mx_bugged[2][0] = RT[1][1];
-			mx_bugged[2][1] = RT[1][1];
-			mx_bugged[2][2] = RT[1][1];
-
-			mx = mx_bugged;
-		}
-
-		uint tx_sel = mvmva_tx(ctx->cpu_int.instr);
-		s32 *tx	    = tx_lut[tx_sel];
-
-		uint vx_sel = mvmva_vx(ctx->cpu_int.instr);
-
-		s16 vx_tmp[3];
-		s16 *vx;
-
-		if (vx_sel <= 2)
-			vx = V[vx_sel].arr;
-		else {
-			vx_tmp[0] = IR[1];
-			vx_tmp[1] = IR[2];
-			vx_tmp[2] = IR[3];
-			vx	  = vx_tmp;
-		}
-
-		if (tx_sel != 2)
-			mvmva(ctx, mx, vx, tx);
-		else
-			// Don't need to worry about passing Tx - only the FC
-			// vector is buggy
-			mvmva_bugged(ctx, mx, vx);
-
-		update_flag(ctx);
-		return;
-	}
-
-	case NCDS:
-		FLAG = 0;
-
-		ncd(ctx, &V[0]);
-
-		update_flag(ctx);
-		return;
-
-	case CDP: {
-		FLAG = 0;
-
-		intpl_bk_lcm(ctx);
-
-		s64 sums[3];
-
-		for (size_t i = 0, j = 1; i < ARRAY_SIZE(sums); ++i, ++j)
-			sums[i] = ((u64)(RGBC[i] * IR[j])) << 4;
-
-		intpl_fc(ctx, sums);
-		color_fifo_push(ctx);
-
-		update_flag(ctx);
-		return;
-	}
-
-	case NCDT:
-		FLAG = 0;
-
-		for (size_t i = 0; i < ARRAY_SIZE(V); ++i)
-			ncd(ctx, &V[i]);
-
-		update_flag(ctx);
-		return;
-
-	case NCCS:
-		FLAG = 0;
-
-		ncc(ctx, &V[0]);
-
-		update_flag(ctx);
-		return;
-
-	case CC:
-		FLAG = 0;
-
-		intpl_bk_lcm(ctx);
-		intpl_rgb(ctx);
-		color_fifo_push(ctx);
-
-		update_flag(ctx);
-		return;
-
-	case NCS:
-		FLAG = 0;
-
-		nc(ctx, &V[0]);
-
-		update_flag(ctx);
-		return;
-
-	case NCT:
-		FLAG = 0;
-
-		for (size_t i = 0; i < ARRAY_SIZE(V); ++i)
-			nc(ctx, &V[i]);
-
-		update_flag(ctx);
-		return;
-
-	case SQR: {
-		FLAG = 0;
-
-		const uint sf = shift_frac(ctx->cpu_int.instr);
-		const bool lm = ir123_lm(ctx->cpu_int.instr);
-
-		for (size_t i = 1; i < ARRAY_SIZE(IR); ++i) {
-			MAC[i] = ((s64)IR[i] * (s64)IR[i]) >> sf;
-			IR[i]  = ir123_sat(ctx, i, MAC[i], lm);
-		}
-
-		update_flag(ctx);
-		return;
-	}
-
-	case DPCL: {
-		FLAG = 0;
-
-		s64 sums[3];
-
-		for (size_t i = 0, j = 1; i < ARRAY_SIZE(sums); ++i, ++j)
-			sums[i] = ((u64)(RGBC[i] * IR[j])) << 4;
-
-		intpl_fc(ctx, sums);
-		color_fifo_push(ctx);
-
-		update_flag(ctx);
-		return;
-	}
-
-	case DPCT:
-		FLAG = 0;
-
-		for (uint i = 0; i < 3; ++i)
-			dpc(ctx, RGB0);
-
-		update_flag(ctx);
-		return;
-
-	case AVSZ3:
-		avsz(ctx, ZSF3, 1);
-		return;
-
-	case AVSZ4:
-		avsz(ctx, ZSF4, 0);
-		return;
-
-	case RTPT:
-		FLAG = 0;
-
-		rtp(ctx, &V[0], false);
-		rtp(ctx, &V[1], false);
-		rtp(ctx, &V[2], true);
-
-		update_flag(ctx);
-		return;
-
-	case GPF:
-		memset(&MAC[1], 0, sizeof(MAC) - 1);
-		P_FALLTHROUGH;
-
-	case GPL: {
-		FLAG = 0;
-
-		const uint sf = shift_frac(ctx->cpu_int.instr);
-		const bool lm = ir123_lm(ctx->cpu_int.instr);
-
-		for (size_t i = 1; i < ARRAY_SIZE(MAC); ++i) {
-			s64 sum = 0;
-			sum	= mac123_add(ctx, i, sum, (u64)MAC[i] << sf);
-			sum	= mac123_add(ctx, i, sum, IR[i] * IR[0]);
-
-			MAC[i] = sum >> sf;
-			IR[i]  = ir123_sat(ctx, i, MAC[i], lm);
-		}
-
-		color_fifo_push(ctx);
-		update_flag(ctx);
-
-		return;
-	}
-
-	case NCCT:
-		FLAG = 0;
-
-		for (size_t i = 0; i < ARRAY_SIZE(V); ++i)
-			ncc(ctx, &V[i]);
-
-		update_flag(ctx);
-		return;
-
-	default:
-		illegal_instr(ctx);
-		return;
-	}
-
-#undef BK
-#undef D1
-#undef D2
-#undef D3
-#undef FC
-#undef FLAG
-#undef IR
-#undef LCM
-#undef LLM
-#undef MAC
-#undef RGB0
-#undef RGBC
-#undef RT
-#undef SX0
-#undef SX1
-#undef SX2
-#undef SY0
-#undef SY1
-#undef SY2
-#undef TR
-#undef V
-#undef ZSF3
-#undef ZSF4
-}
-
 P_NONNULL static void dly_slot_process(struct p_ctx *ctx)
 {
 	ctx->cpu_int.gpr[ctx->cpu_int.ld_next.dst] = ctx->cpu_int.ld_next.val;
@@ -1331,7 +978,471 @@ P_NONNULL static void load_dly(struct p_ctx *ctx, size_t dst, u32 val)
 		memset(&ctx->cpu_int.ld_next, 0, sizeof(ctx->cpu_int.ld_next));
 }
 
-P_NONNULL static void step(struct p_ctx *ctx)
+P_NONNULL static void do_jalr(struct p_ctx *ctx, size_t rs, size_t rd)
+{
+#define gpr   (ctx->cpu_int.gpr)
+#define instr (ctx->cpu_int.instr)
+#define pc    (ctx->cpu_int.pc)
+
+	u32 addr = gpr[rs];
+
+	gpr_set(ctx, rd, pc + (sizeof(instr) * 2));
+	branch(ctx, addr);
+
+#undef gpr
+#undef instr
+#undef pc
+}
+
+P_NONNULL static void do_mult(struct p_ctx *ctx, size_t rs, size_t rt)
+{
+#define gpr (ctx->cpu_int.gpr)
+#define hi  (ctx->cpu_int.hi)
+#define lo  (ctx->cpu_int.lo)
+
+	u64 prod = sext_32_64(gpr[rs]) * sext_32_64(gpr[rt]);
+
+	lo = prod & UINT32_MAX;
+	hi = prod >> 32;
+
+#undef gpr
+#undef hi
+#undef lo
+}
+
+P_NONNULL static void do_multu(struct p_ctx *ctx, size_t rs, size_t rt)
+{
+#define gpr (ctx->cpu_int.gpr)
+#define hi  (ctx->cpu_int.hi)
+#define lo  (ctx->cpu_int.lo)
+
+	u64 prod = zext_32_64(gpr[rs]) * zext_32_64(gpr[rt]);
+
+	lo = prod & UINT32_MAX;
+	hi = prod >> 32;
+
+#undef gpr
+#undef hi
+#undef lo
+}
+
+P_NONNULL static void regimm(struct p_ctx *ctx, size_t rs, size_t rt)
+{
+#define gpr   (ctx->cpu_int.gpr)
+#define pc    (ctx->cpu_int.pc)
+#define instr (ctx->cpu_int.instr)
+
+	bool link   = (rt & 0x1E) == 0x10;
+	bool branch = (s32)(gpr[rs] ^ (rt << 31)) < 0;
+
+	if (link)
+		gpr_set(ctx, P_RA, pc + (sizeof(instr) * 2));
+
+	branch_if(ctx, branch);
+
+#undef gpr
+#undef pc
+#undef instr
+}
+
+P_NONNULL static void do_addi(struct p_ctx *ctx, size_t rs, size_t rt)
+{
+#define gpr	(ctx->cpu_int.gpr)
+#define sextimm (sext_16_32(instr_imm(ctx->cpu_int.instr)))
+
+	int sum;
+
+	if (unlikely(__builtin_sadd_overflow(gpr[rs], sextimm, &sum)))
+		exc(ctx, EXC_OV);
+	else
+		gpr_set(ctx, rt, sum);
+
+#undef gpr
+#undef sextimm
+}
+
+P_NONNULL static void do_op(struct p_ctx *ctx)
+{
+#define D1  (ctx->cpu_int.cop2.ccr.r[0][0])
+#define D2  (ctx->cpu_int.cop2.ccr.r[1][1])
+#define D3  (ctx->cpu_int.cop2.ccr.r[2][2])
+#define IR  (ctx->cpu_int.cop2.cpr.ir)
+#define MAC (ctx->cpu_int.cop2.cpr.mac)
+
+	const uint sf = shift_frac(ctx->cpu_int.instr);
+	const bool lm = ir123_lm(ctx->cpu_int.instr);
+
+	s64 res[3] = {
+		// clang-format off
+
+		[0] = (IR[3] * D2) - (IR[2] * D3),
+		[1] = (IR[1] * D3) - (IR[3] * D1),
+		[2] = (IR[2] * D1) - (IR[1] * D2)
+
+		// clang-format on
+	};
+
+	for (size_t i = 0, reg = 1; i < ARRAY_SIZE(res); ++i, ++reg) {
+		s64 sum = 0;
+		sum	= mac123_add(ctx, reg, sum, res[i]);
+
+		MAC[reg] = sum >> sf;
+		IR[reg]	 = ir123_sat(ctx, reg, MAC[reg], lm);
+	}
+
+#undef D1
+#undef D2
+#undef D3
+#undef IR
+#undef MAC
+}
+
+P_NONNULL static void do_intpl(struct p_ctx *ctx)
+{
+#define IR (ctx->cpu_int.cop2.cpr.ir)
+
+	s64 sums[3];
+
+	for (size_t i = 0, j = 1; i < ARRAY_SIZE(sums); ++i, ++j)
+		sums[i] = (u64)IR[j] << 12;
+
+	intpl_fc(ctx, sums);
+	color_fifo_push(ctx);
+
+#undef IR
+}
+
+P_NONNULL static void do_mvmva(struct p_ctx *ctx)
+{
+#define BK   (ctx->cpu_int.cop2.ccr.bk)
+#define FC   (ctx->cpu_int.cop2.ccr.fc)
+#define IR   (ctx->cpu_int.cop2.cpr.ir)
+#define LCM  (ctx->cpu_int.cop2.ccr.lcm)
+#define LLM  (ctx->cpu_int.cop2.ccr.llm)
+#define RGBC (ctx->cpu_int.cop2.cpr.rgbc.arr)
+#define RT   (ctx->cpu_int.cop2.ccr.r)
+#define TR   (ctx->cpu_int.cop2.ccr.tr)
+#define V    (ctx->cpu_int.cop2.cpr.v)
+
+	s16(*mx_lut[3])[3] = {
+		// clang-format off
+
+		[0] = RT,
+		[1] = LLM,
+		[2] = LCM
+
+		// clang-format on
+	};
+
+	s32 *tx_lut[4] = {
+		// clang-format off
+
+		[0] = TR,
+		[1] = BK,
+		[2] = FC,
+		[3] = (s32[3]){ 0 }
+
+		// clang-format on
+	};
+
+	uint mx_sel = mvmva_mx(ctx->cpu_int.instr);
+
+	s16(*mx)[3];
+	s16 mx_bugged[3][3];
+
+	if (likely(mx_sel <= 2))
+		mx = mx_lut[mx_sel];
+	else {
+		mx_bugged[0][0] = (u32)-RGBC[0] << 4;
+		mx_bugged[0][1] = +RGBC[0] << 4;
+		mx_bugged[0][2] = IR[0];
+		mx_bugged[1][0] = RT[0][2];
+		mx_bugged[1][1] = RT[0][2];
+		mx_bugged[1][2] = RT[0][2];
+		mx_bugged[2][0] = RT[1][1];
+		mx_bugged[2][1] = RT[1][1];
+		mx_bugged[2][2] = RT[1][1];
+
+		mx = mx_bugged;
+	}
+
+	uint tx_sel = mvmva_tx(ctx->cpu_int.instr);
+	s32 *tx	    = tx_lut[tx_sel];
+
+	uint vx_sel = mvmva_vx(ctx->cpu_int.instr);
+
+	s16 vx_tmp[3];
+	s16 *vx;
+
+	if (vx_sel <= 2)
+		vx = V[vx_sel].arr;
+	else {
+		vx_tmp[0] = IR[1];
+		vx_tmp[1] = IR[2];
+		vx_tmp[2] = IR[3];
+		vx	  = vx_tmp;
+	}
+
+	if (tx_sel != 2)
+		mvmva(ctx, mx, vx, tx);
+	else
+		// Don't need to worry about passing Tx - only the FC
+		// vector is buggy
+		mvmva_bugged(ctx, mx, vx);
+
+#undef BK
+#undef FC
+#undef IR
+#undef LCM
+#undef LLM
+#undef RGBC
+#undef RT
+#undef TR
+#undef V
+}
+
+P_NONNULL static void do_cdp(struct p_ctx *ctx)
+{
+#define IR   (ctx->cpu_int.cop2.cpr.ir)
+#define RGBC (ctx->cpu_int.cop2.cpr.rgbc.arr)
+
+	intpl_bk_lcm(ctx);
+
+	s64 sums[3];
+
+	for (size_t i = 0, j = 1; i < ARRAY_SIZE(sums); ++i, ++j)
+		sums[i] = ((u64)(RGBC[i] * IR[j])) << 4;
+
+	intpl_fc(ctx, sums);
+	color_fifo_push(ctx);
+
+#undef IR
+#undef RGBC
+}
+
+P_NONNULL static void do_sqr(struct p_ctx *ctx)
+{
+#define IR  (ctx->cpu_int.cop2.cpr.ir)
+#define MAC (ctx->cpu_int.cop2.cpr.mac)
+
+	const uint sf = shift_frac(ctx->cpu_int.instr);
+	const bool lm = ir123_lm(ctx->cpu_int.instr);
+
+	for (size_t i = 1; i < ARRAY_SIZE(IR); ++i) {
+		MAC[i] = ((s64)IR[i] * (s64)IR[i]) >> sf;
+		IR[i]  = ir123_sat(ctx, i, MAC[i], lm);
+	}
+
+#undef IR
+#undef MAC
+}
+
+P_NONNULL static void do_dpcl(struct p_ctx *ctx)
+{
+#define IR   (ctx->cpu_int.cop2.cpr.ir)
+#define RGBC (ctx->cpu_int.cop2.cpr.rgbc.arr)
+
+	s64 sums[3];
+
+	for (size_t i = 0, j = 1; i < ARRAY_SIZE(sums); ++i, ++j)
+		sums[i] = ((u64)(RGBC[i] * IR[j])) << 4;
+
+	intpl_fc(ctx, sums);
+	color_fifo_push(ctx);
+
+#undef IR
+#undef RGBC
+}
+
+P_NONNULL static void do_gpl(struct p_ctx *ctx)
+{
+#define IR  (ctx->cpu_int.cop2.cpr.ir)
+#define MAC (ctx->cpu_int.cop2.cpr.mac)
+
+	const uint sf = shift_frac(ctx->cpu_int.instr);
+	const bool lm = ir123_lm(ctx->cpu_int.instr);
+
+	for (size_t i = 1; i < ARRAY_SIZE(MAC); ++i) {
+		s64 sum = 0;
+		sum	= mac123_add(ctx, i, sum, (u64)MAC[i] << sf);
+		sum	= mac123_add(ctx, i, sum, IR[i] * IR[0]);
+
+		MAC[i] = sum >> sf;
+		IR[i]  = ir123_sat(ctx, i, MAC[i], lm);
+	}
+
+	color_fifo_push(ctx);
+	update_flag(ctx);
+
+#undef IR
+#undef MAC
+}
+
+P_NONNULL static void do_lh(struct p_ctx *ctx, size_t base, size_t offset,
+			    size_t rt)
+{
+#define gpr (ctx->cpu_int.gpr)
+
+	u32 vaddr = gpr[base] + offset;
+
+	if (unlikely(vaddr & 1)) {
+		exc(ctx, EXC_ADEL);
+		return;
+	}
+	load_dly(ctx, rt, sext_16_32(load16(ctx, vaddr)));
+
+#undef gpr
+}
+
+P_NONNULL static void do_lwl(struct p_ctx *ctx, size_t base, size_t offset,
+			     size_t rt)
+{
+#define gpr (ctx->cpu_int.gpr)
+
+	u32 vaddr	  = gpr[base] + offset;
+	u32 aligned_vaddr = vaddr & ~3;
+
+	u32 word = load32(ctx, aligned_vaddr);
+
+	uint shift = (vaddr & 3) * 8;
+	uint mask  = 0x00FFFFFF >> shift;
+
+	u32 val = (ctx->cpu_int.ld_next.dst == rt) ? ctx->cpu_int.ld_next.val :
+						     gpr[rt];
+
+	val = (val & mask) | (word << (24 - shift));
+	load_dly(ctx, rt, val);
+
+#undef gpr
+}
+
+P_NONNULL static void do_lw(struct p_ctx *ctx, size_t base, size_t offset,
+			    size_t rt)
+{
+#define gpr (ctx->cpu_int.gpr)
+
+	u32 vaddr = gpr[base] + offset;
+
+	if (unlikely(vaddr & 0x3)) {
+		exc(ctx, EXC_ADEL);
+		return;
+	}
+	load_dly(ctx, rt, load32(ctx, vaddr));
+
+#undef gpr
+}
+
+P_NONNULL static void do_lhu(struct p_ctx *ctx, size_t base, size_t offset,
+			     size_t rt)
+{
+#define gpr (ctx->cpu_int.gpr)
+
+	u32 vaddr = gpr[base] + offset;
+
+	if (unlikely(vaddr & 1)) {
+		exc(ctx, EXC_ADEL);
+		return;
+	}
+
+	load_dly(ctx, rt, zext_16_32(load16(ctx, vaddr)));
+
+#undef gpr
+}
+
+P_NONNULL static void do_lwr(struct p_ctx *ctx, size_t base, size_t offset,
+			     size_t rt)
+{
+#define gpr (ctx->cpu_int.gpr)
+
+	u32 vaddr	  = gpr[base] + offset;
+	u32 aligned_vaddr = vaddr & ~3;
+
+	u32 word = load32(ctx, aligned_vaddr);
+
+	uint shift = (vaddr & 3) * 8;
+	uint mask  = 0xFFFFFF00 << (24 - shift);
+
+	u32 val = (ctx->cpu_int.ld_next.dst == rt) ? ctx->cpu_int.ld_next.val :
+						     gpr[rt];
+
+	val = (val & mask) | (word >> shift);
+
+	load_dly(ctx, rt, val);
+
+#undef gpr
+}
+
+P_NONNULL static void do_sh(struct p_ctx *ctx, size_t base, size_t offset,
+			    size_t rt)
+{
+#define gpr (ctx->cpu_int.gpr)
+
+	u32 vaddr = gpr[base] + offset;
+
+	if (unlikely(vaddr & 1)) {
+		exc(ctx, EXC_ADES);
+		return;
+	}
+
+	store16(ctx, vaddr, gpr[rt] & UINT16_MAX);
+
+#undef gpr
+}
+
+P_NONNULL static void do_swl(struct p_ctx *ctx, size_t base, size_t offset,
+			     size_t rt)
+{
+#define gpr (ctx->cpu_int.gpr)
+
+	u32 vaddr	  = gpr[base] + offset;
+	u32 aligned_vaddr = vaddr & ~3;
+
+	uint shift = (vaddr & 3) * 8;
+	uint mask  = 0xFFFFFF00 << shift;
+
+	u32 word = load32(ctx, aligned_vaddr);
+	word	 = (word & mask) | (gpr[rt] >> (24 - shift));
+	store32(ctx, aligned_vaddr, word);
+
+#undef gpr
+}
+
+P_NONNULL static void do_sw(struct p_ctx *ctx, size_t base, size_t offset,
+			    size_t rt)
+{
+#define gpr (ctx->cpu_int.gpr)
+
+	u32 vaddr = gpr[base] + offset;
+
+	if (unlikely(vaddr & 3)) {
+		exc(ctx, EXC_ADES);
+		return;
+	}
+
+	store32(ctx, vaddr, gpr[rt]);
+
+#undef gpr
+}
+
+P_NONNULL static void do_swr(struct p_ctx *ctx, size_t base, size_t offset,
+			     size_t rt)
+{
+#define gpr (ctx->cpu_int.gpr)
+
+	u32 vaddr	  = gpr[base] + offset;
+	u32 aligned_vaddr = vaddr & ~3;
+
+	uint shift = (vaddr & 3) * 8;
+	uint mask  = 0x00FFFFFF >> (24 - shift);
+
+	u32 word = load32(ctx, aligned_vaddr);
+	word	 = (word & mask) | (gpr[rt] << shift);
+	store32(ctx, aligned_vaddr, word);
+
+#undef gpr
+}
+
+P_NONNULL static void run(struct p_ctx *ctx, u64 instr_limit, bool stop_on_ev)
 {
 #define gpr	(ctx->cpu_int.gpr)
 #define pc	(ctx->cpu_int.pc)
@@ -1351,6 +1462,179 @@ P_NONNULL static void step(struct p_ctx *ctx)
 #define sextimm (sext_16_32(instr_imm(instr)))
 #define offset	(sextimm)
 
+#define SR	(ctx->cpu_int.cop0[P_SR])
+
+#define FLAG	(ctx->cpu_int.cop2.ccr.flag)
+#define MAC	(ctx->cpu_int.cop2.cpr.mac)
+#define V	(ctx->cpu_int.cop2.cpr.v)
+#define SX0	(ctx->cpu_int.cop2.cpr.sxy[0].x)
+#define SX1	(ctx->cpu_int.cop2.cpr.sxy[1].x)
+#define SX2	(ctx->cpu_int.cop2.cpr.sxy[2].x)
+#define SY0	(ctx->cpu_int.cop2.cpr.sxy[0].y)
+#define SY1	(ctx->cpu_int.cop2.cpr.sxy[1].y)
+#define SY2	(ctx->cpu_int.cop2.cpr.sxy[2].y)
+#define RGB0	(ctx->cpu_int.cop2.cpr.rgb[0].arr)
+#define RGBC	(ctx->cpu_int.cop2.cpr.rgbc.arr)
+#define ZSF3	(ctx->cpu_int.cop2.ccr.zsf3)
+#define ZSF4	(ctx->cpu_int.cop2.ccr.zsf4)
+
+	static const s32 op_tbl[] = {
+		[GRP_SPECIAL]	= &&grp_special - &&grp_special,
+		[GRP_REGIMM]	= &&grp_regimm - &&grp_special,
+		[J]		= &&op_j - &&grp_special,
+		[JAL]		= &&op_jal - &&grp_special,
+		[BEQ]		= &&op_beq - &&grp_special,
+		[BNE]		= &&op_bne - &&grp_special,
+		[BLEZ]		= &&op_blez - &&grp_special,
+		[BGTZ]		= &&op_bgtz - &&grp_special,
+		[ADDI]		= &&op_addi - &&grp_special,
+		[ADDIU]		= &&op_addiu - &&grp_special,
+		[SLTI]		= &&op_slti - &&grp_special,
+		[SLTIU]		= &&op_sltiu - &&grp_special,
+		[ANDI]		= &&op_andi - &&grp_special,
+		[ORI]		= &&op_ori - &&grp_special,
+		[XORI]		= &&op_xori - &&grp_special,
+		[LUI]		= &&op_lui - &&grp_special,
+		[GRP_COP0]	= &&grp_cop0 - &&grp_special,
+		[0x11]		= &&illegal - &&grp_special,
+		[GRP_COP2]	= &&grp_cop2 - &&grp_special,
+		[0x13 ... 0x1F] = &&illegal - &&grp_special,
+		[LB]		= &&op_lb - &&grp_special,
+		[LH]		= &&op_lh - &&grp_special,
+		[LWL]		= &&op_lwl - &&grp_special,
+		[LW]		= &&op_lw - &&grp_special,
+		[LBU]		= &&op_lbu - &&grp_special,
+		[LHU]		= &&op_lhu - &&grp_special,
+		[LWR]		= &&op_lwr - &&grp_special,
+		[0x27]		= &&illegal - &&grp_special,
+		[SB]		= &&op_sb - &&grp_special,
+		[SH]		= &&op_sh - &&grp_special,
+		[SWL]		= &&op_swl - &&grp_special,
+		[SW]		= &&op_sw - &&grp_special,
+		[SWR]		= &&op_swr - &&grp_special,
+		[0x2F ... 0x3F] = &&illegal - &&grp_special
+	};
+
+	static const s32 special_tbl[] = {
+		[SLL]		= &&op_sll - &&op_sll,
+		[0x01]		= &&illegal - &&op_sll,
+		[SRL]		= &&op_srl - &&op_sll,
+		[SRA]		= &&op_sra - &&op_sll,
+		[SLLV]		= &&op_sllv - &&op_sll,
+		[0x05]		= &&illegal - &&op_sll,
+		[SRLV]		= &&op_srlv - &&op_sll,
+		[SRAV]		= &&op_srav - &&op_sll,
+		[JR]		= &&op_jr - &&op_sll,
+		[JALR]		= &&op_jalr - &&op_sll,
+		[0x0A ... 0x0B] = &&illegal - &&op_sll,
+		[SYSCALL]	= &&op_syscall - &&op_sll,
+		[BREAK]		= &&op_break - &&op_sll,
+		[0x0E ... 0x0F] = &&illegal - &&op_sll,
+		[MFHI]		= &&op_mfhi - &&op_sll,
+		[MTHI]		= &&op_mthi - &&op_sll,
+		[MFLO]		= &&op_mflo - &&op_sll,
+		[MTLO]		= &&op_mtlo - &&op_sll,
+		[0x14 ... 0x17] = &&illegal - &&op_sll,
+		[MULT]		= &&op_mult - &&op_sll,
+		[MULTU]		= &&op_multu - &&op_sll,
+		[DIV]		= &&op_div - &&op_sll,
+		[DIVU]		= &&op_divu - &&op_sll,
+		[0x1C ... 0x1F] = &&illegal - &&op_sll,
+		[ADD]		= &&op_add - &&op_sll,
+		[ADDU]		= &&op_addu - &&op_sll,
+		[SUB]		= &&op_sub - &&op_sll,
+		[SUBU]		= &&op_subu - &&op_sll,
+		[AND]		= &&op_and - &&op_sll,
+		[OR]		= &&op_or - &&op_sll,
+		[XOR]		= &&op_xor - &&op_sll,
+		[NOR]		= &&op_nor - &&op_sll,
+		[0x28 ... 0x29] = &&illegal - &&op_sll,
+		[SLT]		= &&op_slt - &&op_sll,
+		[SLTU]		= &&op_sltu - &&op_sll,
+		[0x2C ... 0x3F] = &&illegal - &&op_sll
+	};
+
+	static const s32 cop0_tbl[] = {
+		[MFC]		= &&cop0_mfc - &&cop0_mfc,
+		[0x01 ... 0x03] = &&cop0_instr - &&cop0_mfc,
+		[MTC]		= &&cop0_mtc - &&cop0_mfc,
+		[0x05 ... CTC]	= &&cop0_instr - &&cop0_mfc,
+		[0x07 ... 0x1F] = &&cop0_instr - &&cop0_mfc
+	};
+
+	static const s32 cop0_instr_tbl[] = {
+		[0x00 ... 0x0F] = &&illegal - &&illegal,
+		[RFE]		= &&op_rfe - &&illegal,
+		[0x11 ... 0x3F] = &&illegal - &&illegal
+	};
+
+	static const s32 cop2_tbl[] = {
+		[MFC]		= &&cop2_mfc - &&cop2_mfc,
+		[0x01]		= &&cop2_instr - &&cop2_mfc,
+		[CFC]		= &&cop2_cfc - &&cop2_mfc,
+		[0x03]		= &&cop2_instr - &&cop2_mfc,
+		[MTC]		= &&cop2_mtc - &&cop2_mfc,
+		[0x05]		= &&cop2_instr - &&cop2_mfc,
+		[CTC]		= &&cop2_ctc - &&cop2_mfc,
+		[0x07 ... 0x1F] = &&cop2_instr - &&cop2_mfc
+	};
+
+	static const s32 cop2_instr_tbl[] = {
+		[0x00]		= &&illegal - &&illegal,
+		[RTPS]		= &&op_rtps - &&illegal,
+		[0x02 ... 0x05] = &&illegal - &&illegal,
+		[NCLIP]		= &&op_nclip - &&illegal,
+		[0x07 ... 0x0B] = &&illegal - &&illegal,
+		[OP]		= &&op_op - &&illegal,
+		[0x0D ... 0x0F] = &&illegal - &&illegal,
+		[DPCS]		= &&op_dpcs - &&illegal,
+		[INTPL]		= &&op_intpl - &&illegal,
+		[MVMVA]		= &&op_mvmva - &&illegal,
+		[NCDS]		= &&op_ncds - &&illegal,
+		[CDP]		= &&op_cdp - &&illegal,
+		[0x15]		= &&illegal - &&illegal,
+		[NCDT]		= &&op_ncdt - &&illegal,
+		[0x17 ... 0x1A] = &&illegal - &&illegal,
+		[NCCS]		= &&op_nccs - &&illegal,
+		[CC]		= &&op_cc - &&illegal,
+		[0x1D]		= &&illegal - &&illegal,
+		[NCS]		= &&op_ncs - &&illegal,
+		[0x1F]		= &&illegal - &&illegal,
+		[NCT]		= &&op_nct - &&illegal,
+		[0x21 ... 0x27] = &&illegal - &&illegal,
+		[SQR]		= &&op_sqr - &&illegal,
+		[DPCL]		= &&op_dpcl - &&illegal,
+		[DPCT]		= &&op_dpct - &&illegal,
+		[0x2B ... 0x2C] = &&illegal - &&illegal,
+		[AVSZ3]		= &&op_avsz3 - &&illegal,
+		[AVSZ4]		= &&op_avsz4 - &&illegal,
+		[0x2F]		= &&illegal - &&illegal,
+		[RTPT]		= &&op_rtpt - &&illegal,
+		[0x31 ... 0x3C] = &&illegal - &&illegal,
+		[GPF]		= &&op_gpf - &&illegal,
+		[GPL]		= &&op_gpl - &&illegal,
+		[NCCT]		= &&op_ncct - &&illegal
+	};
+
+	u64 instrs_done = 0;
+
+loop:
+	if (unlikely(!ctx->running))
+		goto done;
+
+	if (unlikely(ctx->sched.ts_now >= ctx->sched.ev[0]->ts)) {
+		p_sched_run(ctx);
+
+		if (unlikely(stop_on_ev))
+			goto done;
+	}
+
+	if (unlikely(instrs_done++ >= instr_limit))
+		goto done;
+
+	if (unlikely((ctx->exe.data) && (pc == KERNEL_INIT_PC)))
+		p_exe_inject(ctx);
+
 	if (unlikely(ctx->cpu_int.dly_pc & 3))
 		exc(ctx, EXC_ADEL);
 
@@ -1365,431 +1649,459 @@ P_NONNULL static void step(struct p_ctx *ctx)
 
 	dly_slot_process(ctx);
 
-	switch (op) {
-	case GRP_SPECIAL:
-		switch (funct) {
-		case SLL:
-			gpr_set(ctx, rd, gpr[rt] << shamt);
-			break;
+	p_bios_trace_begin(ctx);
+	goto *(&&grp_special + op_tbl[op]);
 
-		case SRL:
-			gpr_set(ctx, rd, gpr[rt] >> shamt);
-			break;
+grp_special:
+	goto *(&&op_sll + special_tbl[funct]);
+
+op_sll:
+	gpr_set(ctx, rd, gpr[rt] << shamt);
+	goto end;
+
+op_srl:
+	gpr_set(ctx, rd, gpr[rt] >> shamt);
+	goto end;
+
+op_sra:
+	gpr_set(ctx, rd, (s32)gpr[rt] >> shamt);
+	goto end;
+
+op_sllv:
+	gpr_set(ctx, rd, gpr[rt] << (gpr[rs] & 0x1F));
+	goto end;
+
+op_srlv:
+	gpr_set(ctx, rd, gpr[rt] >> (gpr[rs] & 0x1F));
+	goto end;
+
+op_srav:
+	gpr_set(ctx, rd, (s32)gpr[rt] >> (gpr[rs] & 0x1F));
+	goto end;
+
+op_jr:
+	branch(ctx, gpr[rs]);
+	goto end;
 
-		case SRA:
-			gpr_set(ctx, rd, (s32)gpr[rt] >> shamt);
-			break;
+op_jalr:
+	do_jalr(ctx, rs, rd);
+	goto end;
 
-		case SLLV:
-			gpr_set(ctx, rd, gpr[rt] << (gpr[rs] & 0x1F));
-			break;
+op_syscall:
+	exc(ctx, EXC_SYSCALL);
+	goto end;
 
-		case SRLV:
-			gpr_set(ctx, rd, gpr[rt] >> (gpr[rs] & 0x1F));
-			break;
+op_break:
+	exc(ctx, EXC_BP);
+	goto end;
 
-		case SRAV:
-			gpr_set(ctx, rd, (s32)gpr[rt] >> (gpr[rs] & 0x1F));
-			break;
+op_mfhi:
+	gpr_set(ctx, rd, hi);
+	goto end;
 
-		case JR:
-			branch(ctx, gpr[rs]);
-			break;
+op_mthi:
+	hi = gpr[rs];
+	goto end;
 
-		case JALR: {
-			u32 jmp_addr = gpr[rs];
+op_mflo:
+	gpr_set(ctx, rd, lo);
+	goto end;
 
-			gpr_set(ctx, rd, pc + (sizeof(instr) * 2));
-			branch(ctx, jmp_addr);
+op_mtlo:
+	lo = gpr[rs];
+	goto end;
 
-			break;
-		}
+op_mult:
+	do_mult(ctx, rs, rt);
+	goto end;
 
-		case SYSCALL:
-			exc(ctx, EXC_SYSCALL);
-			break;
+op_multu:
+	do_multu(ctx, rs, rt);
+	goto end;
 
-		case BREAK:
-			exc(ctx, EXC_BP);
-			break;
+op_div:
+	do_div(ctx, gpr[rs], gpr[rt]);
+	goto end;
 
-		case MFHI:
-			gpr_set(ctx, rd, hi);
-			break;
+op_divu:
+	do_divu(ctx, gpr[rs], gpr[rt]);
+	goto end;
 
-		case MTHI:
-			hi = gpr[rs];
-			break;
+op_add:
+	do_add(ctx, rd, gpr[rs], gpr[rt]);
+	goto end;
 
-		case MFLO:
-			gpr_set(ctx, rd, lo);
-			break;
+op_addu:
+	gpr_set(ctx, rd, gpr[rs] + gpr[rt]);
+	goto end;
 
-		case MTLO:
-			lo = gpr[rs];
-			break;
+op_sub:
+	do_sub(ctx, rd, gpr[rs], gpr[rt]);
+	goto end;
 
-		case MULT: {
-			u64 x = sext_32_64(gpr[rs]) * sext_32_64(gpr[rt]);
+op_subu:
+	gpr_set(ctx, rd, gpr[rs] - gpr[rt]);
+	goto end;
 
-			lo = x & UINT32_MAX;
-			hi = x >> 32;
+op_and:
+	gpr_set(ctx, rd, gpr[rs] & gpr[rt]);
+	goto end;
 
-			break;
-		}
+op_or:
+	gpr_set(ctx, rd, gpr[rs] | gpr[rt]);
+	goto end;
 
-		case MULTU: {
-			u64 x = zext_32_64(gpr[rs]) * zext_32_64(gpr[rt]);
+op_xor:
+	gpr_set(ctx, rd, gpr[rs] ^ gpr[rt]);
+	goto end;
 
-			lo = x & UINT32_MAX;
-			hi = x >> 32;
+op_nor:
+	gpr_set(ctx, rd, ~(gpr[rs] & gpr[rt]));
+	goto end;
 
-			break;
-		}
+op_slt:
+	gpr_set(ctx, rd, (s32)gpr[rs] < (s32)gpr[rt]);
+	goto end;
 
-		case DIV:
-			do_div(ctx, gpr[rs], gpr[rt]);
-			break;
+op_sltu:
+	gpr_set(ctx, rd, gpr[rs] < gpr[rt]);
+	goto end;
 
-		case DIVU:
-			do_divu(ctx, gpr[rs], gpr[rt]);
-			break;
+grp_regimm:
+	regimm(ctx, rs, rt);
+	goto end;
 
-		case ADD:
-			do_add(ctx, rd, gpr[rs], gpr[rt]);
-			break;
+op_j:
+	branch(ctx, jmp_addr(pc, instr));
+	goto end;
 
-		case ADDU:
-			gpr_set(ctx, rd, gpr[rs] + gpr[rt]);
-			break;
+op_jal:
+	gpr_set(ctx, P_RA, pc + (sizeof(instr) * 2));
+	branch(ctx, jmp_addr(pc, instr));
 
-		case SUB:
-			do_sub(ctx, rd, gpr[rs], gpr[rt]);
-			break;
+	goto end;
 
-		case SUBU:
-			gpr_set(ctx, rd, gpr[rs] - gpr[rt]);
-			break;
+op_beq:
+	branch_if(ctx, gpr[rs] == gpr[rt]);
+	goto end;
 
-		case AND:
-			gpr_set(ctx, rd, gpr[rs] & gpr[rt]);
-			break;
+op_bne:
+	branch_if(ctx, gpr[rs] != gpr[rt]);
+	goto end;
 
-		case OR:
-			gpr_set(ctx, rd, gpr[rs] | gpr[rt]);
-			break;
+op_blez:
+	branch_if(ctx, (s32)gpr[rs] <= 0);
+	goto end;
 
-		case XOR:
-			gpr_set(ctx, rd, gpr[rs] ^ gpr[rt]);
-			break;
-
-		case NOR:
-			gpr_set(ctx, rd, ~(gpr[rs] | gpr[rt]));
-			break;
-
-		case SLT:
-			gpr_set(ctx, rd, (s32)gpr[rs] < (s32)gpr[rt]);
-			break;
-
-		case SLTU:
-			gpr_set(ctx, rd, gpr[rs] < gpr[rt]);
-			break;
-
-		default:
-			illegal_instr(ctx);
-			break;
-		}
-		break;
-
-	case GRP_REGIMM: {
-		bool link   = (rt & 0x1E) == 0x10;
-		bool branch = (s32)(gpr[rs] ^ (rt << 31)) < 0;
-
-		if (link)
-			gpr_set(ctx, P_RA, pc + (sizeof(instr) * 2));
-
-		branch_if(ctx, branch);
-		break;
-	}
-
-	case J:
-		branch(ctx, jmp_addr(pc, instr));
-		break;
-
-	case JAL:
-		gpr_set(ctx, P_RA, pc + (sizeof(instr) * 2));
-		branch(ctx, jmp_addr(pc, instr));
-
-		break;
-
-	case BEQ:
-		branch_if(ctx, gpr[rs] == gpr[rt]);
-		break;
-
-	case BNE:
-		branch_if(ctx, gpr[rs] != gpr[rt]);
-		break;
-
-	case BLEZ:
-		branch_if(ctx, (s32)gpr[rs] <= 0);
-		break;
-
-	case BGTZ:
-		branch_if(ctx, (s32)gpr[rs] > 0);
-		break;
-
-	case ADDI: {
-		int sum;
-
-		if (unlikely(__builtin_sadd_overflow(gpr[rs], sextimm, &sum)))
-			exc(ctx, EXC_OV);
-		else
-			gpr_set(ctx, rt, sum);
-
-		break;
-	}
-
-	case ADDIU:
-		gpr_set(ctx, rt, gpr[rs] + sextimm);
-		break;
-
-	case SLTI:
-		gpr_set(ctx, rt, (s32)gpr[rs] < (s32)sextimm);
-		break;
-
-	case SLTIU:
-		gpr_set(ctx, rt, gpr[rs] < sextimm);
-		break;
-
-	case ANDI:
-		gpr_set(ctx, rt, zextimm & gpr[rs]);
-		break;
-
-	case ORI:
-		gpr_set(ctx, rt, zextimm | gpr[rs]);
-		break;
-
-	case XORI:
-		gpr_set(ctx, rt, zextimm ^ gpr[rs]);
-		break;
-
-	case LUI:
-		gpr_set(ctx, rt, zextimm << 16);
-		break;
-
-	case GRP_COP0:
-		switch (rs) {
-		case MFC:
-			gpr_set(ctx, rt, ctx->cpu_int.cop0[rd]);
-			break;
-
-		case MTC:
-			ctx->cpu_int.cop0[rd] = gpr[rt];
-			break;
-
-		default:
-			do_cop0_instr(ctx, funct);
-			break;
-		}
-		break;
-
-	case GRP_COP2:
-		switch (rs) {
-		case MFC:
-			do_cop2_mfc(ctx, rt, rd);
-			break;
-
-		case CFC:
-			do_cop2_cfc(ctx, rt, rd);
-			break;
-
-		case MTC:
-			do_cop2_mtc(ctx, rd, rt);
-			break;
-
-		case CTC:
-			do_cop2_ctc(ctx, rd, rt);
-			break;
-
-		default:
-			do_cop2_instr(ctx, funct);
-			break;
-		}
-		break;
-
-	case LB:
-		load_dly(ctx, rt, sext_8_32(load8(ctx, gpr[base] + offset)));
-		break;
+op_bgtz:
+	branch_if(ctx, (s32)gpr[rs] > 0);
+	goto end;
 
-	case LH: {
-		u32 vaddr = gpr[base] + offset;
-
-		if (unlikely(vaddr & 1)) {
-			exc(ctx, EXC_ADEL);
-			break;
-		}
-		load_dly(ctx, rt, sext_16_32(load16(ctx, vaddr)));
-		break;
-	}
+op_addi:
+	do_addi(ctx, rs, rt);
+	goto end;
 
-	case LWL: {
-		u32 vaddr	  = gpr[base] + offset;
-		u32 aligned_vaddr = vaddr & ~3;
+op_addiu:
+	gpr_set(ctx, rt, gpr[rs] + sextimm);
+	goto end;
 
-		u32 word = load32(ctx, aligned_vaddr);
+op_slti:
+	gpr_set(ctx, rt, (s32)gpr[rs] < (s32)sextimm);
+	goto end;
 
-		uint shift = (vaddr & 3) * 8;
-		uint mask  = 0x00FFFFFF >> shift;
+op_sltiu:
+	gpr_set(ctx, rt, gpr[rs] < sextimm);
+	goto end;
 
-		u32 val = (ctx->cpu_int.ld_next.dst == rt) ?
-				  ctx->cpu_int.ld_next.val :
-				  gpr[rt];
+op_andi:
+	gpr_set(ctx, rt, zextimm & gpr[rs]);
+	goto end;
 
-		val = (val & mask) | (word << (24 - shift));
-		load_dly(ctx, rt, val);
+op_ori:
+	gpr_set(ctx, rt, zextimm | gpr[rs]);
+	goto end;
 
-		break;
-	}
+op_xori:
+	gpr_set(ctx, rt, zextimm ^ gpr[rs]);
+	goto end;
 
-	case LW: {
-		u32 vaddr = gpr[base] + offset;
+op_lui:
+	gpr_set(ctx, rt, zextimm << 16);
+	goto end;
 
-		if (unlikely(vaddr & 0x3)) {
-			exc(ctx, EXC_ADEL);
-			break;
-		}
-		load_dly(ctx, rt, load32(ctx, vaddr));
-		break;
-	}
+grp_cop0:
+	goto *(&&cop0_mfc + cop0_tbl[rs]);
 
-	case LBU:
-		load_dly(ctx, rt, zext_8_32(load8(ctx, gpr[base] + offset)));
-		break;
+cop0_mfc:
+	gpr_set(ctx, rt, ctx->cpu_int.cop0[rd]);
+	goto end;
 
-	case LHU: {
-		u32 vaddr = gpr[base] + offset;
+cop0_mtc:
+	ctx->cpu_int.cop0[rd] = gpr[rt];
+	goto end;
 
-		if (unlikely(vaddr & 1)) {
-			exc(ctx, EXC_ADEL);
-			break;
-		}
+cop0_instr:
+	goto *(&&illegal + cop0_instr_tbl[funct]);
 
-		load_dly(ctx, rt, zext_16_32(load16(ctx, vaddr)));
-		break;
-	}
+op_rfe:
+	SR = (SR & ~0x0F) | ((SR >> 2) & 0x0F);
+	goto end;
 
-	case LWR: {
-		u32 vaddr	  = gpr[base] + offset;
-		u32 aligned_vaddr = vaddr & ~3;
+grp_cop2:
+	goto *(&&cop2_mfc + cop2_tbl[rs]);
 
-		u32 word = load32(ctx, aligned_vaddr);
+cop2_mfc:
+	do_cop2_mfc(ctx, rt, rd);
+	goto end;
 
-		uint shift = (vaddr & 3) * 8;
-		uint mask  = 0xFFFFFF00 << (24 - shift);
+cop2_cfc:
+	do_cop2_cfc(ctx, rt, rd);
+	goto end;
 
-		u32 val = (ctx->cpu_int.ld_next.dst == rt) ?
-				  ctx->cpu_int.ld_next.val :
-				  gpr[rt];
+cop2_mtc:
+	do_cop2_mtc(ctx, rd, rt);
+	goto end;
 
-		val = (val & mask) | (word >> shift);
+cop2_ctc:
+	do_cop2_ctc(ctx, rd, rt);
+	goto end;
 
-		load_dly(ctx, rt, val);
-		break;
-	}
+cop2_instr:
+	goto *(&&illegal + cop2_instr_tbl[funct]);
 
-	case SB:
-		store8(ctx, gpr[base] + offset, gpr[rt] & UINT8_MAX);
-		break;
+op_rtps:
+	FLAG = 0;
 
-	case SH: {
-		u32 vaddr = gpr[base] + offset;
+	rtp(ctx, &V[0], true);
+	update_flag(ctx);
 
-		if (unlikely(vaddr & 1)) {
-			exc(ctx, EXC_ADES);
-			break;
-		}
+	goto end;
 
-		store16(ctx, vaddr, gpr[rt] & UINT16_MAX);
-		break;
-	}
+op_nclip:
+	FLAG = 0;
 
-	case SWL: {
-		u32 vaddr	  = gpr[base] + offset;
-		u32 aligned_vaddr = vaddr & ~3;
+	MAC[0] = mac0_add(
+		ctx, ((u64)SX0 * (u64)SY1) + ((u64)SX1 * (u64)SY2) +
+			     ((u64)SX2 * (u64)SY0) - ((u64)SX0 * (u64)SY2) -
+			     ((u64)SX1 * (u64)SY0) - ((u64)SX2 * (u64)SY1));
 
-		uint shift = (vaddr & 3) * 8;
-		uint mask  = 0xFFFFFF00 << shift;
+	update_flag(ctx);
+	goto end;
 
-		u32 word = load32(ctx, aligned_vaddr);
-		word	 = (word & mask) | (gpr[rt] >> (24 - shift));
-		store32(ctx, aligned_vaddr, word);
+op_op:
+	FLAG = 0;
 
-		break;
-	}
+	do_op(ctx);
 
-	case SW: {
-		u32 vaddr = gpr[base] + offset;
+	update_flag(ctx);
+	goto end;
 
-		if (unlikely(vaddr & 3)) {
-			exc(ctx, EXC_ADES);
-			break;
-		}
+op_dpcs:
+	FLAG = 0;
 
-		store32(ctx, vaddr, gpr[rt]);
-		break;
-	}
+	dpc(ctx, RGBC);
 
-	case SWR: {
-		u32 vaddr	  = gpr[base] + offset;
-		u32 aligned_vaddr = vaddr & ~3;
+	update_flag(ctx);
+	goto end;
 
-		uint shift = (vaddr & 3) * 8;
-		uint mask  = 0x00FFFFFF >> (24 - shift);
+op_intpl:
+	FLAG = 0;
 
-		u32 word = load32(ctx, aligned_vaddr);
-		word	 = (word & mask) | (gpr[rt] << shift);
-		store32(ctx, aligned_vaddr, word);
+	do_intpl(ctx);
 
-		break;
-	}
+	update_flag(ctx);
+	goto end;
 
-	default:
-		illegal_instr(ctx);
-		break;
-	}
+op_mvmva:
+	FLAG = 0;
 
-	// Better than a branch - ensure that zero is indeed always zero.
+	do_mvmva(ctx);
+
+	update_flag(ctx);
+	goto end;
+
+op_ncds:
+	FLAG = 0;
+
+	ncd(ctx, &V[0]);
+
+	update_flag(ctx);
+	goto end;
+
+op_cdp:
+	FLAG = 0;
+
+	do_cdp(ctx);
+
+	update_flag(ctx);
+	goto end;
+
+op_ncdt:
+	FLAG = 0;
+
+	for (size_t i = 0; i < ARRAY_SIZE(V); ++i)
+		ncd(ctx, &V[i]);
+
+	update_flag(ctx);
+	goto end;
+
+op_nccs:
+	FLAG = 0;
+
+	ncc(ctx, &V[0]);
+	update_flag(ctx);
+
+	goto end;
+
+op_cc:
+	FLAG = 0;
+
+	intpl_bk_lcm(ctx);
+	intpl_rgb(ctx);
+	color_fifo_push(ctx);
+
+	update_flag(ctx);
+	goto end;
+
+op_ncs:
+	FLAG = 0;
+
+	nc(ctx, &V[0]);
+
+	update_flag(ctx);
+	goto end;
+
+op_nct:
+	FLAG = 0;
+
+	for (size_t i = 0; i < ARRAY_SIZE(V); ++i)
+		nc(ctx, &V[i]);
+
+	update_flag(ctx);
+	goto end;
+
+op_sqr:
+	FLAG = 0;
+
+	do_sqr(ctx);
+
+	update_flag(ctx);
+	goto end;
+
+op_dpcl:
+	FLAG = 0;
+
+	do_dpcl(ctx);
+
+	update_flag(ctx);
+	goto end;
+
+op_dpct:
+	FLAG = 0;
+
+	for (uint i = 0; i < 3; ++i)
+		dpc(ctx, RGB0);
+
+	update_flag(ctx);
+	goto end;
+
+op_avsz3:
+	avsz(ctx, ZSF3, 1);
+	goto end;
+
+op_avsz4:
+	avsz(ctx, ZSF4, 0);
+	goto end;
+
+op_rtpt:
+	FLAG = 0;
+
+	rtp(ctx, &V[0], false);
+	rtp(ctx, &V[1], false);
+	rtp(ctx, &V[2], true);
+
+	update_flag(ctx);
+	goto end;
+
+op_gpf:
+	memset(&MAC[1], 0, sizeof(MAC) - 1);
+
+op_gpl:
+	FLAG = 0;
+
+	do_gpl(ctx);
+
+	update_flag(ctx);
+	goto end;
+
+op_ncct:
+	FLAG = 0;
+
+	for (size_t i = 0; i < ARRAY_SIZE(V); ++i)
+		ncc(ctx, &V[i]);
+
+	update_flag(ctx);
+	goto end;
+
+op_lb:
+	load_dly(ctx, rt, sext_8_32(load8(ctx, gpr[base] + offset)));
+	goto end;
+
+op_lh:
+	do_lh(ctx, base, offset, rt);
+	goto end;
+
+op_lwl:
+	do_lwl(ctx, base, offset, rt);
+	goto end;
+
+op_lw:
+	do_lw(ctx, base, offset, rt);
+	goto end;
+
+op_lbu:
+	load_dly(ctx, rt, zext_8_32(load8(ctx, gpr[base] + offset)));
+	goto end;
+
+op_lhu:
+	do_lhu(ctx, base, offset, rt);
+	goto end;
+
+op_lwr:
+	do_lwr(ctx, base, offset, rt);
+	goto end;
+
+op_sb:
+	store8(ctx, gpr[base] + offset, gpr[rt] & UINT8_MAX);
+	goto end;
+
+op_sh:
+	do_sh(ctx, base, offset, rt);
+	goto end;
+
+op_swl:
+	do_swl(ctx, base, offset, rt);
+	goto end;
+
+op_sw:
+	do_sw(ctx, base, offset, rt);
+	goto end;
+
+op_swr:
+	do_swr(ctx, base, offset, rt);
+	goto end;
+
+illegal:
+	illegal_instr(ctx);
+	goto done;
+
+end:
 	gpr[P_ZERO] = 0;
+	p_bios_trace_end(ctx);
+	goto loop;
 
-#undef gpr
-#undef pc
-#undef npc
-#undef hi
-#undef lo
-#undef instr
-
-#undef op
-#undef rt
-#undef rs
-#undef rd
-#undef shamt
-#undef funct
-#undef base
-#undef zextimm
-#undef sextimm
-#undef offset
-}
-
-static void run(struct p_ctx *ctx, u64 cycles, u64 instr_limit,
-		bool end_on_event)
-{
-	cycles += ctx->sched.ts_now;
-
-	while (ctx->sched.ts_now < cycles) {
-		p_bios_trace_begin(ctx);
-		step(ctx);
-		p_bios_trace_end(ctx);
-	}
+done:
+	return;
 }
 
 void p_cpu_int_init(struct p_ctx *ctx)

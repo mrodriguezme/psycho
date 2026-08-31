@@ -31,7 +31,7 @@ P_ALWAYS_INLINE void p_sched_adv_ts(struct p_ctx *ctx, u64 ts)
 
 void p_sched_rst(struct p_ctx *ctx) P_NONNULL;
 
-bool p_sched_run(struct p_ctx *ctx) P_NONNULL;
+void p_sched_run(struct p_ctx *ctx) P_NONNULL;
 
 void p_sched_add(struct p_ctx *ctx, struct p_sched_ev *ev) P_NONNULL;
 void p_sched_del(struct p_ctx *ctx, struct p_sched_ev *ev) P_NONNULL;

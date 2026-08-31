@@ -90,6 +90,8 @@
 #define INSTR_SF	 (1 << 19)
 #define INSTR_LM	 (1 << 10)
 
+#define SR_IM2		 (1 << 10)
+
 enum cpu_exc {
 	EXC_ADEL    = 4,
 	EXC_ADES    = 5,

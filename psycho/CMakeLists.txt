@@ -50,6 +50,8 @@ target_sources(
 	src/ctx.c
 	src/digital_ctrl.c
 	src/disasm.c
+	src/exe_loader.c
+	src/exe_loader.h
 	src/gpu_sw.c
 	src/gpu_sw.h
 	src/gpu.c
