@@ -22,61 +22,34 @@
 
 #pragma once
 
-#include <stddef.h>
-#include "sched.h"
-#include "types.h"
+#include <SDL3/SDL.h>
 
-#ifdef __cplusplus
-extern "C" {
-#endif // __cplusplus
+#include "psycho/ctx.h"
+#include "psycho/digital_ctrl.h"
 
-#define VRAM_HEIGHT (512)
-#define VRAM_WIDTH  (1024)
+struct emu_runner {
+	struct p_ctx ctx;
+	struct p_digital_ctrl ctrl;
 
-struct p_ctx;
-
-typedef u16 p_gpu_vram[VRAM_HEIGHT][VRAM_WIDTH];
-
-struct p_gpu_vertex {
-	s16 x;
-	s16 y;
-	uint color;
+	p_gpu_vram fbufs[2];
+	SDL_AtomicInt write_idx;
+	SDL_AtomicInt running;
+	SDL_AtomicInt frame_pend;
+	SDL_AtomicInt frame_count;
+	SDL_Thread *thread;
 };
 
-struct p_gpu_render_ops {
-	void (*rect)(struct p_ctx *ctx, struct p_gpu_vertex *v0);
-};
+void emu_init(struct emu_runner *emu, u8 *bios_data, u8 *exe_data,
+	      size_t exe_size);
 
-struct p_gpu {
-	struct {
-		void (*fn)(struct p_ctx *ctx);
-		size_t rem_params;
-		size_t params;
-		u32 data[64];
-	} init;
+void emu_run(struct emu_runner *emu);
 
-	struct {
-		size_t x;
-		size_t y;
-		size_t x_orig;
-		size_t x_max;
-		uint rem;
-	} copy;
+void emu_stop(struct emu_runner *emu);
 
-	struct p_gpu_vertex rect;
-
-	struct p_gpu_render_ops render_ops;
-
-	p_gpu_vram vram;
-
-	void (*cmd_fn)(struct p_ctx *ctx, u32 packet);
-
-	struct p_sched_ev ev_vblank;
-
-	u32 gpustat;
-	u32 gpuread;
-};
-
-#ifdef __cplusplus
+P_NONNULL P_ALWAYS_INLINE u16 *emu_front_buffer_get(struct emu_runner *emu)
+{
+	return (u16 *)emu->fbufs[SDL_GetAtomicInt(&emu->write_idx) ^ 1];
 }
-#endif // __cplusplus
+
+void emu_btn_press(struct emu_runner *emu, SDL_Event *ev);
+void emu_btn_rel(struct emu_runner *emu, SDL_Event *ev);

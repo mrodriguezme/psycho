@@ -1649,7 +1649,9 @@ loop:
 
 	dly_slot_process(ctx);
 
-	p_bios_trace_begin(ctx);
+	if (unlikely(p_bios_trace_in_bios_call(pc)))
+		p_bios_trace_begin(ctx, gpr[P_T1], (pc >> 4) - 0xA);
+
 	goto *(&&grp_special + op_tbl[op]);
 
 grp_special:
@@ -2097,7 +2099,10 @@ illegal:
 
 end:
 	gpr[P_ZERO] = 0;
-	p_bios_trace_end(ctx);
+
+	if (p_bios_trace_end_of_call(ctx, instr))
+		p_bios_trace_end(ctx, gpr[P_V0]);
+
 	goto loop;
 
 done:

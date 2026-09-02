@@ -22,8 +22,23 @@
 
 #pragma once
 
+#define JR_RA (0x03E00008)
+
 #include "psycho/ctx.h"
 
 void p_bios_trace_init(struct p_ctx *ctx) P_NONNULL;
-void p_bios_trace_begin(struct p_ctx *ctx) P_NONNULL;
-void p_bios_trace_end(struct p_ctx *ctx) P_NONNULL;
+
+P_NONNULL P_ALWAYS_INLINE bool p_bios_trace_in_bios_call(u32 pc)
+{
+	return (pc == 0xA0) || (pc == 0xB0) || (pc == 0xC0);
+}
+
+void p_bios_trace_begin(struct p_ctx *ctx, u32 fn, u32 tbl_off) P_NONNULL;
+
+P_NONNULL P_ALWAYS_INLINE bool p_bios_trace_end_of_call(struct p_ctx *ctx,
+							u32 instr)
+{
+	return (instr == JR_RA) && (ctx->bios_trace.stack.top);
+}
+
+void p_bios_trace_end(struct p_ctx *ctx, u32 v0) P_NONNULL;

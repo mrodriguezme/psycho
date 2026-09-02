@@ -22,7 +22,7 @@
 
 find_package(SDL3 REQUIRED)
 
-add_executable(psycho_testbed main.c)
+add_executable(psycho_testbed emu.c main.c)
 
 target_link_libraries(
 	psycho_testbed PRIVATE
