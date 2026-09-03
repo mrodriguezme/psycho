@@ -39,113 +39,91 @@ LOG_MOD(P_LOG_BIOS);
 
 static void on_putchar(struct p_ctx *ctx, struct p_bios_frame *frame);
 
-static const struct p_bios_fn a0_funcs[] = {
-	// clang-format off
-
-	[0x17]	= {
-		.prototype	= "int strcmp(const char *s1=%s, const char *s2=%s)",
-		.ret		= P_BIOS_FN_RET_INT
+static const struct p_bios_fn call_tbl[3][0xFF] = {
+	// 0xA0 - "A" functions
+	[0] = {
+		[0x17] = {
+			.prototype = "int strcmp(const char *s1=%s, const char *s2=%s)",
+			.ret       = P_BIOS_FN_RET_INT
+		},
+		[0x25] = {
+			.prototype = "char toupper(char c=%c)",
+			.ret       = P_BIOS_FN_RET_CHAR
+		},
+		[0x2A] = {
+			.prototype = "void *memcpy(unsigned char *s1=%p, const unsigned char *s2=%p, int n=%d)",
+			.ret       = P_BIOS_FN_RET_VOID_PTR
+		},
+		[0x44] = {
+			.prototype = "void FlushCache(void)",
+			.ret       = P_BIOS_FN_RET_VOID
+		},
+		[0x96] = {
+			.prototype = "void AddCDROMDevice(void)",
+			.ret       = P_BIOS_FN_RET_VOID
+		},
+		[0x97] = {
+			.prototype = "void AddMemCardDevice(void)",
+			.ret       = P_BIOS_FN_RET_VOID
+		},
+		[0x99] = {
+			.prototype = "void add_nullcon_driver()",
+			.ret       = P_BIOS_FN_RET_VOID
+		},
 	},
 
-	[0x25]	= {
-		.prototype	= "char toupper(char c=%c)",
-		.ret		= P_BIOS_FN_RET_CHAR
+	// 0xB0 - "B" functions
+	[1] = {
+		[0x00] = {
+			.prototype = "void alloc_kernel_memory(size_t size=%d)",
+			.ret       = P_BIOS_FN_RET_VOID
+		},
+		[0x18] = {
+			.prototype = "void *ResetEntryInt(void)",
+			.ret       = P_BIOS_FN_RET_VOID_PTR
+		},
+		[0x3D] = {
+			.prototype = "void putchar(char c=%c)",
+			.ret       = P_BIOS_FN_RET_VOID,
+			.hook_cb   = on_putchar
+		},
+		[0x47] = {
+			.prototype = "void AddDrv()",
+			.ret       = P_BIOS_FN_RET_VOID
+		},
 	},
 
-	[0x2A]	= {
-		.prototype	= "void *memcpy(unsigned char *s1=%p, const unsigned char *s2=%p, int n=%d)",
-		.ret		= P_BIOS_FN_RET_VOID_PTR
+	// 0xC0 - "C" functions
+	[2] = {
+		[0x00] = {
+			.prototype = "void EnqueueTimerAndVblankIrqs(int prio=%d)",
+			.ret       = P_BIOS_FN_RET_VOID
+		},
+		[0x01] = {
+			.prototype = "void EnqueueSyscallHandler(int prio=%d)",
+			.ret       = P_BIOS_FN_RET_VOID
+		},
+		[0x07] = {
+			.prototype = "void InstallExceptionHandlers(void)",
+			.ret       = P_BIOS_FN_RET_VOID
+		},
+		[0x08] = {
+			.prototype = "void SysInitMemory(void *addr=%p, size_t size=%d)",
+			.ret       = P_BIOS_FN_RET_VOID
+		},
+		[0x0C] = {
+			.prototype = "void InitDefInt(int prio=%d)",
+			.ret       = P_BIOS_FN_RET_VOID
+		},
+		[0x12] = {
+			.prototype = "void InstallDevices(int ttyflag=%d)",
+			.ret       = P_BIOS_FN_RET_VOID
+		},
+		[0x1C] = {
+			.prototype = "void AdjustA0Table(void)",
+			.ret       = P_BIOS_FN_RET_VOID
+		},
 	},
-
-	[0x44]	= {
-		.prototype	= "void FlushCache(void)",
-		.ret		= P_BIOS_FN_RET_VOID
-	},
-
-	[0x96]	= {
-		.prototype	= "void AddCDROMDevice(void)",
-		.ret		= P_BIOS_FN_RET_VOID
-	},
-
-	[0x97]	= {
-		.prototype	= "void AddMemCardDevice(void)",
-		.ret		= P_BIOS_FN_RET_VOID
-	},
-
-	[0x99] = {
-		.prototype	= "void add_nullcon_driver()",
-		.ret		= P_BIOS_FN_RET_VOID
-	}
-
-	// clang-format on
-};
-
-static const struct p_bios_fn b0_funcs[] = {
-	// clang-format off
-
-	[0x00]	= {
-		.prototype	= "void alloc_kernel_memory(size_t size=%d)",
-		.ret		= P_BIOS_FN_RET_VOID
-	},
-
-	[0x18]	= {
-		.prototype	= "void *ResetEntryInt(void)",
-		.ret		= P_BIOS_FN_RET_VOID_PTR
-	},
-
-	[0x3D]	= {
-		.prototype	= "void putchar(char c=%c)",
-		.ret		= P_BIOS_FN_RET_VOID,
-		.hook_cb	= on_putchar
-	},
-
-	[0x47]	= {
-		.prototype	= "void AddDrv()",
-		.ret		= P_BIOS_FN_RET_VOID
-	}
-
-	// clang-format on
-};
-
-static const struct p_bios_fn c0_funcs[] = {
-	// clang-format off
-
-	[0x00]	= {
-		.prototype	= "void EnqueueTimerAndVblankIrqs(int prio=%d)",
-		.ret		= P_BIOS_FN_RET_VOID
-	},
-
-	[0x01]	= {
-		.prototype	= "void EnqueueSyscallHandler(int prio=%d)",
-		.ret		= P_BIOS_FN_RET_VOID
-	},
-
-	[0x07]	= {
-		.prototype	= "void InstallExceptionHandlers(void)",
-		.ret		= P_BIOS_FN_RET_VOID
-	},
-
-	[0x08]	= {
-		.prototype	= "void SysInitMemory(void *addr=%p, size_t size=%d)",
-		.ret		= P_BIOS_FN_RET_VOID
-	},
-
-	[0x0C]	= {
-		.prototype	= "void InitDefInt(int prio=%d)",
-		.ret		= P_BIOS_FN_RET_VOID
-	},
-
-	[0x12]	= {
-		.prototype	= "void InstallDevices(int ttyflag=%d)",
-		.ret		= P_BIOS_FN_RET_VOID
-	},
-
-	[0x1C]	= {
-		.prototype	= "void AdjustA0Table(void)",
-		.ret		= P_BIOS_FN_RET_VOID
-	},
-
-	// clang-format on
 };
 
 P_NODISCARD P_NONNULL static const struct p_bios_fn *
@@ -352,26 +330,14 @@ void p_bios_trace_init(struct p_ctx *ctx)
 	rst_tty_strs(ctx);
 }
 
-void p_bios_trace_begin(struct p_ctx *ctx)
+void p_bios_trace_begin(struct p_ctx *ctx, u32 fn_def, u32 tbl_off)
 {
-	const u32 fn_num = ctx->cpu.gpr_get(ctx, P_T1);
-	const u32 pc	 = ctx->cpu.pc_get(ctx);
+	const struct p_bios_fn *fn = &call_tbl[tbl_off][fn_def];
 
-	const struct p_bios_fn *fn;
-
-	if (pc == 0x000000A0)
-		fn = func_get(a0_funcs, ARRAY_SIZE(a0_funcs), fn_num);
-	else if (pc == 0x000000B0)
-		fn = func_get(b0_funcs, ARRAY_SIZE(b0_funcs), fn_num);
-	else if (pc == 0x000000C0)
-		fn = func_get(c0_funcs, ARRAY_SIZE(c0_funcs), fn_num);
-	else
-		return;
-
-	if (!fn) {
+	if (!fn->prototype) {
 		LOG_WARN(ctx,
-			 "Unimplemented BIOS call: 0x%02X:0x%08X; ignoring", pc,
-			 fn_num);
+			 "Unimplemented BIOS call: 0x%02X:0x%08X; ignoring",
+			 tbl_off, fn_def);
 		return;
 	}
 
@@ -389,19 +355,9 @@ void p_bios_trace_begin(struct p_ctx *ctx)
 	process_prototype(ctx, frame);
 }
 
-void p_bios_trace_end(struct p_ctx *const ctx)
+void p_bios_trace_end(struct p_ctx *const ctx, u32 v0)
 {
-	u32 instr = ctx->cpu.instr_get(ctx);
-
-	if (instr != JR_RA)
-		return;
-
 	struct p_bios_frame *frame = stack_pop(ctx);
-
-	if (!frame)
-		return;
-
-	const u32 v0 = ctx->cpu.gpr_get(ctx, P_V0);
 
 	switch (frame->fn->ret) {
 	case P_BIOS_FN_RET_CHAR:

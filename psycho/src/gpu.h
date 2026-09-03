@@ -45,12 +45,12 @@ void p_gp1(struct p_ctx *ctx, u32 packet) P_NONNULL;
 P_NONNULL P_ALWAYS_INLINE void vram_px_set(struct p_ctx *ctx, size_t x,
 					   size_t y, u16 data)
 {
-	ctx->gpu.vram[x + (VRAM_WIDTH * y)] = data;
+	ctx->gpu.vram[y][x] = data;
 }
 
 P_NONNULL P_ALWAYS_INLINE u16 vram_px_get(struct p_ctx *ctx, size_t x, size_t y)
 {
-	return ctx->gpu.vram[x + (VRAM_WIDTH * y)];
+	return ctx->gpu.vram[y][x];
 }
 
 P_NODISCARD P_ALWAYS_INLINE u16 color_to_15bit(u32 px)

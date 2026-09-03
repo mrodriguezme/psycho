@@ -21,59 +21,33 @@
 // SOFTWARE.
 
 #include <assert.h>
-#include <errno.h>
-#include <stdbool.h>
 #include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
 #include <sys/stat.h>
 #include <SDL3/SDL.h>
+#include <errno.h>
+#include <stdlib.h>
 
-#include "ansi-color-codes.h"
-#include "psycho/ctx.h"
-#include "psycho/digital_ctrl.h"
+#include "emu.h"
 
-static struct p_ctx m_ctx;
-static u8 *exe_data;
-static size_t exe_size;
 static const char *prog_name;
 static SDL_Window *window;
 static SDL_Renderer *renderer;
 static SDL_Texture *texture;
-static bool running;
-static Uint64 fps_last_update_ns;
-static Uint32 frame;
-struct p_digital_ctrl ctrl;
 
-static void log_cb(struct p_ctx *ctx, struct p_log_msg *msg)
+static struct emu_runner emu;
+static bool vsync_enabled;
+
+static u8 *exe_data;
+static size_t exe_size;
+static u8 bios_data[P_BUS_BIOS_SIZE_BYTES];
+
+static void update_window_title(int render_fps, int emu_fps)
 {
-	assert(ctx != NULL);
-	assert(msg != NULL);
-
-	static const char *color_str[P_LOG_COUNT] = {
-		[P_LOG_INFO]  = BHWHT "%s\n" CRESET,
-		[P_LOG_WARN]  = BHYEL "%s\n" CRESET,
-		[P_LOG_ERR]   = BHRED "%s\n" CRESET,
-		[P_LOG_DBG]   = BHCYN "%s\n" CRESET,
-		[P_LOG_TRACE] = BHMAG "%s\n" CRESET
-	};
-
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wformat-nonliteral"
-	printf(color_str[msg->lvl], msg->str.ptr);
-#pragma GCC diagnostic pop
-}
-
-static void illegal_instr_cb(struct p_ctx *ctx, u32 instr)
-{
-	assert(ctx != NULL);
-
-	fflush(stdout);
-	abort();
-}
-
-static void on_stdout_line(struct p_ctx *ctx, struct p_str *str)
-{
+	char title[128];
+	SDL_snprintf(title, sizeof(title),
+		     "psycho | Host FPS: %d | Emulator FPS: %d", render_fps,
+		     emu_fps);
+	SDL_SetWindowTitle(window, title);
 }
 
 static bool get_file_size(const char *file, size_t *file_size)
@@ -88,56 +62,6 @@ static bool get_file_size(const char *file, size_t *file_size)
 	}
 
 	*file_size = st.st_size;
-	return true;
-}
-
-static void on_vblank(struct p_ctx *ctx)
-{
-	SDL_UpdateTexture(texture, NULL, ctx->gpu.vram,
-			  VRAM_WIDTH * sizeof(*ctx->gpu.vram));
-
-	SDL_RenderClear(renderer);
-	SDL_RenderTexture(renderer, texture, NULL, NULL);
-	SDL_RenderPresent(renderer);
-}
-
-static bool load_bios_file(char *bios_file)
-{
-	assert(bios_file != NULL);
-
-	size_t file_size;
-
-	if (!get_file_size(bios_file, &file_size))
-		return false;
-
-	if (file_size != P_BUS_BIOS_SIZE_BYTES) {
-		fprintf(stderr,
-			"%s: bios file size is not correct (expected %d bytes, "
-			"got %zu)\n",
-			prog_name, P_BUS_BIOS_SIZE_BYTES, file_size);
-		return false;
-	}
-
-	FILE *const handle = fopen(bios_file, "rb");
-
-	if (!handle) {
-		fprintf(stderr, "%s: unable to open bios file %s: %s\n",
-			prog_name, bios_file, strerror(errno));
-		return false;
-	}
-
-	uint8_t *const dst = p_bios_data_get(&m_ctx);
-	const size_t bytes = fread(dst, sizeof(uint8_t), file_size, handle);
-
-	if (bytes != file_size) {
-		fprintf(stderr,
-			"%s: not all bytes were read from bios file %s: %s\n",
-			prog_name, bios_file, strerror(errno));
-		fclose(handle);
-
-		return false;
-	}
-	fclose(handle);
 	return true;
 }
 
@@ -175,23 +99,44 @@ static bool load_exe_file(char *exe_file)
 	return true;
 }
 
-static void fps_update(void)
+static bool load_bios_file(char *bios_file)
 {
-	char title[64];
-	frame++;
+	assert(bios_file != NULL);
 
-	const Uint64 curr_ticks = SDL_GetTicksNS();
-	const Uint64 fps_diff	= curr_ticks - fps_last_update_ns;
+	size_t file_size;
 
-	if (fps_diff >= 1000000000) {
-		const double fps = frame * 1000000000.0 / (double)fps_diff;
+	if (!get_file_size(bios_file, &file_size))
+		return false;
 
-		SDL_snprintf(title, sizeof(title), "psycho - %.1f FPS", fps);
-		SDL_SetWindowTitle(window, title);
-
-		frame		   = 0;
-		fps_last_update_ns = curr_ticks;
+	if (file_size != P_BUS_BIOS_SIZE_BYTES) {
+		fprintf(stderr,
+			"%s: bios file size is not correct (expected %d bytes, "
+			"got %zu)\n",
+			prog_name, P_BUS_BIOS_SIZE_BYTES, file_size);
+		return false;
 	}
+
+	FILE *const handle = fopen(bios_file, "rb");
+
+	if (!handle) {
+		fprintf(stderr, "%s: unable to open bios file %s: %s\n",
+			prog_name, bios_file, strerror(errno));
+		return false;
+	}
+
+	const size_t bytes =
+		fread(bios_data, sizeof(uint8_t), file_size, handle);
+
+	if (bytes != file_size) {
+		fprintf(stderr,
+			"%s: not all bytes were read from bios file %s: %s\n",
+			prog_name, bios_file, strerror(errno));
+		fclose(handle);
+
+		return false;
+	}
+	fclose(handle);
+	return true;
 }
 
 static bool gfx_init(void)
@@ -211,6 +156,14 @@ static bool gfx_init(void)
 		return false;
 	}
 
+	vsync_enabled = SDL_SetRenderVSync(renderer, 1);
+	if (!vsync_enabled) {
+		SDL_Log("vsync not supported, falling back to manual frame "
+			"cap: %s",
+			SDL_GetError());
+	} else
+		SDL_Log("vsync enabled");
+
 	texture = SDL_CreateTexture(renderer, SDL_PIXELFORMAT_XBGR1555,
 				    SDL_TEXTUREACCESS_STREAMING, VRAM_WIDTH,
 				    VRAM_HEIGHT);
@@ -225,37 +178,7 @@ static bool gfx_init(void)
 	SDL_RenderTexture(renderer, texture, NULL, NULL);
 	SDL_RenderPresent(renderer);
 
-	frame		   = 0;
-	fps_last_update_ns = SDL_GetTicksNS();
-
 	return true;
-}
-
-static void emu_init(void)
-{
-	struct p_ctx_cfg *const cfg = p_cfg_get(&m_ctx);
-
-	cfg->cpu.illegal_instr = illegal_instr_cb;
-
-	cfg->log.log_cb = log_cb;
-
-	cfg->log.mod[P_LOG_CTX]		 = P_LOG_TRACE;
-	//cfg->log.mod[P_LOG_BUS]		 = P_LOG_TRACE;
-	cfg->log.mod[P_LOG_BIOS]	 = P_LOG_INFO;
-	//cfg->log.mod[P_LOG_SCHED]	 = P_LOG_TRACE;
-	//cfg->log.mod[P_LOG_GPU]		 = P_LOG_OFF;
-	//cfg->log.mod[P_LOG_INTCTRL]	 = P_LOG_TRACE;
-	//cfg->log.mod[P_LOG_DIGITAL_CTRL] = P_LOG_TRACE;
-	//cfg->log.mod[P_LOG_SIO0]	 = P_LOG_TRACE;
-	//cfg->log.mod[P_LOG_SCHED]	 = P_LOG_TRACE;
-	cfg->log.mod[P_LOG_CPU]		 = P_LOG_ERR;
-
-	cfg->bios_trace.stdout_line = on_stdout_line;
-	cfg->bios_trace.deref_ptrs  = true;
-
-	cfg->on_vblank = on_vblank;
-
-	p_init(&m_ctx);
 }
 
 static void gfx_fini(void)
@@ -267,118 +190,50 @@ static void gfx_fini(void)
 	SDL_Quit();
 }
 
-static void press_emu_btn(SDL_Event *ev)
+static void render_frame(void)
 {
-	if (ev->key.repeat)
+	u16 *src = emu_front_buffer_get(&emu);
+
+	void *pixels;
+	int pitch;
+
+	if (!SDL_LockTexture(texture, NULL, &pixels, &pitch)) {
+		SDL_Log("SDL_LockTexture failed: %s", SDL_GetError());
 		return;
-
-	switch (ev->key.key) {
-	case SDLK_DOWN:
-		p_digital_ctrl_btn_press(&ctrl, P_DIGITAL_CTRL_DN);
-		break;
-
-	case SDLK_UP:
-		p_digital_ctrl_btn_press(&ctrl, P_DIGITAL_CTRL_UP);
-		break;
-
-	case SDLK_LEFT:
-		p_digital_ctrl_btn_press(&ctrl, P_DIGITAL_CTRL_LT);
-		break;
-
-	case SDLK_RIGHT:
-		p_digital_ctrl_btn_press(&ctrl, P_DIGITAL_CTRL_RT);
-		break;
-
-	case SDLK_X:
-		p_digital_ctrl_btn_press(&ctrl, P_DIGITAL_CTRL_CROSS);
-		break;
-
-	case SDLK_O:
-		p_digital_ctrl_btn_press(&ctrl, P_DIGITAL_CTRL_CIR);
-		break;
-
-	case SDLK_S:
-		p_digital_ctrl_btn_press(&ctrl, P_DIGITAL_CTRL_SQR);
-		break;
-
-	case SDLK_T:
-		p_digital_ctrl_btn_press(&ctrl, P_DIGITAL_CTRL_TRI);
-		break;
-
-	case SDLK_RETURN:
-		p_digital_ctrl_btn_press(&ctrl, P_DIGITAL_CTRL_START);
-		break;
-
-	case SDLK_SPACE:
-		p_digital_ctrl_btn_press(&ctrl, P_DIGITAL_CTRL_SEL);
-		break;
-
-	default:
-		break;
 	}
-}
 
-static void rel_emu_btn(SDL_Event *ev)
-{
-	switch (ev->key.key) {
-	case SDLK_DOWN:
-		p_digital_ctrl_btn_rel(&ctrl, P_DIGITAL_CTRL_DN);
-		break;
+	const size_t row_bytes = VRAM_WIDTH * sizeof(u16);
 
-	case SDLK_UP:
-		p_digital_ctrl_btn_rel(&ctrl, P_DIGITAL_CTRL_UP);
-		break;
-
-	case SDLK_LEFT:
-		p_digital_ctrl_btn_rel(&ctrl, P_DIGITAL_CTRL_LT);
-		break;
-
-	case SDLK_RIGHT:
-		p_digital_ctrl_btn_rel(&ctrl, P_DIGITAL_CTRL_RT);
-		break;
-
-	case SDLK_X:
-		p_digital_ctrl_btn_rel(&ctrl, P_DIGITAL_CTRL_CROSS);
-		break;
-
-	case SDLK_O:
-		p_digital_ctrl_btn_rel(&ctrl, P_DIGITAL_CTRL_CIR);
-		break;
-
-	case SDLK_S:
-		p_digital_ctrl_btn_rel(&ctrl, P_DIGITAL_CTRL_SQR);
-		break;
-
-	case SDLK_T:
-		p_digital_ctrl_btn_rel(&ctrl, P_DIGITAL_CTRL_TRI);
-		break;
-
-	case SDLK_RETURN:
-		p_digital_ctrl_btn_rel(&ctrl, P_DIGITAL_CTRL_START);
-		break;
-
-	case SDLK_SPACE:
-		p_digital_ctrl_btn_rel(&ctrl, P_DIGITAL_CTRL_SEL);
-		break;
-
-	default:
-		break;
+	if (pitch == (int)row_bytes) {
+		memcpy(pixels, src, row_bytes * VRAM_HEIGHT);
+	} else {
+		u8 *src_bytes = (u8 *)src;
+		u8 *dst_bytes = (u8 *)pixels;
+		for (int y = 0; y < VRAM_HEIGHT; ++y)
+			memcpy(dst_bytes + y * pitch, src_bytes + y * row_bytes,
+			       row_bytes);
 	}
+
+	SDL_UnlockTexture(texture);
+
+	SDL_RenderClear(renderer);
+	SDL_RenderTexture(renderer, texture, NULL, NULL);
+	SDL_RenderPresent(renderer);
 }
 
 static void sdl_process_ev(SDL_Event *ev)
 {
 	switch (ev->type) {
 	case SDL_EVENT_QUIT:
-		running = false;
+		SDL_SetAtomicInt(&emu.running, 0);
 		break;
 
 	case SDL_EVENT_KEY_DOWN:
-		press_emu_btn(ev);
+		emu_btn_press(&emu, ev);
 		break;
 
 	case SDL_EVENT_KEY_UP:
-		rel_emu_btn(ev);
+		emu_btn_rel(&emu, ev);
 		break;
 
 	default:
@@ -398,43 +253,60 @@ int main(int argc, char **argv)
 
 	prog_name = argv[0];
 
-	emu_init();
-
-	p_digital_ctrl_init(&m_ctx, &ctrl);
-	p_attach_dev_to_sio0(&m_ctx, &ctrl.dev, 0);
-
 	if (!load_bios_file(argv[1]))
 		return EXIT_FAILURE;
 
 	if (!load_exe_file(argv[2]))
 		return EXIT_FAILURE;
 
-	if (!p_run_exe(&m_ctx, exe_data, exe_size)) {
-		fprintf(stderr, "%s: exe not valid\n", argv[2]);
-		return EXIT_FAILURE;
-	}
+	emu_init(&emu, bios_data, exe_data, exe_size);
 
 	if (!gfx_init())
 		return EXIT_FAILURE;
 
-	running = true;
+	SDL_SetAtomicInt(&emu.running, 1);
+	emu_run(&emu);
 
-	while (running) {
-		SDL_Event event;
-		while (SDL_PollEvent(&event))
-			sdl_process_ev(&event);
+	Uint64 fps_window_start	 = SDL_GetTicksNS();
+	int last_emu_frame_count = SDL_GetAtomicInt(&emu.frame_count);
+	int render_frame_count	 = 0;
 
-		const Uint64 start_ns = SDL_GetTicksNS();
-		p_run_until_ev(&m_ctx);
-		const Uint64 end_ns = SDL_GetTicksNS();
+	while (SDL_GetAtomicInt(&emu.running)) {
+		const Uint64 frame_start = SDL_GetTicksNS();
 
-		const Uint64 diff = end_ns - start_ns;
+		SDL_Event ev;
+		while (SDL_PollEvent(&ev))
+			sdl_process_ev(&ev);
 
-		//if (diff < (1000000000 / 60))
-		//	SDL_DelayNS((1000000000 / 60) - diff);
+		render_frame();
+		render_frame_count++;
 
-		fps_update();
+		Uint64 now = SDL_GetTicksNS();
+		if (now - fps_window_start >= 1000000000ULL) {
+			int current_emu_frame_count =
+				SDL_GetAtomicInt(&emu.frame_count);
+			int emu_fps =
+				current_emu_frame_count - last_emu_frame_count;
+
+			update_window_title(render_frame_count, emu_fps);
+
+			render_frame_count   = 0;
+			last_emu_frame_count = current_emu_frame_count;
+			fps_window_start     = now;
+		}
+
+		const Uint64 frame_end = SDL_GetTicksNS();
+
+		if (!vsync_enabled) {
+			const Uint64 diff      = frame_end - frame_start;
+			const Uint64 target    = 1000000000 / 60;
+
+			if (diff < target)
+				SDL_DelayNS(target - diff);
+		}
 	}
+
+	emu_stop(&emu);
 
 	gfx_fini();
 	return EXIT_SUCCESS;

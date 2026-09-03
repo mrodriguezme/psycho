@@ -197,9 +197,6 @@ P_NONNULL static void handle_gpu_info(struct p_ctx *ctx, uint data)
 
 void p_gpu_init(struct p_ctx *ctx)
 {
-	ctx->gpu.vram =
-		malloc(VRAM_WIDTH * VRAM_HEIGHT * sizeof(*ctx->gpu.vram));
-
 	ctx->gpu.render_ops.rect = p_gpu_sw_draw_rect;
 }
 
