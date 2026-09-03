@@ -44,7 +44,6 @@ struct p_ctx_cfg *p_cfg_get(struct p_ctx *ctx)
 void p_init(struct p_ctx *ctx)
 {
 	p_bios_trace_init(ctx);
-	p_bus_init(ctx);
 	p_gpu_init(ctx);
 
 	p_cpu_int_init(ctx);

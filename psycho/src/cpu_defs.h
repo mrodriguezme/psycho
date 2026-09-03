@@ -26,6 +26,8 @@
 #include "psycho/compiler.h"
 #include "util.h"
 
+#define DBG_VECTOR   (UINT32_C(0x80000040))
+#define EXC_VECTOR   (UINT32_C(0x80000080))
 #define RST_VECTOR   (UINT32_C(0xBFC00000))
 
 #define SR_ISC	     (1 << 16)
@@ -62,35 +64,53 @@
 	 MAC2_OVF_NEG | MAC3_OVF_NEG | IR1_SAT | IR2_SAT | SZ3_OTZ_SAT | \
 	 DIV_OVF | MAC0_POS_OVF | MAC0_NEG_OVF | SX2_SAT | SY2_SAT)
 
-#define MAC123_MAX	 ((INT64_C(1) << 43) - 1)
-#define MAC123_MIN	 (-(INT64_C(1) << 43))
+#define MAC123_MAX	      ((INT64_C(1) << 43) - 1)
+#define MAC123_MIN	      (-(INT64_C(1) << 43))
 
-#define IR0_MIN		 (0x0000)
-#define IR0_MAX		 (0x1000)
+#define IR0_MIN		      (0x0000)
+#define IR0_MAX		      (0x1000)
 
-#define IR123_MIN	 (-(INT16_C(1) << 15))
-#define IR123_MAX	 ((INT16_C(1) << 15) - 1)
-#define IR123_LM_MIN	 (0x0000)
+#define IR123_MIN	      (-(INT16_C(1) << 15))
+#define IR123_MAX	      ((INT16_C(1) << 15) - 1)
+#define IR123_LM_MIN	      (0x0000)
 
-#define SXY_MIN		 (-0x0400)
-#define SXY_MAX		 (+0x03FF)
+#define SXY_MIN		      (-0x0400)
+#define SXY_MAX		      (+0x03FF)
 
-#define SZ_OTZ_MIN	 (0x0000)
-#define SZ_OTZ_MAX	 (UINT16_MAX)
+#define SZ_OTZ_MIN	      (0x0000)
+#define SZ_OTZ_MAX	      (UINT16_MAX)
 
-#define RGB_MIN		 (0x00)
-#define RGB_MAX		 (UINT8_MAX)
+#define RGB_MIN		      (0x00)
+#define RGB_MAX		      (UINT8_MAX)
 
-#define MVMVA_MX_SHIFT	 (17)
-#define MVMVA_VX_SHIFT	 (15)
-#define MVMVA_TX_SHIFT	 (13)
+#define MVMVA_MX_SHIFT	      (17)
+#define MVMVA_VX_SHIFT	      (15)
+#define MVMVA_TX_SHIFT	      (13)
 
-#define MVMVA_PARAM_MASK (0x3)
+#define MVMVA_PARAM_MASK      (0x3)
 
-#define INSTR_SF	 (1 << 19)
-#define INSTR_LM	 (1 << 10)
+#define INSTR_SF	      (1 << 19)
+#define INSTR_LM	      (1 << 10)
 
-#define SR_IM2		 (1 << 10)
+#define SR_IM2		      (1 << 10)
+
+#define DCIC_TR		      (UINT32_C(1) << 31)
+#define DCIC_UD		      (1 << 30)
+#define DCIC_KD		      (1 << 29)
+#define DCIC_TE		      (1 << 28)
+#define DCIC_DW		      (1 << 27)
+#define DCIC_DR		      (1 << 26)
+#define DCIC_DAE	      (1 << 25)
+#define DCIC_PCE	      (1 << 24)
+#define DCIC_DE		      (1 << 23)
+#define DCIC_T		      (1 << 5)
+#define DCIC_W		      (1 << 4)
+#define DCIC_R		      (1 << 3)
+#define DCIC_DA		      (1 << 2)
+#define DCIC_PC		      (1 << 1)
+#define DCIC_DB		      (1 << 0)
+
+#define DCIC_BP_WRITE_EN_MASK (DCIC_TR | DCIC_UD | DCIC_DW | DCIC_DAE | DCIC_DE)
 
 enum cpu_exc {
 	EXC_ADEL    = 4,

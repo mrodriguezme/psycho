@@ -219,7 +219,7 @@ P_NONNULL static void branch_if(struct p_ctx *ctx, bool cond)
 	}
 }
 
-P_NONNULL static void exc(struct p_ctx *ctx, enum cpu_exc exc)
+P_NONNULL static void exc_base(struct p_ctx *ctx, enum cpu_exc exc, u32 vec)
 {
 #define CAUSE (ctx->cpu_int.cop0[P_CAUSE])
 #define EPC   (ctx->cpu_int.cop0[P_EPC])
@@ -242,11 +242,38 @@ P_NONNULL static void exc(struct p_ctx *ctx, enum cpu_exc exc)
 	CAUSE = (CAUSE & 0x0000FF00) | (exc << 2);
 
 	// 4) transfers control to the exception entry point.
-	pc_set(ctx, 0x80000080);
+	pc_set(ctx, vec);
 
 #undef CAUSE
 #undef EPC
 #undef SR
+}
+
+P_NONNULL static void exc(struct p_ctx *ctx, enum cpu_exc exc)
+{
+	exc_base(ctx, exc, EXC_VECTOR);
+}
+
+P_NONNULL static void exc_dbg(struct p_ctx *ctx)
+{
+	exc_base(ctx, EXC_BP, DBG_VECTOR);
+}
+
+P_NONNULL static void dbg_bp_write(struct p_ctx *ctx, u32 vaddr)
+{
+#define BDA  (ctx->cpu_int.cop0[P_BDA])
+#define BDAM (ctx->cpu_int.cop0[P_BDAM])
+#define DCIC (ctx->cpu_int.cop0[P_DCIC])
+
+	if (unlikely((DCIC & DCIC_BP_WRITE_EN_MASK) &&
+		     !((vaddr ^ BDA) & BDAM))) {
+		DCIC |= (DCIC_DB | DCIC_W);
+		exc_dbg(ctx);
+	}
+
+#undef BDA
+#undef BDAM
+#undef DCIC
 }
 
 P_NONNULL static void do_div(struct p_ctx *ctx, s32 dividend, s32 divisor)
@@ -1419,6 +1446,8 @@ P_NONNULL static void do_sw(struct p_ctx *ctx, size_t base, size_t offset,
 		return;
 	}
 
+	dbg_bp_write(ctx, vaddr);
+
 	store32(ctx, vaddr, gpr[rt]);
 
 #undef gpr
@@ -2074,6 +2103,8 @@ op_lwr:
 	goto end;
 
 op_sb:
+	dbg_bp_write(ctx, gpr[base] + offset);
+
 	store8(ctx, gpr[base] + offset, gpr[rt] & UINT8_MAX);
 	goto end;
 

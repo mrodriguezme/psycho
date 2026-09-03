@@ -24,8 +24,6 @@
 
 #include "psycho/ctx.h"
 
-void p_bus_init(struct p_ctx *ctx) P_NONNULL;
-
 P_NODISCARD u32 p_load32(struct p_ctx *ctx, u32 paddr) P_NONNULL;
 
 P_NODISCARD u16 p_load16(struct p_ctx *ctx, u32 paddr) P_NONNULL;

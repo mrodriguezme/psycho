@@ -37,8 +37,8 @@ LOG_MOD(P_LOG_BUS);
 #define BIOS_MASK  (0x000FFFFF)
 
 #define RAM_BEGIN  (0x00000000)
-#define RAM_END	   (0x001FFFFF)
-#define RAM_MASK   (0x00FFFFFF)
+#define RAM_END	   (P_BUS_MAX_RAM_SIZE)
+#define RAM_MASK   (0x001FFFFF)
 
 #define SPAD_BEGIN (0x1F800000)
 #define SPAD_END   (0x1F8003FF)
@@ -47,11 +47,6 @@ LOG_MOD(P_LOG_BUS);
 u8 *p_bios_data_get(struct p_ctx *ctx)
 {
 	return ctx->bus.bios;
-}
-
-void p_bus_init(struct p_ctx *ctx)
-{
-	ctx->bus.ram = malloc(RAM_END + 1);
 }
 
 u32 p_load32(struct p_ctx *ctx, u32 paddr)
@@ -192,10 +187,6 @@ void p_store8(struct p_ctx *ctx, u32 paddr, u8 data)
 {
 	switch (paddr) {
 	case RAM_BEGIN ... RAM_END:
-		if (paddr == 0x0004d474) {
-			//ctx->bus.ram[paddr] = 1;
-			//return;
-		}
 		ctx->bus.ram[paddr & RAM_MASK] = data;
 		return;
 

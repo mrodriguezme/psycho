@@ -36,11 +36,12 @@ struct p_ctx;
 #define P_BUS_BIOS_SIZE_BYTES (524288)
 #define P_BUS_SPAD_SIZE	      (1024)
 
+#define P_BUS_MAX_RAM_SIZE (0x00FFFFFF)
+
 struct p_bus {
+	u8 ram[P_BUS_MAX_RAM_SIZE];
 	u8 bios[P_BUS_BIOS_SIZE_BYTES];
 	u8 spad[P_BUS_SPAD_SIZE];
-
-	u8 *ram;
 };
 
 P_NODISCARD P_CONST u8 *p_bios_data_get(struct p_ctx *ctx) P_NONNULL;
