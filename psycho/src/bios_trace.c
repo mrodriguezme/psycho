@@ -334,7 +334,7 @@ void p_bios_trace_begin(struct p_ctx *ctx, u32 fn_def, u32 tbl_off)
 {
 	const struct p_bios_fn *fn = &call_tbl[tbl_off][fn_def];
 
-	if (!fn) {
+	if (!fn->prototype) {
 		LOG_WARN(ctx,
 			 "Unimplemented BIOS call: 0x%02X:0x%08X; ignoring",
 			 tbl_off, fn_def);
