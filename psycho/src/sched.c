@@ -31,8 +31,9 @@
 LOG_MOD(P_LOG_SCHED);
 
 static const char *ev_names[P_SCHED_EV_COUNT] = {
-	[P_SCHED_EV_VBLANK]  = "vblank",
-	[P_SCHED_EV_SIO0_TX] = "sio0 tx"
+	[P_SCHED_EV_VBLANK]	  = "vblank",
+	[P_SCHED_EV_SIO0_TX]	  = "sio0 tx",
+	[P_SCHED_EV_SIO0_DEV_ACK] = "sio0 dev ack"
 };
 
 P_NODISCARD static size_t node_parent(size_t node)
@@ -102,12 +103,13 @@ void p_sched_rst(struct p_ctx *ctx)
 
 void p_sched_run(struct p_ctx *ctx)
 {
+	assert(ctx->sched.num_ev > 0);
+
 	struct p_sched_ev *ev = ctx->sched.ev[0];
 	u64 latency	      = ctx->sched.ts_now - ev->ts;
 
 	LOG_TRACE(ctx,
-		  "servicing event \"%s\" (ts_now=%" PRIu64 "), "
-		  "drift=%" PRIu64,
+		  "servicing event \"%s\" (ts_now=%" PRIu64 "), drift=%" PRIu64,
 		  ev_names[ev->type], ctx->sched.ts_now, latency);
 
 	if (unlikely(ev->permanent)) {
@@ -122,6 +124,13 @@ void p_sched_run(struct p_ctx *ctx)
 void p_sched_add(struct p_ctx *ctx, struct p_sched_ev *ev)
 {
 	assert(ctx->sched.num_ev < ARRAY_SIZE(ctx->sched.ev));
+
+	if (unlikely(ctx->sched.num_ev >= ARRAY_SIZE(ctx->sched.ev))) {
+		LOG_ERR(ctx, "event heap full; dropping event \"%s\"",
+			ev_names[ev->type]);
+
+		return;
+	}
 
 	size_t node = ctx->sched.num_ev;
 
@@ -141,8 +150,8 @@ void p_sched_add(struct p_ctx *ctx, struct p_sched_ev *ev)
 	const char *plural = likely(expiry != 1) ? "s" : "";
 
 	LOG_TRACE(ctx,
-		  "adding event \"%s\"; will be serviced within %lu cycle%s; "
-		  "ts_now=%lu",
+		  "adding event \"%s\"; will be serviced within %" PRIu64
+		  " cycle%s; ts_now=%" PRIu64,
 		  ev_names[ev->type], expiry, plural, ctx->sched.ts_now);
 
 	sift_up(ctx, node);
@@ -153,12 +162,12 @@ void p_sched_del(struct p_ctx *ctx, struct p_sched_ev *ev)
 	if (unlikely(!ev->valid))
 		return;
 
-	assert(ev->permanent != true);
+	assert(!ev->permanent);
+
+	ev->valid = false;
 
 	size_t idx  = ev->idx;
 	size_t last = --ctx->sched.num_ev;
-
-	ev->valid = false;
 
 	if (idx != last) {
 		ctx->sched.ev[idx]	= ctx->sched.ev[last];

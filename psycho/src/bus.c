@@ -172,8 +172,16 @@ void p_store16(struct p_ctx *ctx, u32 paddr, u16 data)
 		memcpy(&ctx->bus.spad[paddr & SPAD_MASK], &data, sizeof(u16));
 		return;
 
+	case SIO0_MODE:
+		p_sio0_mode_set(ctx, data);
+		return;
+
 	case SIO0_CTRL:
 		p_sio0_ctrl_set(ctx, data);
+		return;
+
+	case SIO0_BAUD:
+		p_sio0_baud_set(ctx, data);
 		return;
 
 	default:

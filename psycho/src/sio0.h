@@ -40,3 +40,5 @@ P_NODISCARD u8 p_sio0_rx_pop8(struct p_ctx *ctx) P_NONNULL;
 void p_sio0_mode_set(struct p_ctx *ctx, u16 mode) P_NONNULL;
 
 void p_sio0_ctrl_set(struct p_ctx *ctx, u16 ctrl) P_NONNULL;
+
+void p_sio0_baud_set(struct p_ctx *ctx, u16 baud) P_NONNULL;

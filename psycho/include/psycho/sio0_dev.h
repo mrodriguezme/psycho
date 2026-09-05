@@ -33,10 +33,12 @@ enum p_sio0_dev_type {
 };
 
 struct p_sio0_dev {
-	u8 (*transceive)(void *dev, const u8 mosi, bool *done);
+	u8 (*transceive)(void *dev, const u8 mosi);
 	bool (*addressed)(const u8 addr);
+	void (*reset)(void *dev);
 
 	enum p_sio0_dev_type type;
 	const char *name;
 	void *handle;
+	bool active;
 };

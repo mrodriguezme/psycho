@@ -27,10 +27,13 @@
 #include "bus.h"
 #include "cpu_int.h"
 #include "cpu_defs.h"
+#include "disasm.h"
 #include "exe_loader.h"
 #include "log.h"
 #include "util.h"
 #include "sched.h"
+
+static bool tracing = false;
 
 LOG_MOD(P_LOG_CPU);
 
@@ -1651,7 +1654,7 @@ loop:
 	if (unlikely(!ctx->running))
 		goto done;
 
-	if (unlikely(ctx->sched.ts_now >= ctx->sched.ev[0]->ts)) {
+	while (unlikely(ctx->sched.ts_now >= ctx->sched.ev[0]->ts)) {
 		p_sched_run(ctx);
 
 		if (unlikely(stop_on_ev))
@@ -1680,6 +1683,9 @@ loop:
 
 	if (unlikely(p_bios_trace_in_bios_call(pc)))
 		p_bios_trace_begin(ctx, gpr[P_T1], (pc >> 4) - 0xA);
+
+	//if (tracing)
+	//	p_disasm_trace_begin(ctx, pc);
 
 	goto *(&&grp_special + op_tbl[op]);
 
@@ -2133,6 +2139,11 @@ end:
 
 	if (p_bios_trace_end_of_call(ctx, instr))
 		p_bios_trace_end(ctx, gpr[P_V0]);
+
+	//if (tracing) {
+	//	p_disasm_trace_end(ctx);
+	//	LOG_TRACE(ctx, "0x%08X: %s", pc, ctx->disasm.res.str.ptr);
+	//}
 
 	goto loop;
 

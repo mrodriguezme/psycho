@@ -37,6 +37,7 @@ struct p_ctx;
 enum p_sched_ev_type {
 	P_SCHED_EV_VBLANK,
 	P_SCHED_EV_SIO0_TX,
+	P_SCHED_EV_SIO0_DEV_ACK,
 	P_SCHED_EV_COUNT,
 };
 
@@ -56,7 +57,6 @@ struct p_sched {
 	struct p_sched_ev *ev[P_SCHED_NUM_EVENTS];
 	size_t num_ev;
 	u64 ts_now;
-	u64 next_ev_ts;
 };
 
 #ifdef __cplusplus

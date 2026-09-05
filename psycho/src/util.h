@@ -26,15 +26,17 @@
 #include <stddef.h>
 #include <stdint.h>
 
+#include "psycho/cpu_defs.h"
 #include "psycho/compiler.h"
 #include "psycho/types.h"
 
-#define likely(x)		  __builtin_expect(!!(x), 1)
-#define unlikely(x)		  __builtin_expect(!!(x), 0)
+#define likely(x)		    __builtin_expect(!!(x), 1)
+#define unlikely(x)		    __builtin_expect(!!(x), 0)
 
-#define ARRAY_SIZE(x)		  (sizeof(x) / sizeof((x)[0]))
+#define ARRAY_SIZE(x)		    (sizeof(x) / sizeof((x)[0]))
 
-#define bit_became_set(a, b, bit) ((!((a) & (bit))) && ((b) & (bit)))
+#define bits_became_set(a, b, bits) ((!((a) & (bits))) && ((b) & (bits)))
+#define bits_became_clr(a, b, bits) (((a) & (bits)) && !((b) & (bits)))
 
 #define max(a, b)                       \
 	({                              \
@@ -64,6 +66,11 @@
 		__typeof__(max) _max = (max);                     \
 		_val < _min ? _min : (_val > _max ? _max : _val); \
 	})
+
+P_ALWAYS_INLINE u64 us_to_cycles(u64 us)
+{
+	return (us * P_CPU_CLKFREQ_HZ) / 1000000UL;
+}
 
 #define static_assert_offset(x, memb, off) \
 	_Static_assert(offsetof(x, memb) == (off), "Offset is not correct.")

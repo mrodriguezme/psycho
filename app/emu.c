@@ -187,8 +187,7 @@ void emu_init(struct emu_runner *emu, u8 *bios_data, u8 *exe_data,
 
 	cfg->log.mod[P_LOG_CTX]	  = P_LOG_TRACE;
 	cfg->log.mod[P_LOG_BIOS]  = P_LOG_INFO;
-	cfg->log.mod[P_LOG_CPU]	  = P_LOG_ERR;
-	//cfg->log.mod[P_LOG_SCHED] = P_LOG_TRACE;
+	cfg->log.mod[P_LOG_SIO0] = P_LOG_TRACE;
 
 	cfg->bios_trace.stdout_line = on_stdout_line;
 	cfg->bios_trace.deref_ptrs  = true;

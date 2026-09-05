@@ -44,9 +44,10 @@ struct p_sio0 {
 	struct p_sio0_dev *dev[NUM_SLOTS][NUM_DEVS];
 	struct p_sio0_dev *curr_dev;
 
-	u32 tx;
-	u32 curr_tx;
-	bool need_tx;
+	struct {
+		u32 entry;
+		u32 latched;
+	} txfifo;
 
 	struct {
 		size_t num_entries;
@@ -63,6 +64,7 @@ struct p_sio0 {
 	u16 baud;
 
 	struct p_sched_ev tx_ev;
+	struct p_sched_ev ack_ev;
 };
 
 void p_attach_dev_to_sio0(struct p_ctx *ctx, struct p_sio0_dev *dev,

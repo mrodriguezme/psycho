@@ -25,17 +25,19 @@
 
 LOG_MOD(P_LOG_DIGITAL_CTRL);
 
-#define ADDR	(0x01)
 #define CTRL_ID (0x5A41)
 
 static bool addressed(u8 addr)
 {
-	return addr == ADDR;
+	return addr == 0x01;
 }
 
-static u8 transceive(void *dev, u8 mosi, bool *done)
+static u8 transceive(void *dev, u8 mosi)
 {
 	struct p_digital_ctrl *ctrl = dev;
+
+	if (!ctrl->dev.active)
+		return 0xFF;
 
 	switch (ctrl->state) {
 	case P_DIGITAL_CTRL_ID_LO:
@@ -57,13 +59,17 @@ static u8 transceive(void *dev, u8 mosi, bool *done)
 
 	case P_DIGITAL_CTRL_SW_HI:
 		ctrl->state = P_DIGITAL_CTRL_ID_LO;
-		*done	    = true;
-
 		return ctrl->latched_btns >> 8;
 
 	default:
 		__builtin_unreachable();
 	}
+}
+
+static void reset(void *dev)
+{
+	struct p_digital_ctrl *ctrl = dev;
+	ctrl->state = P_DIGITAL_CTRL_ID_LO;
 }
 
 void p_digital_ctrl_init(struct p_ctx *ctx, struct p_digital_ctrl *ctrl)
@@ -75,6 +81,7 @@ void p_digital_ctrl_init(struct p_ctx *ctx, struct p_digital_ctrl *ctrl)
 	ctrl->dev.type	     = P_SIO0_DEV_TYPE_CTRL;
 	ctrl->dev.addressed  = addressed;
 	ctrl->dev.handle     = ctrl;
+	ctrl->dev.reset	     = reset;
 
 	ctrl->btns = UINT16_MAX;
 
