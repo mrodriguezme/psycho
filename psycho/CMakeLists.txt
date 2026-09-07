@@ -61,6 +61,7 @@ target_sources(
 	src/log.c
 	src/log.h
 	src/sched.c
+	src/sio0_dev.c
 	src/sched.h
 	src/sio0.c
 	src/str.c

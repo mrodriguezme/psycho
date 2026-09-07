@@ -20,53 +20,24 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-#pragma once
-
-#include <stddef.h>
-
-#include "compiler.h"
-#include "sio0_dev.h"
 #include "sched.h"
+#include "util.h"
+#include "sio0.h"
+#include "log.h"
 
-enum sio0_slot {
-	SLOT_1,
-	SLOT_2,
-	NUM_SLOTS,
-};
+LOG_MOD(P_LOG_SIO0);
 
-enum sio0_dev_type {
-	MEMCARD,
-	CTRL,
-	NUM_DEVS,
-};
+void p_sio0_dev_ack(struct p_sio0_dev *dev, uint delay_us, uint pulse_us)
+{
+	dev->ack_pulse_begin_ev.cb	 = p_sio0_dsr_assert;
+	dev->ack_pulse_begin_ev.ts	 = us_to_cycles(delay_us);
+	dev->ack_pulse_begin_ev.type	 = P_SCHED_EV_SIO0_DEV_ACK_PULSE_BEGIN;
+	dev->ack_pulse_begin_ev.userdata = dev;
 
-struct p_sio0 {
-	struct p_sio0_dev *dev[NUM_SLOTS][NUM_DEVS];
-	struct p_sio0_dev *curr_dev;
+	dev->ack_pulse_end_ev.cb   = p_sio0_dsr_deassert;
+	dev->ack_pulse_end_ev.ts   = us_to_cycles(delay_us + pulse_us);
+	dev->ack_pulse_end_ev.type = P_SCHED_EV_SIO0_DEV_ACK_PULSE_END;
 
-	struct {
-		u32 entry;
-		u32 latched;
-	} txfifo;
-
-	struct {
-		size_t num_entries;
-
-		union {
-			u8 entries[4];
-			u32 raw;
-		};
-	} rxfifo;
-
-	u32 stat;
-	u16 mode;
-	u16 ctrl;
-	u16 baud;
-
-	u8 last_rx;
-
-	struct p_sched_ev tx_ev;
-};
-
-void p_attach_dev_to_sio0(struct p_ctx *ctx, struct p_sio0_dev *dev,
-			  enum sio0_slot slot) P_NONNULL;
+	p_sched_add(dev->ctx, &dev->ack_pulse_begin_ev);
+	p_sched_add(dev->ctx, &dev->ack_pulse_end_ev);
+}

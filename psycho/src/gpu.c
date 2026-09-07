@@ -66,8 +66,10 @@ P_NODISCARD static uint ysiz_mask_cpy(u16 ysiz)
 	return ((ysiz - 1) & 0x1FF) + 1;
 }
 
-P_NONNULL static void on_vblank(struct p_ctx *ctx)
+P_NONNULL static void on_vblank(struct p_ctx *ctx, void *userdata)
 {
+	(void)userdata;
+
 	if (ctx->cfg.on_vblank)
 		ctx->cfg.on_vblank(ctx);
 

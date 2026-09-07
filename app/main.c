@@ -228,14 +228,6 @@ static void sdl_process_ev(SDL_Event *ev)
 		SDL_SetAtomicInt(&emu.running, 0);
 		break;
 
-	case SDL_EVENT_KEY_DOWN:
-		emu_btn_press(&emu, ev);
-		break;
-
-	case SDL_EVENT_KEY_UP:
-		emu_btn_rel(&emu, ev);
-		break;
-
 	default:
 		break;
 	}

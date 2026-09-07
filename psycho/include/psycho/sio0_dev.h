@@ -23,7 +23,7 @@
 #pragma once
 
 #include <stdbool.h>
-#include "types.h"
+#include "sched.h"
 
 struct p_ctx;
 
@@ -33,12 +33,17 @@ enum p_sio0_dev_type {
 };
 
 struct p_sio0_dev {
-	u8 (*transceive)(void *dev, const u8 mosi);
-	bool (*addressed)(const u8 addr);
+	struct p_ctx *ctx;
+	void *handle;
+
+	u8 (*transceive)(void *dev, u8 mosi);
 	void (*reset)(void *dev);
 
-	enum p_sio0_dev_type type;
 	const char *name;
-	void *handle;
-	bool active;
+	enum p_sio0_dev_type type;
+
+	struct p_sched_ev ack_pulse_begin_ev;
+	struct p_sched_ev ack_pulse_end_ev;
 };
+
+void p_sio0_dev_ack(struct p_sio0_dev *dev, uint delay_us, uint pulse_us);

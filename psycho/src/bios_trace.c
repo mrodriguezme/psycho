@@ -30,12 +30,9 @@
 #include "bus.h"
 #include "cpu_defs.h"
 #include "log.h"
-#include "util.h"
 #include "str.h"
 
 LOG_MOD(P_LOG_BIOS);
-
-#define JR_RA (0x03E00008)
 
 static void on_putchar(struct p_ctx *ctx, struct p_bios_frame *frame);
 

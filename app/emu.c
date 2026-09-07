@@ -30,104 +30,53 @@
 #include "ansi-color-codes.h"
 
 static struct emu_runner *m_emu;
+u16 btns_prev = 0;
 
-void emu_btn_press(struct emu_runner *emu, SDL_Event *ev)
+static void emu_poll_ctrl(struct emu_runner *emu)
 {
-	if (ev->key.repeat)
-		return;
+	const bool *keys	      = SDL_GetKeyboardState(NULL);
+	enum p_digital_ctrl_btns mask = 0;
 
-	switch (ev->key.key) {
-	case SDLK_DOWN:
-		p_digital_ctrl_btn_press(&emu->ctrl, P_DIGITAL_CTRL_DN);
-		break;
+	if (keys[SDL_SCANCODE_DOWN])
+		mask |= P_DIGITAL_CTRL_DN;
 
-	case SDLK_UP:
-		p_digital_ctrl_btn_press(&emu->ctrl, P_DIGITAL_CTRL_UP);
-		break;
+	if (keys[SDL_SCANCODE_UP])
+		mask |= P_DIGITAL_CTRL_UP;
 
-	case SDLK_LEFT:
-		p_digital_ctrl_btn_press(&emu->ctrl, P_DIGITAL_CTRL_LT);
-		break;
+	if (keys[SDL_SCANCODE_LEFT])
+		mask |= P_DIGITAL_CTRL_LT;
 
-	case SDLK_RIGHT:
-		p_digital_ctrl_btn_press(&emu->ctrl, P_DIGITAL_CTRL_RT);
-		break;
+	if (keys[SDL_SCANCODE_RIGHT])
+		mask |= P_DIGITAL_CTRL_RT;
 
-	case SDLK_X:
-		p_digital_ctrl_btn_press(&emu->ctrl, P_DIGITAL_CTRL_CROSS);
-		break;
+	if (keys[SDL_SCANCODE_X])
+		mask |= P_DIGITAL_CTRL_CROSS;
 
-	case SDLK_O:
-		p_digital_ctrl_btn_press(&emu->ctrl, P_DIGITAL_CTRL_CIR);
-		break;
+	if (keys[SDL_SCANCODE_O])
+		mask |= P_DIGITAL_CTRL_CIR;
 
-	case SDLK_S:
-		p_digital_ctrl_btn_press(&emu->ctrl, P_DIGITAL_CTRL_SQR);
-		break;
+	if (keys[SDL_SCANCODE_S])
+		mask |= P_DIGITAL_CTRL_SQR;
 
-	case SDLK_T:
-		p_digital_ctrl_btn_press(&emu->ctrl, P_DIGITAL_CTRL_TRI);
-		break;
+	if (keys[SDL_SCANCODE_T])
+		mask |= P_DIGITAL_CTRL_TRI;
 
-	case SDLK_RETURN:
-		p_digital_ctrl_btn_press(&emu->ctrl, P_DIGITAL_CTRL_START);
-		break;
+	if (keys[SDL_SCANCODE_RETURN])
+		mask |= P_DIGITAL_CTRL_START;
 
-	case SDLK_SPACE:
-		p_digital_ctrl_btn_press(&emu->ctrl, P_DIGITAL_CTRL_SEL);
-		break;
+	if (keys[SDL_SCANCODE_SPACE])
+		mask |= P_DIGITAL_CTRL_SEL;
 
-	default:
-		break;
-	}
-}
+	enum p_digital_ctrl_btns pressed  = mask & ~btns_prev;
+	enum p_digital_ctrl_btns released = btns_prev & ~mask;
 
-void emu_btn_rel(struct emu_runner *emu, SDL_Event *ev)
-{
-	switch (ev->key.key) {
-	case SDLK_DOWN:
-		p_digital_ctrl_btn_rel(&emu->ctrl, P_DIGITAL_CTRL_DN);
-		break;
+	if (pressed)
+		p_digital_ctrl_btn_press(&emu->ctrl, pressed);
 
-	case SDLK_UP:
-		p_digital_ctrl_btn_rel(&emu->ctrl, P_DIGITAL_CTRL_UP);
-		break;
+	if (released)
+		p_digital_ctrl_btn_rel(&emu->ctrl, released);
 
-	case SDLK_LEFT:
-		p_digital_ctrl_btn_rel(&emu->ctrl, P_DIGITAL_CTRL_LT);
-		break;
-
-	case SDLK_RIGHT:
-		p_digital_ctrl_btn_rel(&emu->ctrl, P_DIGITAL_CTRL_RT);
-		break;
-
-	case SDLK_X:
-		p_digital_ctrl_btn_rel(&emu->ctrl, P_DIGITAL_CTRL_CROSS);
-		break;
-
-	case SDLK_O:
-		p_digital_ctrl_btn_rel(&emu->ctrl, P_DIGITAL_CTRL_CIR);
-		break;
-
-	case SDLK_S:
-		p_digital_ctrl_btn_rel(&emu->ctrl, P_DIGITAL_CTRL_SQR);
-		break;
-
-	case SDLK_T:
-		p_digital_ctrl_btn_rel(&emu->ctrl, P_DIGITAL_CTRL_TRI);
-		break;
-
-	case SDLK_RETURN:
-		p_digital_ctrl_btn_rel(&emu->ctrl, P_DIGITAL_CTRL_START);
-		break;
-
-	case SDLK_SPACE:
-		p_digital_ctrl_btn_rel(&emu->ctrl, P_DIGITAL_CTRL_SEL);
-		break;
-
-	default:
-		break;
-	}
+	btns_prev = mask;
 }
 
 static void on_vblank(struct p_ctx *ctx)
@@ -185,9 +134,11 @@ void emu_init(struct emu_runner *emu, u8 *bios_data, u8 *exe_data,
 
 	cfg->log.log_cb = log_cb;
 
-	cfg->log.mod[P_LOG_CTX]	  = P_LOG_TRACE;
-	cfg->log.mod[P_LOG_BIOS]  = P_LOG_INFO;
-	//cfg->log.mod[P_LOG_SIO0] = P_LOG_TRACE;
+	cfg->log.mod[P_LOG_CTX]		 = P_LOG_TRACE;
+	cfg->log.mod[P_LOG_BIOS]	 = P_LOG_INFO;
+	cfg->log.mod[P_LOG_DIGITAL_CTRL] = P_LOG_TRACE;
+	cfg->log.mod[P_LOG_SIO0]	 = P_LOG_TRACE;
+	cfg->log.mod[P_LOG_SCHED]	 = P_LOG_TRACE;
 
 	cfg->bios_trace.stdout_line = on_stdout_line;
 	cfg->bios_trace.deref_ptrs  = true;
@@ -214,6 +165,8 @@ static int emu_thread_func(void *data)
 	u32 last_frame_count = SDL_GetAtomicInt(&m_emu->frame_count);
 
 	while (SDL_GetAtomicInt(&m_emu->running)) {
+		emu_poll_ctrl(m_emu);
+
 		const Uint64 start_ns = SDL_GetTicksNS();
 		p_run_until_ev(&m_emu->ctx);
 
@@ -226,10 +179,10 @@ static int emu_thread_func(void *data)
 		const Uint64 diff   = end_ns - start_ns;
 		const Uint64 target = 1000000000 / 60;
 
+#if 0
 		if (diff < target)
-			;
-			//SDL_DelayNS(target - diff);
-
+			SDL_DelayNS(target - diff);
+#endif
 		last_frame_count = current_frame_count;
 	}
 	return 0;

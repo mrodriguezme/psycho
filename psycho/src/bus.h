@@ -36,4 +36,4 @@ void p_store16(struct p_ctx *ctx, u32 paddr, u16 halfword) P_NONNULL;
 
 void p_store8(struct p_ctx *ctx, u32 paddr, u8 byte) P_NONNULL;
 
-P_PURE void *p_get_mem_area(struct p_ctx *ctx, u32 paddr) P_NONNULL;
+P_CONST void *p_get_mem_area(struct p_ctx *ctx, u32 paddr) P_NONNULL;

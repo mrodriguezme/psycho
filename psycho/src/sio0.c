@@ -88,47 +88,22 @@ LOG_MOD(P_LOG_SIO0);
 #define CTRL_DSR_INT_EN		    (1 << 12)
 #define CTRL_PORT_SEL		    (1 << 13)
 
-static void transceive_event(struct p_ctx *ctx);
-static void ack_event(struct p_ctx *ctx);
-
-/**
- * @brief Raise the SIO0 interrupt.
- *
- * Sets STAT_IRQ in the status register and asserts the SIO0 line on the
- * interrupt controller.
- *
- * @param ctx Emulator context.
- */
 P_NONNULL static void raise_irq(struct p_ctx *ctx)
 {
+	if (ctx->sio0.stat & STAT_IRQ)
+		return;
+
+	LOG_TRACE(ctx, "IRQ asserted");
+
 	ctx->sio0.stat |= STAT_IRQ;
 	p_irq_pend(ctx, IRQ_SIO0);
 }
 
-/**
- * @brief Determine which peripheral slot is currently selected.
- *
- * Reflects the state of the CTRL_PORT_SEL bit in SIO0_CTRL: peripherals
- * connected to the non-selected slot do not receive the clock/data lines and
- * will not respond to transactions.
- *
- * @param ctx Emulator context.
- * @return The currently selected slot (SLOT_1 or SLOT_2).
- */
 P_NODISCARD P_NONNULL static enum sio0_slot selected_slot(struct p_ctx *ctx)
 {
 	return !(ctx->sio0.ctrl & CTRL_PORT_SEL) ? SLOT_1 : SLOT_2;
 }
 
-/**
- * @brief Reset all peripherals attached to the currently selected slot.
- *
- * Iterates every device index for the slot chosen by selected_slot(), invoking
- * each attached device's reset() callback and clearing its "active" (addressed)
- * state. Devices in the non-selected slot are left untouched.
- *
- * @param ctx Emulator context.
- */
 P_NONNULL static void reset_peripherals(struct p_ctx *ctx)
 {
 	enum sio0_slot slot = selected_slot(ctx);
@@ -140,20 +115,12 @@ P_NONNULL static void reset_peripherals(struct p_ctx *ctx)
 			continue;
 
 		dev->reset(dev);
-		dev->active = false;
 
 		LOG_DBG(ctx, "peripheral %zu (\"%s\") reset in slot %u", i + 1,
 			dev->name, slot);
 	}
 }
 
-/**
- * @brief Get the baud rate reload multiplier from the current mode register.
- *
- * @param ctx Emulator context.
- * @return The multiplier (1, 16, or 64) selected by the mode register's baud
- *         reload factor field.
- */
 P_NODISCARD P_NONNULL static uint baud_fact_get(struct p_ctx *ctx)
 {
 	static const uint mul[] = {
@@ -166,83 +133,44 @@ P_NODISCARD P_NONNULL static uint baud_fact_get(struct p_ctx *ctx)
 		   MODE_BAUD_RELOAD_FACTOR_SHIFT];
 }
 
-/**
- * @brief Get the number of bits per transmitted/received word.
- *
- * Decodes the character length field from the MODE register: the raw field
- * value (0-3, MODE_CHAR_LEN_5BIT..MODE_CHAR_LEN_8BIT) is added to a base of
- * 5 bits, yielding 5, 6, 7, or 8 bits per word.
- *
- * @param ctx Emulator context.
- * @return Word length in bits (5-8).
- */
 P_NODISCARD P_NONNULL static uint word_len_get(struct p_ctx *ctx)
 {
 	return 5 +
 	       ((ctx->sio0.mode & MODE_CHAR_LEN_MASK) >> MODE_CHAR_LEN_SHIFT);
 }
 
-/**
- * @brief Get the RX FIFO fill level that should trigger an interrupt.
- *
- * Decodes the CTRL_RX_INT_MODE field from the CTRL register into the
- * corresponding byte count (1, 2, 4, or 8).
- *
- * @param ctx Emulator context.
- * @return Number of bytes the RX FIFO must hold before an RX interrupt is
- *         raised.
- */
 P_NODISCARD P_NONNULL static uint rxfifo_intr_lvl_get(struct p_ctx *ctx)
 {
-	static const uint tbl[] = { [CTRL_RX_INT_IRQ_ONE_BYTE]	  = 1,
-				    [CTRL_RX_INT_IRQ_TWO_BYTES]	  = 2,
-				    [CTRL_RX_INT_IRQ_FOUR_BYTES]  = 4,
-				    [CTRL_RX_INT_IRQ_EIGHT_BYTES] = 8 };
+	static const uint tbl[] = {
+		// clang-format off
+
+		[CTRL_RX_INT_IRQ_ONE_BYTE]	= 1,
+		[CTRL_RX_INT_IRQ_TWO_BYTES]	= 2,
+		[CTRL_RX_INT_IRQ_FOUR_BYTES]	= 4,
+		[CTRL_RX_INT_IRQ_EIGHT_BYTES]	= 8
+
+		// clang-format on
+	};
 
 	return tbl[(ctx->sio0.ctrl & CTRL_RX_INT_MODE_MASK) >>
 		   CTRL_RX_INT_MODE_SHIFT];
 }
 
-/**
- * @brief Convert a baud reload value into an actual bit rate in bps.
- *
- * @param ctx Emulator context.
- * @param baud Raw baud reload value (as written to SIO0_BAUD).
- * @return The resulting bit rate in bits per second.
- */
 P_NODISCARD P_NONNULL static uint calc_baud(struct p_ctx *ctx, u16 baud)
 {
 	baud *= baud_fact_get(ctx);
 	return P_CPU_CLKFREQ_HZ / baud;
 }
 
-/**
- * @brief Push a received byte into the RX FIFO.
- *
- * Warns if the FIFO already has entries pending (may indicate software isn't
- * draining it fast enough). On overflow, the newest byte overwrites the last
- * slot in the FIFO (rather than being dropped), matching real hardware
- * behavior, and a warning is logged. On a successful push, raises the SIO0
- * interrupt if RX interrupts are enabled and the FIFO has just reached the
- * configured interrupt trigger level.
- *
- * @param ctx  Emulator context.
- * @param byte Byte received from the currently addressed device (or 0xFF if no
- *             device responded).
- */
 P_NONNULL static void rx_push(struct p_ctx *ctx, u8 byte)
 {
-	LOG_TRACE(ctx, "rxfifo push request: 0x%02X", byte);
+	LOG_TRACE(ctx, "RX FIFO push request: 0x%02X", byte);
 
 	size_t num_entries = ctx->sio0.rxfifo.num_entries;
 
 	if (unlikely(ctx->sio0.rxfifo.num_entries)) {
 		const char *plural = (num_entries > 1) ? "entries" : "entry";
-
-		LOG_WARN(ctx,
-			 "rx fifo has %zu %s - something is probably going "
-			 "wrong",
-			 num_entries, plural);
+		LOG_WARN(ctx, "RX FIFO contains %zu %s", num_entries, plural);
 	}
 
 	size_t cnt = ARRAY_SIZE(ctx->sio0.rxfifo.entries);
@@ -256,9 +184,9 @@ P_NONNULL static void rx_push(struct p_ctx *ctx, u8 byte)
 		ctx->sio0.rxfifo.entries[cnt] = byte;
 
 		LOG_WARN(ctx,
-			 "rx fifo overflow; replaced 0x%02X from entries[%zu] "
-			 "with 0x%02X; something is probably going wrong",
-			 old, cnt, byte);
+			 "RX FIFO overflow; replaced last RX FIFO entry 0x%02X "
+			 "with 0x%02X",
+			 old, byte);
 
 		return;
 	}
@@ -270,26 +198,45 @@ P_NONNULL static void rx_push(struct p_ctx *ctx, u8 byte)
 		if (ctx->sio0.rxfifo.num_entries == rxfifo_intr_lvl_get(ctx))
 			raise_irq(ctx);
 
-	LOG_TRACE(ctx, "rxfifo <- 0x%02X", byte);
+	LOG_TRACE(ctx, "Pushed 0x%02X to RX FIFO", byte);
 }
 
-/**
- * @brief Begin transmitting the currently latched TX byte.
- *
- * Schedules transceive_event() to fire once the current byte has finished
- * shifting out, and clears STAT_TX_IDLE while the transfer is in flight.
- * Cancels any previously pending tx_ev first, since p_sched_add() does
- * not permit re-adding an already-valid event.
- *
- * @param ctx Emulator context.
- */
+static void transceive_event(struct p_ctx *ctx, void *userdata)
+{
+	(void)userdata;
+
+	enum sio0_slot slot = selected_slot(ctx);
+
+	u8 miso = 0xFF;
+
+	for (size_t i = 0; i < NUM_DEVS; ++i) {
+		struct p_sio0_dev *dev = ctx->sio0.dev[slot][i];
+
+		if (!dev)
+			continue;
+
+		// All devices on the bus will see the transmitted byte even if
+		// they haven't been addressed, but only the addressed device's
+		// response will end up in the RXFIFO. At the beginning of every
+		// transaction (CS going low), HI-Z is guaranteed (0xFF).
+		u8 ret = dev->transceive(dev->handle, ctx->sio0.txfifo.latched);
+
+		if (ctx->sio0.curr_dev == dev) {
+			miso = ret;
+			continue;
+		}
+	}
+
+	rx_push(ctx, miso);
+	ctx->sio0.stat |= STAT_TX_IDLE;
+}
+
 P_NONNULL static void tx(struct p_ctx *ctx)
 {
-	if (unlikely(ctx->sio0.tx_ev.valid))
-		p_sched_del(ctx, &ctx->sio0.tx_ev);
+	uint baud_fact = baud_fact_get(ctx);
+	uint word_len  = word_len_get(ctx);
 
-	ctx->sio0.tx_ev.ts =
-		ctx->sio0.baud * baud_fact_get(ctx) * word_len_get(ctx);
+	ctx->sio0.tx_ev.ts = ctx->sio0.baud * baud_fact * word_len;
 
 	ctx->sio0.tx_ev.cb	  = transceive_event;
 	ctx->sio0.tx_ev.type	  = P_SCHED_EV_SIO0_TX;
@@ -299,10 +246,45 @@ P_NONNULL static void tx(struct p_ctx *ctx)
 	ctx->sio0.stat &= ~STAT_TX_IDLE;
 }
 
+void p_sio0_dsr_assert(struct p_ctx *ctx, void *dev)
+{
+	enum sio0_slot slot = selected_slot(ctx);
+
+	if (!ctx->sio0.curr_dev) {
+		ctx->sio0.curr_dev = dev;
+
+		LOG_TRACE(ctx, "Peripheral \"%s\" in slot %u addressed",
+			  ctx->sio0.curr_dev->name, slot + 1);
+	}
+
+	LOG_TRACE(ctx,
+		  "Peripheral \"%s\" in slot %u asserted ACK pulse; DSR "
+		  "asserted",
+		  ctx->sio0.curr_dev->name, slot + 1);
+
+	ctx->sio0.stat |= STAT_DSR_IN_LVL;
+
+	if (likely(ctx->sio0.ctrl & CTRL_DSR_INT_EN))
+		raise_irq(ctx);
+}
+
+void p_sio0_dsr_deassert(struct p_ctx *ctx, void *userdata)
+{
+	(void)userdata;
+
+	enum sio0_slot slot = selected_slot(ctx);
+
+	LOG_TRACE(ctx,
+		  "Peripheral \"%s\" in slot %u deasserted ACK pulse; DSR "
+		  "deasserted",
+		  ctx->sio0.curr_dev->name, slot + 1);
+
+	ctx->sio0.stat &= ~STAT_DSR_IN_LVL;
+}
+
 void p_sio0_rst(struct p_ctx *ctx)
 {
 	p_sched_del(ctx, &ctx->sio0.tx_ev);
-	p_sched_del(ctx, &ctx->sio0.ack_ev);
 
 	memset(&ctx->sio0.rxfifo, 0, sizeof(ctx->sio0.rxfifo));
 	memset(&ctx->sio0.txfifo, 0, sizeof(ctx->sio0.txfifo));
@@ -314,64 +296,9 @@ void p_sio0_rst(struct p_ctx *ctx)
 	p_sio0_baud_set(ctx, 0x0088);
 }
 
-static void ack_event(struct p_ctx *ctx)
-{
-	LOG_INFO(ctx, "ack!");
-}
-
-static void transceive_event(struct p_ctx *ctx)
-{
-	enum sio0_slot slot = selected_slot(ctx);
-
-	u8 miso	 = 0xFF;
-	bool ack = false;
-
-	for (size_t i = 0; i < NUM_DEVS; ++i) {
-		struct p_sio0_dev *dev = ctx->sio0.dev[slot][i];
-
-		if (!dev)
-			continue;
-
-		// All devices on the bus will see the transmitted byte even if
-		// they haven't been addressed.
-		u8 ret = dev->transceive(dev->handle, ctx->sio0.txfifo.latched);
-
-		if (dev->active) {
-			miso = ret;
-			ack  = true;
-
-			continue;
-		}
-
-		// This device is currently not being addressed; should it be?
-		if (dev->addressed(ctx->sio0.txfifo.latched)) {
-			dev->active = true;
-
-			ctx->sio0.curr_dev = dev;
-			ack		   = true;
-		}
-	}
-
-	rx_push(ctx, miso);
-	ctx->sio0.stat |= STAT_TX_IDLE;
-
-	if (!ack)
-		return;
-
-	if (ctx->sio0.ack_ev.valid)
-		p_sched_del(ctx, &ctx->sio0.ack_ev);
-
-	ctx->sio0.ack_ev.ts	   = us_to_cycles(50);
-	ctx->sio0.ack_ev.cb	   = ack_event;
-	ctx->sio0.ack_ev.type	   = P_SCHED_EV_SIO0_DEV_ACK;
-	ctx->sio0.ack_ev.permanent = false;
-
-	p_sched_add(ctx, &ctx->sio0.ack_ev);
-}
-
 void p_sio0_tx(struct p_ctx *ctx, u8 byte)
 {
-	LOG_TRACE(ctx, "tx request <- 0x%02X", byte);
+	LOG_TRACE(ctx, "TX FIFO push request: 0x%02X", byte);
 
 	if (unlikely(!(ctx->sio0.ctrl & CTRL_TXEN))) {
 		LOG_WARN(ctx, "TXEN disabled; dropping request (actual "
@@ -383,9 +310,9 @@ void p_sio0_tx(struct p_ctx *ctx, u8 byte)
 		// Writing to this register while SIO_STAT.0=Busy causes the old
 		// value to be overwritten.
 		LOG_WARN(ctx,
-			 "overwriting txfifo with 0x%02X as it is full (txfifo "
-			 "contained 0x%02X)",
-			 byte, ctx->sio0.txfifo.entry);
+			 "TX FIFO overflow; replacing old entry 0x%02X with "
+			 "0x%02X",
+			 ctx->sio0.txfifo.entry, byte);
 
 		ctx->sio0.txfifo.entry = byte;
 		return;
@@ -398,22 +325,27 @@ void p_sio0_tx(struct p_ctx *ctx, u8 byte)
 u8 p_sio0_rx_pop8(struct p_ctx *ctx)
 {
 	if (unlikely(!ctx->sio0.rxfifo.num_entries)) {
-		LOG_WARN(ctx, "rx fifo underflow, rxfifo -> 0xFF");
-		return 0xFF;
+		// Reading from Empty RX FIFO returns either the most recently
+		// received byte or zero.
+		LOG_WARN(ctx,
+			 "RX FIFO underflow; returning last RX byte 0x%02X",
+			 ctx->sio0.last_rx);
+
+		return ctx->sio0.last_rx;
 	}
 
 	u8 byte = ctx->sio0.rxfifo.entries[0];
-
-	LOG_TRACE(ctx, "rxfifo -> 0x%02X", byte);
+	LOG_TRACE(ctx, "RX FIFO popped; returning 0x%02X", byte);
 
 	ctx->sio0.rxfifo.num_entries--;
 
 	for (size_t i = 0; i < ctx->sio0.rxfifo.num_entries; ++i)
 		ctx->sio0.rxfifo.entries[i] = ctx->sio0.rxfifo.entries[i + 1];
 
-	if (!ctx->sio0.rxfifo.num_entries)
+	if (unlikely(!ctx->sio0.rxfifo.num_entries))
 		ctx->sio0.stat &= ~STAT_RX_FIFO_NOT_EMPTY;
 
+	ctx->sio0.last_rx = byte;
 	return byte;
 }
 
@@ -427,10 +359,16 @@ void p_sio0_mode_set(struct p_ctx *ctx, u16 mode)
 		[MODE_BAUD_RELOAD_MUL64]			     = "MUL64"
 	};
 
-	static const char *char_len_to_str[] = { [MODE_CHAR_LEN_5BIT] = "5",
-						 [MODE_CHAR_LEN_6BIT] = "6",
-						 [MODE_CHAR_LEN_7BIT] = "7",
-						 [MODE_CHAR_LEN_8BIT] = "8" };
+	static const char *char_len_to_str[] = {
+		// clang-format off
+
+		[MODE_CHAR_LEN_5BIT] = "5",
+		[MODE_CHAR_LEN_6BIT] = "6",
+		[MODE_CHAR_LEN_7BIT] = "7",
+		[MODE_CHAR_LEN_8BIT] = "8"
+
+		// clang-format on
+	};
 
 	const char *mul = mul_to_str[(mode & MODE_BAUD_RELOAD_FACTOR_MASK) >>
 				     MODE_BAUD_RELOAD_FACTOR_SHIFT];
@@ -443,10 +381,10 @@ void p_sio0_mode_set(struct p_ctx *ctx, u16 mode)
 	const char *cpol     = (mode & MODE_CPOL) ? "low when idle" :
 						    "high when idle";
 
-	LOG_INFO(ctx,
-		 "mode set to 0x%04X (baudrate reload factor = %s, charlen = "
-		 "%s bits, parity = %s, parity type = %s, clock polarity = %s)",
-		 mode, mul, char_len, par, par_type, cpol);
+	LOG_DBG(ctx,
+		"mode set to 0x%04X (baudrate reload factor = %s, charlen = "
+		"%s bits, parity = %s, parity type = %s, clock polarity = %s)",
+		mode, mul, char_len, par, par_type, cpol);
 
 	if (unlikely((mode & (MODE_CHAR_LEN_MASK | MODE_CPOL | MODE_PAR_EN)) !=
 		     MODE_EXPECTED))
@@ -462,8 +400,9 @@ void p_sio0_ctrl_set(struct p_ctx *ctx, u16 ctrl)
 {
 	if (ctrl & CTRL_ACK) {
 		ctx->sio0.stat &= ~(STAT_RX_PAR_ERR | STAT_IRQ);
+
 		LOG_DBG(ctx,
-			"irq acknowledged; STAT_RX_PAR_ERR and STAT_IRQ reset");
+			"IRQ acknowledged; STAT_RX_PAR_ERR and STAT_IRQ reset");
 	}
 
 	if (ctrl & CTRL_RESET) {
@@ -495,8 +434,7 @@ void p_sio0_ctrl_set(struct p_ctx *ctx, u16 ctrl)
 							  "disabled";
 	const char *port_sel = (ctrl & CTRL_PORT_SEL) ? "port 2" : "port 1";
 
-	LOG_INFO(
-		ctx,
+	LOG_DBG(ctx,
 		"ctrl set to 0x%04X (txen = %s, dtr output level = %s, rxen = "
 		"%s, rx interrupt mode = %s, tx interrupt enable = %s, rx "
 		"interrupt enable = %s, dsr interrupt enable = %s, port select "
@@ -505,10 +443,10 @@ void p_sio0_ctrl_set(struct p_ctx *ctx, u16 ctrl)
 		rx_intr, dsr_intr, port_sel);
 
 	if (bits_became_set(ctx->sio0.ctrl, ctrl, CTRL_DTR_OUT_LVL)) {
-		LOG_DBG(ctx, "DTR output level set high - CS has gone low");
+		LOG_DBG(ctx, "DTR output level set high; CS has gone low");
 		reset_peripherals(ctx);
 	} else if (bits_became_clr(ctx->sio0.ctrl, ctrl, CTRL_DTR_OUT_LVL)) {
-		LOG_DBG(ctx, "DTR output level set low - CS has gone high");
+		LOG_DBG(ctx, "DTR output level set low; CS has gone high");
 		ctx->sio0.curr_dev = NULL;
 	}
 
@@ -537,7 +475,7 @@ void p_attach_dev_to_sio0(struct p_ctx *ctx, struct p_sio0_dev *dev,
 
 	ctx->sio0.dev[slot][dev->type] = dev;
 
-	LOG_INFO(ctx, "attached peripheral \"%s\" to slot %u (type = %s)",
+	LOG_INFO(ctx, "connected peripheral \"%s\" to slot %u (type = %s)",
 		 dev->name, slot,
 		 dev->type == P_SIO0_DEV_TYPE_CTRL ? "controller" : "memcard");
 }

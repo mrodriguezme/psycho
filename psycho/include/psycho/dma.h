@@ -22,51 +22,30 @@
 
 #pragma once
 
-#include <stddef.h>
-
-#include "compiler.h"
-#include "sio0_dev.h"
 #include "sched.h"
+#include "types.h"
 
-enum sio0_slot {
-	SLOT_1,
-	SLOT_2,
-	NUM_SLOTS,
+#ifdef __cplusplus
+extern "C" {
+#endif // __cplusplus
+
+struct p_ctx;
+
+#define P_DMA_NUM_CH (7)
+
+struct p_dma_ch {
+	u32 madr;
+	u32 bcr;
+	u32 chcr;
+	struct p_sched_ev xfer_ev;
 };
 
-enum sio0_dev_type {
-	MEMCARD,
-	CTRL,
-	NUM_DEVS,
+struct p_dma {
+	struct p_dma_ch ch[P_DMA_NUM_CH];
+	u32 dpcr;
+	u32 dicr;
 };
 
-struct p_sio0 {
-	struct p_sio0_dev *dev[NUM_SLOTS][NUM_DEVS];
-	struct p_sio0_dev *curr_dev;
-
-	struct {
-		u32 entry;
-		u32 latched;
-	} txfifo;
-
-	struct {
-		size_t num_entries;
-
-		union {
-			u8 entries[4];
-			u32 raw;
-		};
-	} rxfifo;
-
-	u32 stat;
-	u16 mode;
-	u16 ctrl;
-	u16 baud;
-
-	u8 last_rx;
-
-	struct p_sched_ev tx_ev;
-};
-
-void p_attach_dev_to_sio0(struct p_ctx *ctx, struct p_sio0_dev *dev,
-			  enum sio0_slot slot) P_NONNULL;
+#ifdef __cplusplus
+}
+#endif // __cplusplus

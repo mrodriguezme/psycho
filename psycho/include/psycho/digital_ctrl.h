@@ -30,6 +30,7 @@ extern "C" {
 #endif // __cplusplus
 
 enum p_digital_ctrl_state {
+	P_DIGITAL_CTRL_HI_Z,
 	P_DIGITAL_CTRL_ID_LO,
 	P_DIGITAL_CTRL_ID_HI,
 	P_DIGITAL_CTRL_SW_LO,
@@ -58,11 +59,9 @@ enum p_digital_ctrl_btns {
 };
 
 struct p_digital_ctrl {
-	struct p_ctx *ctx;
 	struct p_sio0_dev dev;
 	enum p_digital_ctrl_state state;
 	u16 btns;
-	u16 latched_btns;
 };
 
 void p_digital_ctrl_init(struct p_ctx *ctx,

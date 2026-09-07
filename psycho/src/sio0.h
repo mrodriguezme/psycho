@@ -42,3 +42,6 @@ void p_sio0_mode_set(struct p_ctx *ctx, u16 mode) P_NONNULL;
 void p_sio0_ctrl_set(struct p_ctx *ctx, u16 ctrl) P_NONNULL;
 
 void p_sio0_baud_set(struct p_ctx *ctx, u16 baud) P_NONNULL;
+
+void p_sio0_dsr_assert(struct p_ctx *ctx, void *dev) P_NONNULL;
+void p_sio0_dsr_deassert(struct p_ctx *ctx, void *userdata) P_NONNULL;

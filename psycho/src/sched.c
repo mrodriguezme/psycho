@@ -31,9 +31,10 @@
 LOG_MOD(P_LOG_SCHED);
 
 static const char *ev_names[P_SCHED_EV_COUNT] = {
-	[P_SCHED_EV_VBLANK]	  = "vblank",
-	[P_SCHED_EV_SIO0_TX]	  = "sio0 tx",
-	[P_SCHED_EV_SIO0_DEV_ACK] = "sio0 dev ack"
+	[P_SCHED_EV_VBLANK]		      = "vblank",
+	[P_SCHED_EV_SIO0_TX]		      = "sio0 tx",
+	[P_SCHED_EV_SIO0_DEV_ACK_PULSE_BEGIN] = "sio0 dev ack begin",
+	[P_SCHED_EV_SIO0_DEV_ACK_PULSE_END]   = "sio0 dev ack end"
 };
 
 P_NODISCARD static size_t node_parent(size_t node)
@@ -118,7 +119,7 @@ void p_sched_run(struct p_ctx *ctx)
 	} else
 		p_sched_del(ctx, ev);
 
-	ev->cb(ctx);
+	ev->cb(ctx, ev->userdata);
 }
 
 void p_sched_add(struct p_ctx *ctx, struct p_sched_ev *ev)
