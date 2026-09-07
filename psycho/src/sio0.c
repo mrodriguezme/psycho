@@ -36,7 +36,9 @@ LOG_MOD(P_LOG_SIO0);
 #define STAT_RX_PAR_ERR		      (1 << 3)
 #define STAT_DSR_IN_LVL		      (1 << 7)
 #define STAT_IRQ		      (1 << 9)
-#define STAT_BAUD_TMR_MASK	      (0b11111111111111111111100000000000)
+
+// bits 11-31
+#define STAT_BAUD_TMR_MASK	      (0xFFFFF800)
 #define STAT_BAUD_TMR_SHIFT	      (11)
 
 #define MODE_BAUD_RELOAD_FACTOR_MASK  (0b0000000000000011)
@@ -115,9 +117,11 @@ P_NONNULL static void reset_peripherals(struct p_ctx *ctx)
 			continue;
 
 		dev->reset(dev);
+		p_sched_del(ctx, &dev->ack_pulse_begin_ev);
+		p_sched_del(ctx, &dev->ack_pulse_end_ev);
 
 		LOG_DBG(ctx, "peripheral %zu (\"%s\") reset in slot %u", i + 1,
-			dev->name, slot);
+			dev->name, slot + 1);
 	}
 }
 
@@ -221,10 +225,8 @@ static void transceive_event(struct p_ctx *ctx, void *userdata)
 		// transaction (CS going low), HI-Z is guaranteed (0xFF).
 		u8 ret = dev->transceive(dev->handle, ctx->sio0.txfifo.latched);
 
-		if (ctx->sio0.curr_dev == dev) {
+		if (ctx->sio0.curr_dev == dev)
 			miso = ret;
-			continue;
-		}
 	}
 
 	rx_push(ctx, miso);
@@ -425,8 +427,8 @@ void p_sio0_ctrl_set(struct p_ctx *ctx, u16 ctrl)
 		[CTRL_RX_INT_IRQ_EIGHT_BYTES] = "8 bytes"
 	};
 
-	uint rx_intr_mode = (ctrl >> CTRL_RX_INT_MODE_SHIFT) &
-			    CTRL_RX_INT_MODE_MASK;
+	uint rx_intr_mode = (ctrl & CTRL_RX_INT_MODE_MASK) >>
+			    CTRL_RX_INT_MODE_SHIFT;
 
 	const char *tx_intr  = (ctrl & CTRL_TX_INT_EN) ? "enabled" : "disabled";
 	const char *rx_intr  = (ctrl & CTRL_RX_INT_EN) ? "enabled" : "disabled";
@@ -476,6 +478,6 @@ void p_attach_dev_to_sio0(struct p_ctx *ctx, struct p_sio0_dev *dev,
 	ctx->sio0.dev[slot][dev->type] = dev;
 
 	LOG_INFO(ctx, "connected peripheral \"%s\" to slot %u (type = %s)",
-		 dev->name, slot,
+		 dev->name, slot + 1,
 		 dev->type == P_SIO0_DEV_TYPE_CTRL ? "controller" : "memcard");
 }
