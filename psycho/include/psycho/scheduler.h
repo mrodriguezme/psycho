@@ -20,46 +20,50 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-#include <assert.h>
+#pragma once
+
+#include <stdbool.h>
 #include <stddef.h>
-#include <string.h>
+#include <stdint.h>
 
-#include "log.h"
+#ifdef __cplusplus
+extern "C" {
+#endif // __cplusplus
 
-DECLARE_LOG_MODULE(P_LOG_MODULE_CTX);
+struct psycho_ctx;
 
-struct p_ctx_cfg *p_cfg_get(struct p_ctx *ctx)
-{
-	return &ctx->cfg;
+enum {
+	PSYCHO_SCHEDULER_MAX_NUM_EVENTS = 25
+};
+
+enum psycho_scheduler_event_type {
+	PSYCHO_SCHEDULER_EVENT_TYPE_VBLANK,
+	PSYCHO_SCHEDULER_EVENT_TYPE_SIO0_TX,
+	PSYCHO_SCHEDULER_EVENT_TYPE_SIO0_DEVICE_ACK_PULSE_BEGIN,
+	PSYCHO_SCHEDULER_EVENT_TYPE_SIO0_DEVICE_ACK_PULSE_END,
+	PSYCHO_SCHEDULER_EVENT_TYPE_COUNT
+};
+
+struct psycho_scheduler_event {
+	uint64_t ts;
+	uint64_t period;
+
+	void (*cb)(struct psycho_ctx *ctx, void *userdata);
+	enum psycho_scheduler_event_type type;
+	bool permanent;
+
+	size_t idx;
+	bool valid;
+
+	void *userdata;
+};
+
+struct psycho_scheduler {
+	struct psycho_scheduler_event *events[PSYCHO_SCHEDULER_MAX_NUM_EVENTS];
+	size_t num_ev;
+	uint64_t ts_now;
+};
+
+#ifdef __cplusplus
 }
-
-void p_init(struct p_ctx *ctx)
-{
-	p_bios_trace_init(ctx);
-	p_gpu_init(ctx);
-
-	p_cpu_int_init(ctx);
-	p_rst(ctx);
-
-	LOG_INFO(ctx, "initialized");
-}
-
-void p_rst(struct p_ctx *ctx)
-{
-	p_sched_rst(ctx);
-	p_gpu_rst(ctx);
-	p_sio0_rst(ctx);
-
-	ctx->cpu.rst(ctx);
-	LOG_INFO(ctx, "reset");
-}
-
-void p_step(struct p_ctx *ctx)
-{
-}
-
-void p_run_until_ev(struct p_ctx *ctx)
-{
-	ctx->running = true;
-	ctx->cpu.run(ctx, UINT64_MAX, true);
-}
+#endif // __cplusplus

@@ -17,9 +17,8 @@
 
 #pragma once
 
-#include <stdint.h>
-
-#include "compiler.h"
+#include <stdbool.h>
+#include "defs.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -27,24 +26,33 @@ extern "C" {
 
 struct psycho_ctx;
 
-enum {
-	// 1KB
-	PSYCHO_BUS_SPAD_SIZE_BYTES = 1024,
-
-	// 512KB
-	PSYCHO_BUS_BIOS_SIZE_BYTES = 524288,
-
-	// 16 MB
-	PSYCHO_BUS_MAX_RAM_SIZE = 0x00FFFFFF
+struct psycho_cpu_interpreter_delay_slot {
+	size_t dst;
+	uint32_t val;
 };
 
-struct psycho_bus {
-	uint8_t ram[PSYCHO_BUS_MAX_RAM_SIZE];
-	uint8_t bios[PSYCHO_BUS_BIOS_SIZE_BYTES];
-	uint8_t spad[PSYCHO_BUS_SPAD_SIZE_BYTES];
-};
+struct psycho_cpu_interpreter {
+	uint32_t gpr[PSYCHO_CPU_GPR_COUNT];
+	uint32_t cop0[PSYCHO_CPU_COP0_CPR_COUNT];
 
-PSYCHO_NODISCARD PSYCHO_CONST uint8_t *psycho_bios_data_get(struct psycho_ctx *ctx) PSYCHO_NONNULL;
+	struct {
+		struct psycho_cpu_cop2_cpr_layout cpr;
+		struct psycho_cpu_cop2_ccr_layout ccr;
+	} cop2;
+
+	uint32_t pc;
+	uint32_t next_pc;
+	uint32_t delay_pc;
+	uint32_t instr;
+	uint32_t lo;
+	uint32_t hi;
+
+	struct psycho_cpu_interpreter_delay_slot load_delay_pending;
+	struct psycho_cpu_interpreter_delay_slot load_delay_next;
+
+	bool in_branch_delay;
+	bool next_in_branch_delay;
+};
 
 #ifdef __cplusplus
 }

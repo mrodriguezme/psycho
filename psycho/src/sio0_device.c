@@ -20,46 +20,24 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-#include <assert.h>
-#include <stddef.h>
-#include <string.h>
-
+#include "sched.h"
+#include "util.h"
+#include "devices/internal/sio0.h"
 #include "log.h"
 
-DECLARE_LOG_MODULE(P_LOG_MODULE_CTX);
+DECLARE_LOG_MODULE(PSYCHO_LOG_MODULE_SIO0);
 
-struct p_ctx_cfg *p_cfg_get(struct p_ctx *ctx)
+void p_sio0_dev_ack(struct p_sio0_dev *dev, uint delay_us, uint pulse_us)
 {
-	return &ctx->cfg;
-}
+	dev->ack_pulse_begin_ev.cb	 = p_sio0_dsr_assert;
+	dev->ack_pulse_begin_ev.ts	 = us_to_cycles(delay_us);
+	dev->ack_pulse_begin_ev.type	 = P_SCHED_EV_SIO0_DEV_ACK_PULSE_BEGIN;
+	dev->ack_pulse_begin_ev.userdata = dev;
 
-void p_init(struct p_ctx *ctx)
-{
-	p_bios_trace_init(ctx);
-	p_gpu_init(ctx);
+	dev->ack_pulse_end_ev.cb   = p_sio0_dsr_deassert;
+	dev->ack_pulse_end_ev.ts   = us_to_cycles(delay_us + pulse_us);
+	dev->ack_pulse_end_ev.type = P_SCHED_EV_SIO0_DEV_ACK_PULSE_END;
 
-	p_cpu_int_init(ctx);
-	p_rst(ctx);
-
-	LOG_INFO(ctx, "initialized");
-}
-
-void p_rst(struct p_ctx *ctx)
-{
-	p_sched_rst(ctx);
-	p_gpu_rst(ctx);
-	p_sio0_rst(ctx);
-
-	ctx->cpu.rst(ctx);
-	LOG_INFO(ctx, "reset");
-}
-
-void p_step(struct p_ctx *ctx)
-{
-}
-
-void p_run_until_ev(struct p_ctx *ctx)
-{
-	ctx->running = true;
-	ctx->cpu.run(ctx, UINT64_MAX, true);
+	p_sched_add(dev->ctx, &dev->ack_pulse_begin_ev);
+	p_sched_add(dev->ctx, &dev->ack_pulse_end_ev);
 }

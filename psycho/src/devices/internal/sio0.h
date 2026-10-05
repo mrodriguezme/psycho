@@ -20,46 +20,30 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-#include <assert.h>
-#include <stddef.h>
-#include <string.h>
+#pragma once
 
-#include "log.h"
+#include "psycho/ctx.h"
 
-DECLARE_LOG_MODULE(P_LOG_MODULE_CTX);
+enum {
+	SIO0_TX_DATA = 0x1F801040,
+	SIO0_RX_DATA = 0x1F801040,
+	SIO0_STAT    = 0x1F801044,
+	SIO0_MODE    = 0x1F801048,
+	SIO0_CTRL    = 0x1F80104A,
+	SIO0_BAUD    = 0x1F80104E
+};
 
-struct p_ctx_cfg *p_cfg_get(struct p_ctx *ctx)
-{
-	return &ctx->cfg;
-}
+void p_sio0_reset(struct psycho_ctx *ctx) P_NONNULL;
 
-void p_init(struct p_ctx *ctx)
-{
-	p_bios_trace_init(ctx);
-	p_gpu_init(ctx);
+void p_sio0_tx(struct psycho_ctx *ctx, u8 byte) P_NONNULL;
 
-	p_cpu_int_init(ctx);
-	p_rst(ctx);
+P_NODISCARD u8 p_sio0_rx_pop8(struct p_ctx *ctx) P_NONNULL;
 
-	LOG_INFO(ctx, "initialized");
-}
+void p_sio0_mode_set(struct psycho_ctx *ctx, u16 mode) P_NONNULL;
 
-void p_rst(struct p_ctx *ctx)
-{
-	p_sched_rst(ctx);
-	p_gpu_rst(ctx);
-	p_sio0_rst(ctx);
+void p_sio0_ctrl_set(struct psycho_ctx *ctx, u16 ctrl) P_NONNULL;
 
-	ctx->cpu.rst(ctx);
-	LOG_INFO(ctx, "reset");
-}
+void p_sio0_baud_set(struct psycho_ctx *ctx, u16 baud) P_NONNULL;
 
-void p_step(struct p_ctx *ctx)
-{
-}
-
-void p_run_until_ev(struct p_ctx *ctx)
-{
-	ctx->running = true;
-	ctx->cpu.run(ctx, UINT64_MAX, true);
-}
+void p_sio0_dsr_assert(struct psycho_ctx *ctx, void *dev) P_NONNULL;
+void p_sio0_dsr_deassert(struct psycho_ctx *ctx, void *userdata) P_NONNULL;

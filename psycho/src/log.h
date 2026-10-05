@@ -24,31 +24,29 @@
 
 #include "psycho/ctx.h"
 
-#define LOG_MOD(mod) static const enum p_log_mod m_log_mod = (mod)
+#define DECLARE_LOG_MODULE(mod)		  static const enum psycho_log_module m_log_module = (mod)
 
-#define MOD_LOG_LVL_ACTIVE(ctx, lvl) log_enabled((ctx), m_log_mod, (lvl))
+#define MODULE_LOG_LEVEL_ACTIVE(ctx, lvl) log_enabled((ctx), m_log_mod, (lvl))
 
-#define LOG_MSG(ctx, lvl, args...)                                \
+#define LOG_MESSAGE(ctx, lvl, args...)                            \
 	({                                                        \
 		if (MOD_LOG_LVL_ACTIVE((ctx), (lvl)))             \
 			p_log_msg((ctx), m_log_mod, (lvl), args); \
 	})
 
-#define LOG_INFO(ctx, args...)	LOG_MSG((ctx), P_LOG_INFO, args)
-#define LOG_WARN(ctx, args...)	LOG_MSG((ctx), P_LOG_WARN, args)
-#define LOG_ERR(ctx, args...)	LOG_MSG((ctx), P_LOG_ERR, args)
-#define LOG_DBG(ctx, args...)	LOG_MSG((ctx), P_LOG_DBG, args)
-#define LOG_TRACE(ctx, args...) LOG_MSG((ctx), P_LOG_TRACE, args)
+#define LOG_INFO(ctx, args...)		  LOG_MSG((ctx), P_LOG_INFO, args)
+#define LOG_WARN(ctx, args...)		  LOG_MSG((ctx), P_LOG_WARN, args)
+#define LOG_ERR(ctx, args...)		  LOG_MSG((ctx), P_LOG_ERR, args)
+#define LOG_DBG(ctx, args...)		  LOG_MSG((ctx), P_LOG_DBG, args)
+#define LOG_TRACE(ctx, args...)		  LOG_MSG((ctx), P_LOG_TRACE, args)
 
-#define LOG_TRACE_UNCHECKED(ctx, args...) \
-	p_log_msg((ctx), m_log_mod, P_LOG_TRACE, args)
+#define LOG_TRACE_UNCHECKED(ctx, args...) p_log_msg((ctx), m_log_mod, P_LOG_TRACE, args)
 
-P_NODISCARD P_ALWAYS_INLINE P_NONNULL bool
-log_enabled(struct p_ctx *ctx, enum p_log_mod mod, enum p_log_lvl lvl)
+PSYCHO_NODISCARD PSYCHO_STATIC_ALWAYS_INLINE PSYCHO_NONNULL bool
+log_enabled(struct psycho_ctx *ctx, enum psycho_log_module module, enum psycho_log_level level)
 {
-	return (ctx->cfg.log.log_cb) && ctx->cfg.log.mod[mod] >= lvl;
+	return (ctx->cfg.log.log_cb) && ctx->cfg.log.mod[module] >= level;
 }
 
-__attribute__((format(printf, 4, 5))) void
-p_log_msg(struct p_ctx *ctx, enum p_log_mod mod, enum p_log_lvl lvl,
-	  const char *fmt, ...) P_NONNULL;
+__attribute__((format(printf, 4, 5))) void p_log_msg(struct p_ctx *ctx, enum p_log_mod mod, enum p_log_lvl lvl,
+						     const char *fmt, ...) P_NONNULL;

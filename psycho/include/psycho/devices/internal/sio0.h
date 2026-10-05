@@ -17,35 +17,42 @@
 
 #pragma once
 
-#include <stdint.h>
+#include "psycho/compiler.h"
+#include "psycho/sio0_device.h"
 
-#include "compiler.h"
-
-#ifdef __cplusplus
-extern "C" {
-#endif // __cplusplus
-
-struct psycho_ctx;
-
-enum {
-	// 1KB
-	PSYCHO_BUS_SPAD_SIZE_BYTES = 1024,
-
-	// 512KB
-	PSYCHO_BUS_BIOS_SIZE_BYTES = 524288,
-
-	// 16 MB
-	PSYCHO_BUS_MAX_RAM_SIZE = 0x00FFFFFF
+enum psycho_sio0_slot {
+	PSYCHO_SIO0_SLOT_1,
+	PSYCHO_SIO0_SLOT_2,
+	PSYCHO_SIO0_SLOT_COUNT,
 };
 
-struct psycho_bus {
-	uint8_t ram[PSYCHO_BUS_MAX_RAM_SIZE];
-	uint8_t bios[PSYCHO_BUS_BIOS_SIZE_BYTES];
-	uint8_t spad[PSYCHO_BUS_SPAD_SIZE_BYTES];
+struct psycho_sio0 {
+	struct psycho_sio0_device *devices[PSYCHO_SIO0_SLOT_COUNT][PSYCHO_SIO0_DEVICE_TYPE_COUNT];
+	struct psycho_sio0_device *curr_device;
+
+	struct {
+		uint32_t entry;
+		uint32_t latched;
+	} txfifo;
+
+	struct {
+		size_t num_entries;
+
+		union {
+			uint8_t entries[4];
+			uint32_t raw;
+		};
+	} rxfifo;
+
+	uint32_t stat;
+	uint16_t mode;
+	uint16_t ctrl;
+	uint16_t baud;
+
+	uint8_t last_rx;
+
+	struct psycho_scheduler_event tx_event;
 };
 
-PSYCHO_NODISCARD PSYCHO_CONST uint8_t *psycho_bios_data_get(struct psycho_ctx *ctx) PSYCHO_NONNULL;
-
-#ifdef __cplusplus
-}
-#endif // __cplusplus
+void psycho_attach_device_to_sio0(struct psycho_ctx *ctx, struct psycho_sio0_device *dev,
+				  enum psycho_sio0_slot slot) PSYCHO_NONNULL;

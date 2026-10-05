@@ -20,46 +20,26 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-#include <assert.h>
-#include <stddef.h>
-#include <string.h>
+#pragma once
 
-#include "log.h"
+#include "psycho/ctx.h"
 
-DECLARE_LOG_MODULE(P_LOG_MODULE_CTX);
+enum {
+	JR_RA = 0x03E00008,
+};
 
-struct p_ctx_cfg *p_cfg_get(struct p_ctx *ctx)
+void psycho_bios_func_tracer_init(struct psycho_ctx *ctx) PSYCHO_NONNULL;
+
+PSYCHO_NONNULL PSYCHO_STATIC_ALWAYS_INLINE bool entering_bios_func(uint32_t pc)
 {
-	return &ctx->cfg;
+	return (pc == 0xA0) || (pc == 0xB0) || (pc == 0xC0);
 }
 
-void p_init(struct p_ctx *ctx)
+PSYCHO_NONNULL PSYCHO_STATIC_ALWAYS_INLINE bool leaving_bios_func(struct psycho_ctx *ctx, uint32_t instr)
 {
-	p_bios_trace_init(ctx);
-	p_gpu_init(ctx);
-
-	p_cpu_int_init(ctx);
-	p_rst(ctx);
-
-	LOG_INFO(ctx, "initialized");
+	return (instr == JR_RA) && (ctx->bios_func_tracer.stack.top);
 }
 
-void p_rst(struct p_ctx *ctx)
-{
-	p_sched_rst(ctx);
-	p_gpu_rst(ctx);
-	p_sio0_rst(ctx);
+void psycho_bios_func_tracer_begin(struct psycho_ctx *ctx, uint32_t fn, uint32_t tbl_off) PSYCHO_NONNULL;
 
-	ctx->cpu.rst(ctx);
-	LOG_INFO(ctx, "reset");
-}
-
-void p_step(struct p_ctx *ctx)
-{
-}
-
-void p_run_until_ev(struct p_ctx *ctx)
-{
-	ctx->running = true;
-	ctx->cpu.run(ctx, UINT64_MAX, true);
-}
+void psycho_bios_func_tracer_end(struct psycho_ctx *ctx, uint32_t v0) PSYCHO_NONNULL;

@@ -20,46 +20,23 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-#include <assert.h>
-#include <stddef.h>
-#include <string.h>
+#pragma once
 
-#include "log.h"
+#include <stdarg.h>
+#include <stdbool.h>
 
-DECLARE_LOG_MODULE(P_LOG_MODULE_CTX);
+#include "psycho/compiler.h"
+#include "psycho/fixed_string.h"
 
-struct p_ctx_cfg *p_cfg_get(struct p_ctx *ctx)
-{
-	return &ctx->cfg;
-}
+void psycho_fixed_string_init(struct psycho_fixed_string *str, char *ptr, size_t capacity) PSYCHO_NONNULL;
 
-void p_init(struct p_ctx *ctx)
-{
-	p_bios_trace_init(ctx);
-	p_gpu_init(ctx);
+void psycho_fixed_string_reset(struct psycho_fixed_string *str) PSYCHO_NONNULL;
 
-	p_cpu_int_init(ctx);
-	p_rst(ctx);
+void psycho_fixed_string_append(struct psycho_fixed_string *str, bool *truncated, const char *fmt, ...)
+	__attribute__((format(printf, 3, 4), nonnull(1, 3)));
 
-	LOG_INFO(ctx, "initialized");
-}
+void psycho_fixed_string_vappend(struct psycho_fixed_string *str, bool *truncated, const char *fmt, va_list args)
+	__attribute__((format(printf, 3, 0), nonnull(1, 3)));
 
-void p_rst(struct p_ctx *ctx)
-{
-	p_sched_rst(ctx);
-	p_gpu_rst(ctx);
-	p_sio0_rst(ctx);
-
-	ctx->cpu.rst(ctx);
-	LOG_INFO(ctx, "reset");
-}
-
-void p_step(struct p_ctx *ctx)
-{
-}
-
-void p_run_until_ev(struct p_ctx *ctx)
-{
-	ctx->running = true;
-	ctx->cpu.run(ctx, UINT64_MAX, true);
-}
+void psycho_fixed_string_pad(struct psycho_fixed_string *str, char c, size_t count, bool *truncated)
+	__attribute__((nonnull(1)));

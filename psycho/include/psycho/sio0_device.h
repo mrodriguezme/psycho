@@ -20,46 +20,31 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-#include <assert.h>
-#include <stddef.h>
-#include <string.h>
+#pragma once
 
-#include "log.h"
+#include <stdbool.h>
+#include "psycho/scheduler.h"
 
-DECLARE_LOG_MODULE(P_LOG_MODULE_CTX);
+struct psycho_ctx;
 
-struct p_ctx_cfg *p_cfg_get(struct p_ctx *ctx)
-{
-	return &ctx->cfg;
-}
+enum psycho_sio0_device_type {
+	PSYCHO_SIO0_DEVICE_TYPE_CONTROLLER,
+	PSYCHO_SIO0_DEVICE_TYPE_MEMCARD,
+	PSYCHO_SIO0_DEVICE_TYPE_COUNT
+};
 
-void p_init(struct p_ctx *ctx)
-{
-	p_bios_trace_init(ctx);
-	p_gpu_init(ctx);
+struct psycho_sio0_device {
+	struct psycho_ctx *ctx;
+	void *handle;
 
-	p_cpu_int_init(ctx);
-	p_rst(ctx);
+	uint8_t (*transceive)(void *dev, uint8_t mosi);
+	void (*reset)(void *dev);
 
-	LOG_INFO(ctx, "initialized");
-}
+	const char *name;
+	enum psycho_sio0_device_type type;
 
-void p_rst(struct p_ctx *ctx)
-{
-	p_sched_rst(ctx);
-	p_gpu_rst(ctx);
-	p_sio0_rst(ctx);
+	struct psycho_scheduler_event ack_pulse_begin_event;
+	struct psycho_scheduler_event ack_pulse_end_event;
+};
 
-	ctx->cpu.rst(ctx);
-	LOG_INFO(ctx, "reset");
-}
-
-void p_step(struct p_ctx *ctx)
-{
-}
-
-void p_run_until_ev(struct p_ctx *ctx)
-{
-	ctx->running = true;
-	ctx->cpu.run(ctx, UINT64_MAX, true);
-}
+void psycho_sio0_device_ack(struct psycho_sio0_device *dev, unsigned int delay_us, unsigned int pulse_us);

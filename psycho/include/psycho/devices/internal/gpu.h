@@ -17,9 +17,8 @@
 
 #pragma once
 
-#include <stdint.h>
-
-#include "compiler.h"
+#include <stddef.h>
+#include "psycho/scheduler.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -28,23 +27,51 @@ extern "C" {
 struct psycho_ctx;
 
 enum {
-	// 1KB
-	PSYCHO_BUS_SPAD_SIZE_BYTES = 1024,
-
-	// 512KB
-	PSYCHO_BUS_BIOS_SIZE_BYTES = 524288,
-
-	// 16 MB
-	PSYCHO_BUS_MAX_RAM_SIZE = 0x00FFFFFF
+	PSYCHO_GPU_VRAM_HEIGHT = 512,
+	PSYCHO_GPU_VRAM_WIDTH = 1024
 };
 
-struct psycho_bus {
-	uint8_t ram[PSYCHO_BUS_MAX_RAM_SIZE];
-	uint8_t bios[PSYCHO_BUS_BIOS_SIZE_BYTES];
-	uint8_t spad[PSYCHO_BUS_SPAD_SIZE_BYTES];
+typedef uint16_t psycho_gpu_vram[PSYCHO_GPU_VRAM_HEIGHT][PSYCHO_GPU_VRAM_WIDTH];
+
+struct psycho_gpu_vertex {
+	int16_t x;
+	int16_t y;
+	unsigned int color;
 };
 
-PSYCHO_NODISCARD PSYCHO_CONST uint8_t *psycho_bios_data_get(struct psycho_ctx *ctx) PSYCHO_NONNULL;
+struct psycho_gpu_render_ops {
+	void (*rect)(struct psycho_ctx *ctx, struct psycho_gpu_vertex *v0);
+};
+
+struct psycho_gpu {
+	struct {
+		void (*fn)(struct psycho_ctx *ctx);
+		size_t rem_params;
+		size_t params;
+		uint32_t data[64];
+	} init;
+
+	struct {
+		size_t x;
+		size_t y;
+		size_t x_orig;
+		size_t x_max;
+		unsigned int rem;
+	} copy;
+
+	struct psycho_gpu_vertex rect;
+
+	struct psycho_gpu_render_ops render_ops;
+
+	psycho_gpu_vram vram;
+
+	void (*cmd_fn)(struct psycho_ctx *ctx, uint32_t packet);
+
+	struct psycho_scheduler_event vblank_event;
+
+	uint32_t gpustat;
+	uint32_t gpuread;
+};
 
 #ifdef __cplusplus
 }

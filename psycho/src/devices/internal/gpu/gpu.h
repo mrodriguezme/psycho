@@ -20,46 +20,45 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-#include <assert.h>
-#include <stddef.h>
-#include <string.h>
+#pragma once
 
-#include "log.h"
+#include "psycho/ctx.h"
 
-DECLARE_LOG_MODULE(P_LOG_MODULE_CTX);
+#define GPU_GPUREAD		 (0x1F801810)
+#define GPU_GP0			 (0x1F801810)
+#define GPU_GP1			 (0x1F801814)
+#define GPU_GPUSTAT		 (0x1F801814)
 
-struct p_ctx_cfg *p_cfg_get(struct p_ctx *ctx)
+#define GP0_MONO_RECT_1X1_OPAQUE (0x68)
+#define GP0_CPY_RECT_CPU_TO_VRAM (0xA0)
+#define GP0_CPY_RECT_VRAM_TO_CPU (0xC0)
+
+#define GP1_RST			 (0x00)
+#define GP1_GPU_INFO		 (0x10)
+
+void p_gpu_init(struct psycho_ctx *ctx) P_NONNULL;
+void p_gpu_rst(struct psycho_ctx *ctx) P_NONNULL;
+
+void p_gp0(struct psycho_ctx *ctx, u32 packet) P_NONNULL;
+void p_gp1(struct psycho_ctx *ctx, u32 packet) P_NONNULL;
+
+PSYCHO_NONNULL PSYCHO_STATIC_ALWAYS_INLINE void vram_px_set(struct p_ctx *ctx, size_t x, size_t y, u16 data)
 {
-	return &ctx->cfg;
+	ctx->gpu.vram[y][x] = data;
 }
 
-void p_init(struct p_ctx *ctx)
+P_NONNULL P_ALWAYS_INLINE u16 vram_px_get(struct p_ctx *ctx, size_t x, size_t y)
 {
-	p_bios_trace_init(ctx);
-	p_gpu_init(ctx);
-
-	p_cpu_int_init(ctx);
-	p_rst(ctx);
-
-	LOG_INFO(ctx, "initialized");
+	return ctx->gpu.vram[y][x];
 }
 
-void p_rst(struct p_ctx *ctx)
+P_NODISCARD P_ALWAYS_INLINE u16 color_to_15bit(u32 px)
 {
-	p_sched_rst(ctx);
-	p_gpu_rst(ctx);
-	p_sio0_rst(ctx);
+	const uint r = (px & UINT8_MAX) >> 3;
+	const uint g = ((px >> 8) & UINT8_MAX) >> 3;
+	const uint b = ((px >> 16) & UINT8_MAX) >> 3;
 
-	ctx->cpu.rst(ctx);
-	LOG_INFO(ctx, "reset");
+	return (b << 10) | (g << 5) | r;
 }
 
-void p_step(struct p_ctx *ctx)
-{
-}
-
-void p_run_until_ev(struct p_ctx *ctx)
-{
-	ctx->running = true;
-	ctx->cpu.run(ctx, UINT64_MAX, true);
-}
+P_NODISCARD u32 p_gpuread(struct p_ctx *ctx) P_NONNULL;

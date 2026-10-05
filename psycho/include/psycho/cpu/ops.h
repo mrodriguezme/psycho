@@ -17,9 +17,8 @@
 
 #pragma once
 
-#include <stdint.h>
-
-#include "compiler.h"
+#include <stdbool.h>
+#include "defs.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -27,24 +26,24 @@ extern "C" {
 
 struct psycho_ctx;
 
-enum {
-	// 1KB
-	PSYCHO_BUS_SPAD_SIZE_BYTES = 1024,
+struct psycho_cpu_ops {
+	void (*irq_mux_set)(struct psycho_ctx *ctx, bool state);
 
-	// 512KB
-	PSYCHO_BUS_BIOS_SIZE_BYTES = 524288,
+	void (*gpr_set)(struct psycho_ctx *ctx, enum psycho_cpu_gpr gpr, uint32_t val);
+	uint32_t (*gpr_get)(struct psycho_ctx *ctx, enum psycho_cpu_gpr gpr);
 
-	// 16 MB
-	PSYCHO_BUS_MAX_RAM_SIZE = 0x00FFFFFF
+	uint32_t (*lo_get)(struct psycho_ctx *ctx);
+	uint32_t (*hi_get)(struct psycho_ctx *ctx);
+
+	void (*pc_set)(struct psycho_ctx *ctx, uint32_t pc);
+	uint32_t (*pc_get)(struct psycho_ctx *ctx);
+
+	void (*run)(struct psycho_ctx *ctx, uint64_t instr_limit, bool stop_on_ev);
+
+	uint32_t (*instr_get)(struct psycho_ctx *ctx);
+
+	void (*reset)(struct psycho_ctx *ctx);
 };
-
-struct psycho_bus {
-	uint8_t ram[PSYCHO_BUS_MAX_RAM_SIZE];
-	uint8_t bios[PSYCHO_BUS_BIOS_SIZE_BYTES];
-	uint8_t spad[PSYCHO_BUS_SPAD_SIZE_BYTES];
-};
-
-PSYCHO_NODISCARD PSYCHO_CONST uint8_t *psycho_bios_data_get(struct psycho_ctx *ctx) PSYCHO_NONNULL;
 
 #ifdef __cplusplus
 }

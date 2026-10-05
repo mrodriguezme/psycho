@@ -19,32 +19,16 @@
 
 #include <stdint.h>
 
-#include "compiler.h"
-
 #ifdef __cplusplus
 extern "C" {
 #endif // __cplusplus
 
 struct psycho_ctx;
 
-enum {
-	// 1KB
-	PSYCHO_BUS_SPAD_SIZE_BYTES = 1024,
-
-	// 512KB
-	PSYCHO_BUS_BIOS_SIZE_BYTES = 524288,
-
-	// 16 MB
-	PSYCHO_BUS_MAX_RAM_SIZE = 0x00FFFFFF
+struct psycho_interrupt_controller {
+	uint32_t i_stat;
+	uint32_t i_mask;
 };
-
-struct psycho_bus {
-	uint8_t ram[PSYCHO_BUS_MAX_RAM_SIZE];
-	uint8_t bios[PSYCHO_BUS_BIOS_SIZE_BYTES];
-	uint8_t spad[PSYCHO_BUS_SPAD_SIZE_BYTES];
-};
-
-PSYCHO_NODISCARD PSYCHO_CONST uint8_t *psycho_bios_data_get(struct psycho_ctx *ctx) PSYCHO_NONNULL;
 
 #ifdef __cplusplus
 }

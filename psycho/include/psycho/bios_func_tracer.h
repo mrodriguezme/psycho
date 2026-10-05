@@ -17,7 +17,10 @@
 
 #pragma once
 
+#include <stdbool.h>
 #include <stddef.h>
+#include <stdint.h>
+
 #include "fixed_string.h"
 
 #ifdef __cplusplus
@@ -26,38 +29,55 @@ extern "C" {
 
 struct psycho_ctx;
 
-enum psycho_log_level {
-	PSYCHO_LOG_LEVEL_OFF,
-	PSYCHO_LOG_LEVEL_INFO,
-	PSYCHO_LOG_LEVEL_WARNING,
-	PSYCHO_LOG_LEVEL_ERROR,
-	PSYCHO_LOG_LEVEL_DEBUG,
-	PSYCHO_LOG_LEVEL_TRACE,
-	PSYCHO_LOG_LEVEL_COUNT
+enum {
+	PSYCHO_BIOS_FUNC_TRACER_MAX_CALL_STACK_DEPTH = 10,
+	PSYCHO_BIOS_FUNC_TRACER_MAX_TTY_STDOUT_LEN   = 512,
 };
 
-enum psycho_log_module {
-	PSYCHO_LOG_MODULE_CTX,
-	PSYCHO_LOG_MODULE_CPU,
-	PSYCHO_LOG_MODULE_BUS,
-	PSYCHO_LOG_MODULE_BIOS_FUNC_TRACER,
-	PSYCHO_LOG_MODULE_SCHEDULER,
-	PSYCHO_LOG_MODULE_GPU,
-	PSYCHO_LOG_MODULE_INTERRUPT_CONTROLLER,
-	PSYCHO_LOG_MODULE_SIO0,
-	PSYCHO_LOG_MODULE_DIGITAL_CONTROLLER,
-	PSYCHO_LOG_MODULE_COUNT,
+enum psycho_bios_func_tracer_func_ret_type {
+	PSYCHO_BIOS_FUNC_TRACER_FUNC_RET_TYPE_INT,
+	PSYCHO_BIOS_FUNC_TRACER_FUNC_RET_TYPE_CHAR,
+	PSYCHO_BIOS_FUNC_TRACER_FUNC_RET_TYPE_VOID,
+	PSYCHO_BIOS_FUNC_TRACER_FUNC_RET_TYPE_VOID_PTR
 };
 
-struct psycho_log_message {
+struct psycho_bios_func_tracer_stack_frame {
+	const struct psycho_bios_func_tracer_func_data *func;
 	struct psycho_fixed_string str;
-	enum psycho_log_module module;
-	enum psycho_log_level level;
+	char str_buf[512];
+
+	uint32_t a0;
+	uint32_t a1;
+	uint32_t a2;
+	uint32_t a3;
+	uint32_t sp;
+	uint32_t ra;
 };
 
-struct psycho_log_cfg {
-	void (*log_cb)(struct psycho_ctx *ctx, struct psycho_log_message *msg);
-	enum psycho_log_level mod[PSYCHO_LOG_MODULE_COUNT];
+struct psycho_bios_func_tracer_func_data {
+	const char *prototype;
+	const enum psycho_bios_func_tracer_func_ret_type ret;
+	void (*hook_cb)(struct psycho_ctx *ctx, struct psycho_bios_func_tracer_stack_frame *frame);
+};
+
+struct psycho_bios_func_tracer_cfg {
+	void (*stdout_line)(struct psycho_ctx *ctx, struct psycho_fixed_string *str);
+	bool deref_ptrs;
+};
+
+struct psycho_tty_str {
+	char data[PSYCHO_BIOS_FUNC_TRACER_MAX_TTY_STDOUT_LEN];
+	struct psycho_fixed_string str;
+};
+
+struct psycho_bios_func_tracer {
+	struct {
+		struct psycho_bios_func_tracer_stack_frame frames[PSYCHO_BIOS_FUNC_TRACER_MAX_CALL_STACK_DEPTH];
+		size_t top;
+	} stack;
+
+	struct psycho_tty_str tty_orig;
+	struct psycho_tty_str tty_log;
 };
 
 #ifdef __cplusplus

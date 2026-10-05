@@ -25,47 +25,52 @@ target_link_libraries(psycho PRIVATE psycho_cfg_base_c)
 
 target_sources(
 	psycho PRIVATE
-	include/psycho/bios_trace.h
+	include/psycho/cpu/defs.h
+	include/psycho/cpu/interpreter.h
+	include/psycho/cpu/ops.h
+	include/psycho/devices/external/digital_pad.h
+	include/psycho/devices/internal/dma.h
+	include/psycho/devices/internal/gpu.h
+	include/psycho/devices/internal/interrupt_controller.h
+	include/psycho/devices/internal/sio0.h
+	include/psycho/bios_func_tracer.h
 	include/psycho/bus.h
 	include/psycho/compiler.h
-	include/psycho/cpu_defs.h
-	include/psycho/cpu_int.h
-	include/psycho/cpu_ops.h
 	include/psycho/ctx.h
 	include/psycho/disasm.h
-	include/psycho/gpu.h
-	include/psycho/intctrl.h
+	include/psycho/fixed_string.h
 	include/psycho/log.h
-	include/psycho/sched.h
-	include/psycho/str.h
-	include/psycho/types.h
-	src/bios_trace.c
-	src/bios_trace.h
+	include/psycho/scheduler.h
+	include/psycho/sio0_device.h
+	src/cpu/defs.c
+	src/cpu/defs.h
+	src/cpu/interpreter.c
+	src/cpu/interpreter.h
+	src/devices/external/digital_pad.c
+	src/devices/internal/gpu/gpu.c
+	src/devices/internal/gpu/gpu.h
+	src/devices/internal/gpu/sw.c
+	src/devices/internal/gpu/sw.c
+	src/devices/internal/interrupt_controller.c
+	src/devices/internal/interrupt_controller.h
+	src/devices/internal/sio0.c
+	src/devices/internal/sio0.h
+	src/bios_func_tracer.c
+	src/bios_func_tracer.h
 	src/bus.c
 	src/bus.h
-	src/cpu_defs.c
-	src/cpu_defs.h
-	src/cpu_int.c
-	src/cpu_int.h
 	src/ctx.c
-	src/digital_ctrl.c
 	src/disasm.c
+	src/disasm.h
 	src/exe_loader.c
 	src/exe_loader.h
-	src/gpu_sw.c
-	src/gpu_sw.h
-	src/gpu.c
-	src/gpu.h
-	src/intctrl.c
-	src/intctrl.h
+	src/fixed_string.c
+	src/fixed_string.h
 	src/log.c
 	src/log.h
-	src/sched.c
-	src/sio0_dev.c
-	src/sched.h
-	src/sio0.c
-	src/str.c
-	src/str.h
+	src/scheduler.c
+	src/scheduler.h
+	src/sio0_device.c
 	src/util.h
 )
 

@@ -20,46 +20,32 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-#include <assert.h>
-#include <stddef.h>
-#include <string.h>
+#pragma once
 
-#include "log.h"
+#include "psycho/ctx.h"
 
-DECLARE_LOG_MODULE(P_LOG_MODULE_CTX);
+enum {
+	I_STAT = 0x1F801070,
+	I_MASK = 0x1F801074,
+};
 
-struct p_ctx_cfg *p_cfg_get(struct p_ctx *ctx)
-{
-	return &ctx->cfg;
-}
+enum {
+	IRQ_VBLANK     = 1 << 0,
+	IRQ_GPU	       = 1 << 1,
+	IRQ_CDROM      = 1 << 2,
+	IRQ_DMA	       = 1 << 3,
+	IRQ_TMR0       = 1 << 4,
+	IRQ_TMR1       = 1 << 5,
+	IRQ_TMR2       = 1 << 6,
+	IRQ_SIO0       = 1 << 7,
+	IRQ_SIO1       = 1 << 8,
+	IRQ_SPU	       = 1 << 9,
+	IRQ_CONTROLLER = 1 << 10,
+	IRQ_COUNT      = 11
+};
 
-void p_init(struct p_ctx *ctx)
-{
-	p_bios_trace_init(ctx);
-	p_gpu_init(ctx);
+void psycho_irq_mask_set(struct psycho_ctx *ctx, uint32_t mask) PSYCHO_NONNULL;
 
-	p_cpu_int_init(ctx);
-	p_rst(ctx);
+void psycho_irq_ack(struct psycho_ctx *ctx, uint32_t mask) PSYCHO_NONNULL;
 
-	LOG_INFO(ctx, "initialized");
-}
-
-void p_rst(struct p_ctx *ctx)
-{
-	p_sched_rst(ctx);
-	p_gpu_rst(ctx);
-	p_sio0_rst(ctx);
-
-	ctx->cpu.rst(ctx);
-	LOG_INFO(ctx, "reset");
-}
-
-void p_step(struct p_ctx *ctx)
-{
-}
-
-void p_run_until_ev(struct p_ctx *ctx)
-{
-	ctx->running = true;
-	ctx->cpu.run(ctx, UINT64_MAX, true);
-}
+void psycho_irq_set_pending(struct psycho_ctx *ctx, uint32_t mask) PSYCHO_NONNULL;

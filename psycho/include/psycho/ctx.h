@@ -2,23 +2,18 @@
 //
 // Copyright 2026 Michael Rodriguez
 //
-// Permission is hereby granted, free of charge, to any person obtaining a copy
-// of this software and associated documentation files (the “Software”), to deal
-// in the Software without restriction, including without limitation the rights
-// to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-// copies of the Software, and to permit persons to whom the Software is
-// furnished to do so, subject to the following conditions:
+// Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated
+// documentation files (the "Software"), to deal in the Software without restriction, including without limitation the
+// rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to
+// permit persons to whom the Software is furnished to do so, subject to the following conditions:
 //
-// The above copyright notice and this permission notice shall be included in
-// all copies or substantial portions of the Software.
+// The above copyright notice and this permission notice shall be included in all copies or substantial portions of the
+// Software.
 //
-// THE SOFTWARE IS PROVIDED “AS IS”, WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-// SOFTWARE.
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE
+// WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR
+// COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR
+// OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 #pragma once
 
@@ -26,66 +21,73 @@
 extern "C" {
 #endif // __cplusplus
 
-#include "bios_trace.h"
+#include "cpu/interpreter.h"
+#include "cpu/ops.h"
+
+#include "devices/internal/dma.h"
+#include "devices/internal/gpu.h"
+#include "devices/internal/interrupt_controller.h"
+#include "devices/internal/sio0.h"
+
+#include "bios_func_tracer.h"
 #include "bus.h"
-#include "cpu_int.h"
-#include "cpu_ops.h"
 #include "disasm.h"
-#include "gpu.h"
-#include "intctrl.h"
 #include "log.h"
-#include "sched.h"
-#include "sio0.h"
+#include "scheduler.h"
 
-struct p_ctx_cfg {
-	struct p_cpu_cfg cpu;
-	struct p_bios_trace_cfg bios_trace;
-	struct p_disasm_cfg disasm;
-	struct p_log_cfg log;
+struct psycho_ctx_cfg {
+	struct psycho_cpu_cfg cpu;
+	struct psycho_bios_func_tracer_cfg bios_func_tracer;
+	struct psycho_disasm_cfg disasm;
+	struct psycho_log_cfg log;
 
-	void (*on_vblank)(struct p_ctx *ctx);
+	void (*on_vblank)(struct psycho_ctx *ctx);
 };
 
-struct p_ctx {
-	struct p_cpu_int cpu_int;
-	struct p_cpu_ops cpu;
-	struct p_bios_trace bios_trace;
-	struct p_bus bus;
-	struct p_disasm disasm;
-	struct p_sched sched;
-	struct p_gpu gpu;
-	struct p_intctrl intctrl;
-	struct p_sio0 sio0;
-
-	struct p_ctx_cfg cfg;
+struct psycho_ctx {
+	struct psycho_bus bus;
 
 	struct {
-		const u8 *data;
+		struct psycho_cpu_interpreter interpreter;
+		struct psycho_cpu_ops impl;
+	} cpu;
+
+	struct psycho_bios_func_tracer bios_func_tracer;
+	struct psycho_disasm disasm;
+	struct psycho_scheduler scheduler;
+	struct psycho_gpu gpu;
+	struct psycho_interrupt_controller interrupt_controller;
+	struct psycho_sio0 sio0;
+
+	struct psycho_ctx_cfg cfg;
+
+	struct {
+		uint8_t *data;
 		size_t size;
 	} exe;
 
 	bool running;
 };
 
-enum p_ctx_ret {
-	P_EXE_FILE_SIZE_INVALID = -3,
-	P_EXE_SIZE_INVALID	= -2,
-	P_EXE_ID_INVALID	= -1,
-	P_OK			= 1,
+enum psycho_ctx_ret {
+	PSYCHO_EXE_FILE_SIZE_INVALID = -3,
+	PSYCHO_EXE_SIZE_INVALID	     = -2,
+	PSYCHO_EXE_ID_INVALID	     = -1,
+	PSYCHO_OK		     = 1,
 };
 
-P_NODISCARD P_CONST struct p_ctx_cfg *p_cfg_get(struct p_ctx *ctx) P_NONNULL;
+PSYCHO_NODISCARD PSYCHO_CONST struct psycho_ctx_cfg *psycho_ctx_cfg_get(struct psycho_ctx *ctx) PSYCHO_NONNULL;
 
-void p_init(struct p_ctx *ctx) P_NONNULL;
+void psycho_ctx_init(struct psycho_ctx *ctx) PSYCHO_NONNULL;
 
-void p_rst(struct p_ctx *ctx) P_NONNULL;
+void psycho_ctx_reset(struct psycho_ctx *ctx) PSYCHO_NONNULL;
 
-void p_step(struct p_ctx *ctx) P_NONNULL;
+void psycho_ctx_step(struct psycho_ctx *ctx) PSYCHO_NONNULL;
 
-P_NODISCARD enum p_ctx_ret p_run_exe(struct p_ctx *ctx, u8 *exe,
-				     size_t size) P_NONNULL;
+PSYCHO_NODISCARD enum psycho_ctx_ret psycho_ctx_run_exe(struct psycho_ctx *ctx, uint8_t *exe,
+							size_t size) PSYCHO_NONNULL;
 
-void p_run_until_ev(struct p_ctx *ctx) P_NONNULL;
+void psycho_ctx_run_until_event(struct psycho_ctx *ctx) PSYCHO_NONNULL;
 
 #ifdef __cplusplus
 }
