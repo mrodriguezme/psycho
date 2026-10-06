@@ -15,47 +15,36 @@
 // COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR
 // OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
-#include <assert.h>
-#include <stddef.h>
-#include <string.h>
+#pragma once
 
-#include "psycho/ctx.h"
-#include "debug/log.h"
+#include <stdint.h>
+#include "psycho/compiler_support.h"
 
-DECLARE_LOG_MODULE(PSYCHO_LOG_MODULE_CTX);
+#ifdef __cplusplus
+extern "C" {
+#endif // __cplusplus
 
-struct p_ctx_cfg *p_cfg_get(struct p_ctx *ctx)
-{
-	return &ctx->cfg;
+struct psycho_ctx;
+
+enum {
+	// 1KB
+	PSYCHO_BUS_SPAD_SIZE_BYTES = 1024,
+
+	// 512KB
+	PSYCHO_BUS_BIOS_SIZE_BYTES = 524288,
+
+	// 16 MB
+	PSYCHO_BUS_MAX_RAM_SIZE = 0x00FFFFFF
+};
+
+struct psycho_bus {
+	uint8_t ram[PSYCHO_BUS_MAX_RAM_SIZE];
+	uint8_t bios[PSYCHO_BUS_BIOS_SIZE_BYTES];
+	uint8_t spad[PSYCHO_BUS_SPAD_SIZE_BYTES];
+};
+
+PSYCHO_NODISCARD PSYCHO_CONST uint8_t *psycho_bios_data_get(struct psycho_ctx *ctx) PSYCHO_NONNULL;
+
+#ifdef __cplusplus
 }
-
-void psycho_init(struct p_ctx *ctx)
-{
-	p_bios_trace_init(ctx);
-	p_gpu_init(ctx);
-
-	p_cpu_int_init(ctx);
-	p_rst(ctx);
-
-	LOG_INFO(ctx, "initialized");
-}
-
-void p_rst(struct p_ctx *ctx)
-{
-	p_sched_rst(ctx);
-	p_gpu_rst(ctx);
-	p_sio0_rst(ctx);
-
-	ctx->cpu.rst(ctx);
-	LOG_INFO(ctx, "reset");
-}
-
-void p_step(struct p_ctx *ctx)
-{
-}
-
-void p_run_until_ev(struct p_ctx *ctx)
-{
-	ctx->running = true;
-	ctx->cpu.run(ctx, UINT64_MAX, true);
-}
+#endif // __cplusplus

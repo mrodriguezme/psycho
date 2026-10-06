@@ -24,6 +24,28 @@
 
 #include "psycho/ctx.h"
 
-#define KERNEL_INIT_PC (UINT32_C(0x80030000))
+enum {
+	I_STAT = 0x1F801070,
+	I_MASK = 0x1F801074,
+};
 
-void psycho_ctx_exe_inject(struct psycho_ctx *ctx) PSYCHO_NONNULL;
+enum {
+	IRQ_VBLANK     = 1 << 0,
+	IRQ_GPU	       = 1 << 1,
+	IRQ_CDROM      = 1 << 2,
+	IRQ_DMA	       = 1 << 3,
+	IRQ_TMR0       = 1 << 4,
+	IRQ_TMR1       = 1 << 5,
+	IRQ_TMR2       = 1 << 6,
+	IRQ_SIO0       = 1 << 7,
+	IRQ_SIO1       = 1 << 8,
+	IRQ_SPU	       = 1 << 9,
+	IRQ_CONTROLLER = 1 << 10,
+	IRQ_COUNT      = 11
+};
+
+void psycho_interrupt_controller_set_enabled_irqs(struct psycho_ctx *ctx, uint32_t mask) PSYCHO_NONNULL;
+
+void psycho_interrupt_controller_ack_irqs(struct psycho_ctx *ctx, uint32_t mask) PSYCHO_NONNULL;
+
+void psycho_interrupt_controller_set_pending_irqs(struct psycho_ctx *ctx, uint32_t mask) PSYCHO_NONNULL;

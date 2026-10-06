@@ -15,47 +15,34 @@
 // COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR
 // OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
-#include <assert.h>
-#include <stddef.h>
-#include <string.h>
+#pragma once
 
-#include "psycho/ctx.h"
-#include "debug/log.h"
+#include "psycho/scheduler.h"
 
-DECLARE_LOG_MODULE(PSYCHO_LOG_MODULE_CTX);
+#ifdef __cplusplus
+extern "C" {
+#endif // __cplusplus
 
-struct p_ctx_cfg *p_cfg_get(struct p_ctx *ctx)
-{
-	return &ctx->cfg;
+struct psycho_ctx;
+
+enum {
+	PSYCHO_DMA_NUM_CHANNELS = 7,
+};
+
+struct psycho_dma_channel {
+	uint32_t madr;
+	uint32_t bcr;
+	uint32_t chcr;
+
+	struct psycho_scheduler_event transfer_event;
+};
+
+struct psycho_dma {
+	struct psycho_dma_channel channels[PSYCHO_DMA_NUM_CHANNELS];
+	uint32_t dpcr;
+	uint32_t dicr;
+};
+
+#ifdef __cplusplus
 }
-
-void psycho_init(struct p_ctx *ctx)
-{
-	p_bios_trace_init(ctx);
-	p_gpu_init(ctx);
-
-	p_cpu_int_init(ctx);
-	p_rst(ctx);
-
-	LOG_INFO(ctx, "initialized");
-}
-
-void p_rst(struct p_ctx *ctx)
-{
-	p_sched_rst(ctx);
-	p_gpu_rst(ctx);
-	p_sio0_rst(ctx);
-
-	ctx->cpu.rst(ctx);
-	LOG_INFO(ctx, "reset");
-}
-
-void p_step(struct p_ctx *ctx)
-{
-}
-
-void p_run_until_ev(struct p_ctx *ctx)
-{
-	ctx->running = true;
-	ctx->cpu.run(ctx, UINT64_MAX, true);
-}
+#endif // __cplusplus

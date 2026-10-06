@@ -1,0 +1,53 @@
+// SPDX-License-Identifier: MIT
+//
+// Copyright 2026 Michael Rodriguez
+//
+// Permission is hereby granted, free of charge, to any person obtaining a copy
+// of this software and associated documentation files (the “Software”), to deal
+// in the Software without restriction, including without limitation the rights
+// to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+// copies of the Software, and to permit persons to whom the Software is
+// furnished to do so, subject to the following conditions:
+//
+// The above copyright notice and this permission notice shall be included in
+// all copies or substantial portions of the Software.
+//
+// THE SOFTWARE IS PROVIDED “AS IS”, WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+// SOFTWARE.
+
+#pragma once
+
+#include "psycho/ctx.h"
+
+#define DECLARE_LOG_MODULE(mod)		  static const enum psycho_log_module m_log_module = (mod)
+
+#define MODULE_LOG_LEVEL_ACTIVE(ctx, lvl) log_enabled((ctx), m_log_module, (lvl))
+
+#define LOG_MESSAGE(ctx, lvl, args...)                                    \
+	({                                                                \
+		if (MODULE_LOG_LEVEL_ACTIVE((ctx), (lvl)))                \
+			psycho_log_msg((ctx), m_log_module, (lvl), args); \
+	})
+
+#define LOG_INFO(ctx, args...)		  LOG_MESSAGE((ctx), PSYCHO_LOG_LEVEL_INFO, args)
+#define LOG_WARN(ctx, args...)		  LOG_MESSAGE((ctx), PSYCHO_LOG_LEVEL_WARN, args)
+#define LOG_ERR(ctx, args...)		  LOG_MESSAGE((ctx), PSYCHO_LOG_LEVEL_ERROR, args)
+#define LOG_DBG(ctx, args...)		  LOG_MESSAGE((ctx), PSYCHO_LOG_LEVEL_DEBUG, args)
+#define LOG_TRACE(ctx, args...)		  LOG_MESSAGE((ctx), PSYCHO_LOG_LEVEL_TRACE, args)
+
+#define LOG_TRACE_UNCHECKED(ctx, args...) p_log_msg((ctx), m_log_mod, P_LOG_TRACE, args)
+
+PSYCHO_NODISCARD PSYCHO_STATIC_ALWAYS_INLINE PSYCHO_NONNULL bool
+log_enabled(struct psycho_ctx *ctx, enum psycho_log_module module, enum psycho_log_level level)
+{
+	return (ctx->cfg.log.log_cb) && ctx->cfg.log.mod[module] >= level;
+}
+
+__attribute__((format(printf, 4, 5))) void psycho_log_msg(struct psycho_ctx *ctx, enum psycho_log_module module,
+							  enum psycho_log_level level, const char *fmt,
+							  ...) PSYCHO_NONNULL;

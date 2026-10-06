@@ -24,6 +24,4 @@
 
 #include "psycho/ctx.h"
 
-#define KERNEL_INIT_PC (UINT32_C(0x80030000))
-
-void psycho_ctx_exe_inject(struct psycho_ctx *ctx) PSYCHO_NONNULL;
+void psycho_cpu_interpreter_init(struct psycho_ctx *ctx);

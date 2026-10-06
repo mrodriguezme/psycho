@@ -24,6 +24,26 @@
 
 #include "psycho/ctx.h"
 
-#define KERNEL_INIT_PC (UINT32_C(0x80030000))
+enum {
+	SIO0_TX_DATA = 0x1F801040,
+	SIO0_RX_DATA = 0x1F801040,
+	SIO0_STAT    = 0x1F801044,
+	SIO0_MODE    = 0x1F801048,
+	SIO0_CTRL    = 0x1F80104A,
+	SIO0_BAUD    = 0x1F80104E
+};
 
-void psycho_ctx_exe_inject(struct psycho_ctx *ctx) PSYCHO_NONNULL;
+void psycho_sio0_reset(struct psycho_ctx *ctx) PSYCHO_NONNULL;
+
+void psycho_sio0_tx(struct psycho_ctx *ctx, uint8_t byte) PSYCHO_NONNULL;
+
+PSYCHO_NODISCARD uint8_t psycho_sio0_rx_pop8(struct psycho_ctx *ctx) PSYCHO_NONNULL;
+
+void psycho_sio0_mode_set(struct psycho_ctx *ctx, uint16_t mode) PSYCHO_NONNULL;
+
+void psycho_sio0_ctrl_set(struct psycho_ctx *ctx, uint16_t ctrl) PSYCHO_NONNULL;
+
+void psycho_sio0_baud_set(struct psycho_ctx *ctx, uint16_t baud) PSYCHO_NONNULL;
+
+void psycho_sio0_dsr_assert(struct psycho_ctx *ctx, void *dev) PSYCHO_NONNULL;
+void psycho_sio0_dsr_deassert(struct psycho_ctx *ctx, void *dev) PSYCHO_NONNULL;

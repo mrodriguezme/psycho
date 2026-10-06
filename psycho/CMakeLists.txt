@@ -25,53 +25,54 @@ target_link_libraries(psycho PRIVATE psycho_cfg_base_c)
 
 target_sources(
 	psycho PRIVATE
-	include/psycho/cpu/defs.h
-	include/psycho/cpu/interpreter.h
-	include/psycho/cpu/ops.h
-	include/psycho/devices/external/digital_pad.h
-	include/psycho/devices/internal/dma.h
-	include/psycho/devices/internal/gpu.h
-	include/psycho/devices/internal/interrupt_controller.h
-	include/psycho/devices/internal/sio0.h
-	include/psycho/bios_func_tracer.h
-	include/psycho/bus.h
-	include/psycho/compiler.h
+	include/psycho/debug/bios_func_tracer.h
+	include/psycho/debug/disasm.h
+	include/psycho/debug/fixed_string.h
+	include/psycho/debug/log.h
+	include/psycho/devices/digital_pad.h
+	include/psycho/system/cpu/defs.h
+	include/psycho/system/cpu/interpreter.h
+	include/psycho/system/cpu/ops.h
+	include/psycho/system/bus.h
+	include/psycho/system/dma.h
+	include/psycho/system/gpu.h
+	include/psycho/system/interrupt_controller.h
+	include/psycho/system/sio0_device.h
+	include/psycho/system/sio0.h
+	include/psycho/compiler_support.h
 	include/psycho/ctx.h
-	include/psycho/disasm.h
-	include/psycho/fixed_string.h
-	include/psycho/log.h
 	include/psycho/scheduler.h
-	include/psycho/sio0_device.h
-	src/cpu/defs.c
-	src/cpu/defs.h
-	src/cpu/interpreter.c
-	src/cpu/interpreter.h
-	src/devices/external/digital_pad.c
-	src/devices/internal/gpu/gpu.c
-	src/devices/internal/gpu/gpu.h
-	src/devices/internal/gpu/sw.c
-	src/devices/internal/gpu/sw.c
-	src/devices/internal/interrupt_controller.c
-	src/devices/internal/interrupt_controller.h
-	src/devices/internal/sio0.c
-	src/devices/internal/sio0.h
-	src/bios_func_tracer.c
-	src/bios_func_tracer.h
-	src/bus.c
-	src/bus.h
+	src/debug/bios_func_tracer.c
+	src/debug/bios_func_tracer.h
+	src/debug/disasm.c
+	src/debug/disasm.h
+	src/debug/fixed_string.c
+	src/debug/fixed_string.h
+	src/debug/log.c
+	src/debug/log.h
+	src/devices/digital_pad.c
+	src/system/cpu/defs.c
+	src/system/cpu/defs.h
+	src/system/cpu/interpreter.c
+	src/system/cpu/interpreter.h
+	src/system/gpu/gpu.c
+	src/system/gpu/gpu.h
+	src/system/gpu/sw.c
+	src/system/gpu/sw.h
+	src/system/bus.c
+	src/system/bus.h
+	src/system/interrupt_controller.c
+	src/system/interrupt_controller.h
+	src/system/sio0_device.c
+	src/system/sio0.c
+	src/system/sio0.h
 	src/ctx.c
-	src/disasm.c
-	src/disasm.h
 	src/exe_loader.c
 	src/exe_loader.h
-	src/fixed_string.c
-	src/fixed_string.h
-	src/log.c
-	src/log.h
 	src/scheduler.c
 	src/scheduler.h
-	src/sio0_device.c
 	src/util.h
 )
 
 target_include_directories(psycho PUBLIC include)
+target_include_directories(psycho PRIVATE src)

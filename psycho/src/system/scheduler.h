@@ -24,6 +24,14 @@
 
 #include "psycho/ctx.h"
 
-#define KERNEL_INIT_PC (UINT32_C(0x80030000))
+PSYCHO_STATIC_ALWAYS_INLINE void psycho_scheduler_advance_ts(struct psycho_ctx *ctx, uint64_t ts)
+{
+	ctx->scheduler.ts_now += ts;
+}
 
-void psycho_ctx_exe_inject(struct psycho_ctx *ctx) PSYCHO_NONNULL;
+void psycho_scheduler_reset(struct psycho_ctx *ctx) PSYCHO_NONNULL;
+
+void psycho_scheduler_run(struct psycho_ctx *ctx) PSYCHO_NONNULL;
+
+void psycho_scheduler_add_event(struct psycho_ctx *ctx, struct psycho_scheduler_event *ev) PSYCHO_NONNULL;
+void psycho_scheduler_delete_event(struct psycho_ctx *ctx, struct psycho_scheduler_event *ev) PSYCHO_NONNULL;

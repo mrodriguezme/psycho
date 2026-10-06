@@ -15,47 +15,40 @@
 // COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR
 // OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
-#include <assert.h>
-#include <stddef.h>
-#include <string.h>
+#pragma once
 
-#include "psycho/ctx.h"
-#include "debug/log.h"
+#include <stdbool.h>
+#include "defs.h"
 
-DECLARE_LOG_MODULE(PSYCHO_LOG_MODULE_CTX);
+#ifdef __cplusplus
+extern "C" {
+#endif // __cplusplus
 
-struct p_ctx_cfg *p_cfg_get(struct p_ctx *ctx)
-{
-	return &ctx->cfg;
+struct psycho_ctx;
+
+struct p_cpu_cfg {
+	void (*illegal_instr)(struct psycho_ctx *ctx, uint32_t instr);
+};
+
+struct psycho_cpu_ops {
+	void (*irq_mux_set)(struct psycho_ctx *ctx, bool state);
+
+	void (*gpr_set)(struct psycho_ctx *ctx, enum psycho_cpu_gpr gpr, uint32_t val);
+	uint32_t (*gpr_get)(struct psycho_ctx *ctx, enum psycho_cpu_gpr gpr);
+
+	uint32_t (*lo_get)(struct psycho_ctx *ctx);
+	uint32_t (*hi_get)(struct psycho_ctx *ctx);
+
+	void (*pc_set)(struct psycho_ctx *ctx, uint32_t pc);
+	uint32_t (*pc_get)(struct psycho_ctx *ctx);
+
+	void (*run)(struct psycho_ctx *ctx, uint64_t instr_limit, bool stop_on_ev);
+
+	uint32_t (*instr_get)(struct psycho_ctx *ctx);
+
+	void (*reset)(struct psycho_ctx *ctx);
+};
+
+#ifdef __cplusplus
 }
-
-void psycho_init(struct p_ctx *ctx)
-{
-	p_bios_trace_init(ctx);
-	p_gpu_init(ctx);
-
-	p_cpu_int_init(ctx);
-	p_rst(ctx);
-
-	LOG_INFO(ctx, "initialized");
-}
-
-void p_rst(struct p_ctx *ctx)
-{
-	p_sched_rst(ctx);
-	p_gpu_rst(ctx);
-	p_sio0_rst(ctx);
-
-	ctx->cpu.rst(ctx);
-	LOG_INFO(ctx, "reset");
-}
-
-void p_step(struct p_ctx *ctx)
-{
-}
-
-void p_run_until_ev(struct p_ctx *ctx)
-{
-	ctx->running = true;
-	ctx->cpu.run(ctx, UINT64_MAX, true);
-}
+#endif // __cplusplus

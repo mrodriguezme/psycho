@@ -15,47 +15,51 @@
 // COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR
 // OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
-#include <assert.h>
+#pragma once
+
 #include <stddef.h>
-#include <string.h>
+#include "fixed_string.h"
 
-#include "psycho/ctx.h"
-#include "debug/log.h"
+#ifdef __cplusplus
+extern "C" {
+#endif // __cplusplus
 
-DECLARE_LOG_MODULE(PSYCHO_LOG_MODULE_CTX);
+struct psycho_ctx;
 
-struct p_ctx_cfg *p_cfg_get(struct p_ctx *ctx)
-{
-	return &ctx->cfg;
+enum psycho_log_level {
+	PSYCHO_LOG_LEVEL_OFF,
+	PSYCHO_LOG_LEVEL_INFO,
+	PSYCHO_LOG_LEVEL_WARNING,
+	PSYCHO_LOG_LEVEL_ERROR,
+	PSYCHO_LOG_LEVEL_DEBUG,
+	PSYCHO_LOG_LEVEL_TRACE,
+	PSYCHO_LOG_LEVEL_COUNT
+};
+
+enum psycho_log_module {
+	PSYCHO_LOG_MODULE_CTX,
+	PSYCHO_LOG_MODULE_CPU,
+	PSYCHO_LOG_MODULE_BUS,
+	PSYCHO_LOG_MODULE_BIOS_FUNC_TRACER,
+	PSYCHO_LOG_MODULE_SCHEDULER,
+	PSYCHO_LOG_MODULE_GPU,
+	PSYCHO_LOG_MODULE_INTERRUPT_CONTROLLER,
+	PSYCHO_LOG_MODULE_SIO0,
+	PSYCHO_LOG_MODULE_DIGITAL_CONTROLLER,
+	PSYCHO_LOG_MODULE_COUNT,
+};
+
+struct psycho_log_message {
+	struct psycho_fixed_string str;
+	enum psycho_log_module module;
+	enum psycho_log_level level;
+};
+
+struct psycho_log_cfg {
+	void (*log_cb)(struct psycho_ctx *ctx, struct psycho_log_message *msg);
+	enum psycho_log_level modules[PSYCHO_LOG_MODULE_COUNT];
+};
+
+#ifdef __cplusplus
 }
-
-void psycho_init(struct p_ctx *ctx)
-{
-	p_bios_trace_init(ctx);
-	p_gpu_init(ctx);
-
-	p_cpu_int_init(ctx);
-	p_rst(ctx);
-
-	LOG_INFO(ctx, "initialized");
-}
-
-void p_rst(struct p_ctx *ctx)
-{
-	p_sched_rst(ctx);
-	p_gpu_rst(ctx);
-	p_sio0_rst(ctx);
-
-	ctx->cpu.rst(ctx);
-	LOG_INFO(ctx, "reset");
-}
-
-void p_step(struct p_ctx *ctx)
-{
-}
-
-void p_run_until_ev(struct p_ctx *ctx)
-{
-	ctx->running = true;
-	ctx->cpu.run(ctx, UINT64_MAX, true);
-}
+#endif // __cplusplus

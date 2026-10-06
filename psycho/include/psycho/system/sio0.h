@@ -15,47 +15,44 @@
 // COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR
 // OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
-#include <assert.h>
-#include <stddef.h>
-#include <string.h>
+#pragma once
 
-#include "psycho/ctx.h"
-#include "debug/log.h"
+#include "psycho/compiler_support.h"
+#include "sio0_device.h"
 
-DECLARE_LOG_MODULE(PSYCHO_LOG_MODULE_CTX);
+enum psycho_sio0_slot {
+	PSYCHO_SIO0_SLOT_1,
+	PSYCHO_SIO0_SLOT_2,
+	PSYCHO_SIO0_SLOT_COUNT,
+};
 
-struct p_ctx_cfg *p_cfg_get(struct p_ctx *ctx)
-{
-	return &ctx->cfg;
-}
+struct psycho_sio0 {
+	struct psycho_sio0_device *devices[PSYCHO_SIO0_SLOT_COUNT][PSYCHO_SIO0_DEVICE_TYPE_COUNT];
+	struct psycho_sio0_device *curr_device;
 
-void psycho_init(struct p_ctx *ctx)
-{
-	p_bios_trace_init(ctx);
-	p_gpu_init(ctx);
+	struct {
+		uint32_t entry;
+		uint32_t latched;
+	} txfifo;
 
-	p_cpu_int_init(ctx);
-	p_rst(ctx);
+	struct {
+		size_t num_entries;
 
-	LOG_INFO(ctx, "initialized");
-}
+		union {
+			uint8_t entries[4];
+			uint32_t raw;
+		};
+	} rxfifo;
 
-void p_rst(struct p_ctx *ctx)
-{
-	p_sched_rst(ctx);
-	p_gpu_rst(ctx);
-	p_sio0_rst(ctx);
+	uint32_t stat;
+	uint16_t mode;
+	uint16_t ctrl;
+	uint16_t baud;
 
-	ctx->cpu.rst(ctx);
-	LOG_INFO(ctx, "reset");
-}
+	uint8_t last_rx;
 
-void p_step(struct p_ctx *ctx)
-{
-}
+	struct psycho_scheduler_event tx_event;
+};
 
-void p_run_until_ev(struct p_ctx *ctx)
-{
-	ctx->running = true;
-	ctx->cpu.run(ctx, UINT64_MAX, true);
-}
+void psycho_attach_device_to_sio0(struct psycho_ctx *ctx, struct psycho_sio0_device *dev,
+				  enum psycho_sio0_slot slot) PSYCHO_NONNULL;

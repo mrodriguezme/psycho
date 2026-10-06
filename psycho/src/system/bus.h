@@ -24,6 +24,16 @@
 
 #include "psycho/ctx.h"
 
-#define KERNEL_INIT_PC (UINT32_C(0x80030000))
+PSYCHO_NODISCARD uint32_t psycho_bus_load_word(struct psycho_ctx *ctx, uint32_t paddr) PSYCHO_NONNULL;
 
-void psycho_ctx_exe_inject(struct psycho_ctx *ctx) PSYCHO_NONNULL;
+PSYCHO_NODISCARD uint16_t psycho_bus_load_halfword(struct psycho_ctx *ctx, uint32_t paddr) PSYCHO_NONNULL;
+
+PSYCHO_NODISCARD uint8_t psycho_bus_load_byte(struct psycho_ctx *ctx, uint32_t paddr) PSYCHO_NONNULL;
+
+void psycho_bus_store_word(struct psycho_ctx *ctx, uint32_t paddr, uint32_t word) PSYCHO_NONNULL;
+
+void psycho_bus_store_halfword(struct psycho_ctx *ctx, uint32_t paddr, uint16_t halfword) PSYCHO_NONNULL;
+
+void psycho_bus_store_byte(struct psycho_ctx *ctx, uint32_t paddr, uint8_t byte) PSYCHO_NONNULL;
+
+PSYCHO_CONST void *psycho_get_mem_area(struct psycho_ctx *ctx, uint32_t paddr) PSYCHO_NONNULL;

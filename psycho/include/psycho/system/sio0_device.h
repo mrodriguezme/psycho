@@ -22,8 +22,28 @@
 
 #pragma once
 
-#include "psycho/ctx.h"
+#include "psycho/scheduler.h"
 
-#define KERNEL_INIT_PC (UINT32_C(0x80030000))
+struct psycho_ctx;
 
-void psycho_ctx_exe_inject(struct psycho_ctx *ctx) PSYCHO_NONNULL;
+enum psycho_sio0_device_type {
+	PSYCHO_SIO0_DEVICE_TYPE_CONTROLLER,
+	PSYCHO_SIO0_DEVICE_TYPE_MEMCARD,
+	PSYCHO_SIO0_DEVICE_TYPE_COUNT
+};
+
+struct psycho_sio0_device {
+	struct psycho_ctx *ctx;
+	void *handle;
+
+	uint8_t (*transceive)(void *dev, uint8_t mosi);
+	void (*reset)(void *dev);
+
+	const char *name;
+	enum psycho_sio0_device_type type;
+
+	struct psycho_scheduler_event ack_pulse_begin_event;
+	struct psycho_scheduler_event ack_pulse_end_event;
+};
+
+void psycho_sio0_device_ack(struct psycho_sio0_device *dev, unsigned int delay_us, unsigned int pulse_us);

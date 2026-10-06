@@ -20,10 +20,24 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-#pragma once
+#include "sched.h"
+#include "util.h"
+#include "devices/internal/sio0.h"
+#include "log.h"
 
-#include "psycho/ctx.h"
+DECLARE_LOG_MODULE(PSYCHO_LOG_MODULE_SIO0);
 
-#define KERNEL_INIT_PC (UINT32_C(0x80030000))
+void psycho_sio0_device_ack(struct psycho_sio0_device *dev, unsigned int delay_us, unsigned int pulse_us)
+{
+	dev->ack_pulse_begin_event.cb	    = psycho_sio0_dsr_assert;
+	dev->ack_pulse_begin_event.ts	    = us_to_cycles(delay_us);
+	dev->ack_pulse_begin_event.type	    = PSYCHO_SCHEDULER_EVENT_TYPE_SIO0_DEVICE_ACK_PULSE_BEGIN;
+	dev->ack_pulse_begin_event.userdata = dev;
 
-void psycho_ctx_exe_inject(struct psycho_ctx *ctx) PSYCHO_NONNULL;
+	dev->ack_pulse_end_event.cb   = psycho_sio0_dsr_deassert;
+	dev->ack_pulse_end_event.ts   = us_to_cycles(delay_us + pulse_us);
+	dev->ack_pulse_end_event.type = PSYCHO_SCHEDULER_EVENT_TYPE_SIO0_DEVICE_ACK_PULSE_END;
+
+	psycho_scheduler_add_event(dev->ctx, &dev->ack_pulse_begin_event);
+	psycho_scheduler_add_event(dev->ctx, &dev->ack_pulse_end_event);
+}
