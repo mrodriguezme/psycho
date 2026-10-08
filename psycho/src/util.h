@@ -27,7 +27,7 @@
 #include <stdint.h>
 
 #include "psycho/cpu_defs.h"
-#include "psycho/compiler.h"
+#include "psycho/common/compiler_support.h"
 #include "psycho/types.h"
 
 #define likely(x)		    __builtin_expect(!!(x), 1)

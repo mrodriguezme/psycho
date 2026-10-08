@@ -25,7 +25,7 @@
 #include <stdio.h>
 #include <string.h>
 
-#include "psycho/compiler.h"
+#include "psycho/common/compiler_support.h"
 #include "psycho/ctx.h"
 
 #include "bus.h"

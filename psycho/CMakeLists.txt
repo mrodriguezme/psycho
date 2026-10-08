@@ -25,9 +25,9 @@ target_link_libraries(psycho PRIVATE psycho_cfg_base_c)
 
 target_sources(
 	psycho PRIVATE
+	include/psycho/common/compiler_support.h
 	include/psycho/bios_trace.h
 	include/psycho/bus.h
-	include/psycho/compiler.h
 	include/psycho/cpu_defs.h
 	include/psycho/cpu_int.h
 	include/psycho/cpu_ops.h

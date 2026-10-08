@@ -1793,7 +1793,7 @@ op_xor:
 	goto end;
 
 op_nor:
-	gpr_set(ctx, rd, ~(gpr[rs] & gpr[rt]));
+	gpr_set(ctx, rd, ~(gpr[rs] | gpr[rt]));
 	goto end;
 
 op_slt:

@@ -25,7 +25,7 @@
 #include <stdarg.h>
 #include <stdbool.h>
 
-#include "psycho/compiler.h"
+#include "psycho/common/compiler_support.h"
 #include "psycho/str.h"
 
 void p_str_init_fixed(struct p_str *str, char *ptr, size_t cap) P_NONNULL;

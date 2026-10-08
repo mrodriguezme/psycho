@@ -24,7 +24,7 @@
 
 #include <stdint.h>
 
-#include "compiler.h"
+#include "psycho/common/compiler_support.h"
 #include "types.h"
 
 #ifdef __cplusplus

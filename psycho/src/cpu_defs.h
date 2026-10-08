@@ -23,7 +23,7 @@
 #pragma once
 
 #include <stdint.h>
-#include "psycho/compiler.h"
+#include "psycho/common/compiler_support.h"
 #include "util.h"
 
 #define DBG_VECTOR   (UINT32_C(0x80000040))

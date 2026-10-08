@@ -25,7 +25,7 @@
 #include <stdbool.h>
 #include <stddef.h>
 
-#include "compiler.h"
+#include "psycho/common/compiler_support.h"
 #include "cpu_defs.h"
 #include "str.h"
 #include "types.h"

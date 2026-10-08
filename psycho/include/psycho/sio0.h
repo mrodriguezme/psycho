@@ -24,7 +24,7 @@
 
 #include <stddef.h>
 
-#include "compiler.h"
+#include "psycho/common/compiler_support.h"
 #include "sio0_dev.h"
 #include "sched.h"
 
