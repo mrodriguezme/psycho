@@ -24,9 +24,9 @@
 
 #include <stdbool.h>
 #include <stddef.h>
+#include <stdint.h>
 
 #include "str.h"
-#include "types.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -49,13 +49,13 @@ struct p_bios_frame {
 	struct p_str str;
 	char str_buf[512];
 
-	u32 a0;
-	u32 a1;
-	u32 a2;
-	u32 a3;
-	u32 sp;
-	u32 ra;
-	u32 arg_pos;
+	uint32_t a0;
+	uint32_t a1;
+	uint32_t a2;
+	uint32_t a3;
+	uint32_t sp;
+	uint32_t ra;
+	uint32_t arg_pos;
 };
 
 struct p_bios_fn {

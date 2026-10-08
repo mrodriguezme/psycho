@@ -125,9 +125,9 @@ P_NONNULL static void reset_peripherals(struct p_ctx *ctx)
 	}
 }
 
-P_NODISCARD P_NONNULL static uint baud_fact_get(struct p_ctx *ctx)
+P_NODISCARD P_NONNULL static unsigned int baud_fact_get(struct p_ctx *ctx)
 {
-	static const uint mul[] = {
+	static const unsigned int mul[] = {
 		[MODE_BAUD_RELOAD_MUL1_0... MODE_BAUD_RELOAD_MUL1_1] = 1,
 		[MODE_BAUD_RELOAD_MUL16]			     = 16,
 		[MODE_BAUD_RELOAD_MUL64]			     = 64
@@ -137,15 +137,15 @@ P_NODISCARD P_NONNULL static uint baud_fact_get(struct p_ctx *ctx)
 		   MODE_BAUD_RELOAD_FACTOR_SHIFT];
 }
 
-P_NODISCARD P_NONNULL static uint word_len_get(struct p_ctx *ctx)
+P_NODISCARD P_NONNULL static unsigned int word_len_get(struct p_ctx *ctx)
 {
 	return 5 +
 	       ((ctx->sio0.mode & MODE_CHAR_LEN_MASK) >> MODE_CHAR_LEN_SHIFT);
 }
 
-P_NODISCARD P_NONNULL static uint rxfifo_intr_lvl_get(struct p_ctx *ctx)
+P_NODISCARD P_NONNULL static unsigned int rxfifo_intr_lvl_get(struct p_ctx *ctx)
 {
-	static const uint tbl[] = {
+	static const unsigned int tbl[] = {
 		// clang-format off
 
 		[CTRL_RX_INT_IRQ_ONE_BYTE]	= 1,
@@ -160,13 +160,13 @@ P_NODISCARD P_NONNULL static uint rxfifo_intr_lvl_get(struct p_ctx *ctx)
 		   CTRL_RX_INT_MODE_SHIFT];
 }
 
-P_NODISCARD P_NONNULL static uint calc_baud(struct p_ctx *ctx, u16 baud)
+P_NODISCARD P_NONNULL static unsigned int calc_baud(struct p_ctx *ctx, uint16_t baud)
 {
 	baud *= baud_fact_get(ctx);
 	return P_CPU_CLKFREQ_HZ / baud;
 }
 
-P_NONNULL static void rx_push(struct p_ctx *ctx, u8 byte)
+P_NONNULL static void rx_push(struct p_ctx *ctx, uint8_t byte)
 {
 	LOG_TRACE(ctx, "RX FIFO push request: 0x%02X", byte);
 
@@ -184,7 +184,7 @@ P_NONNULL static void rx_push(struct p_ctx *ctx, u8 byte)
 		// FIFO entry will by overwritten by the new byte.
 		cnt--;
 
-		u8 old			      = ctx->sio0.rxfifo.entries[cnt];
+		uint8_t old			      = ctx->sio0.rxfifo.entries[cnt];
 		ctx->sio0.rxfifo.entries[cnt] = byte;
 
 		LOG_WARN(ctx,
@@ -211,7 +211,7 @@ static void transceive_event(struct p_ctx *ctx, void *userdata)
 
 	enum sio0_slot slot = selected_slot(ctx);
 
-	u8 miso = 0xFF;
+	uint8_t miso = 0xFF;
 
 	for (size_t i = 0; i < NUM_DEVS; ++i) {
 		struct p_sio0_dev *dev = ctx->sio0.dev[slot][i];
@@ -223,7 +223,7 @@ static void transceive_event(struct p_ctx *ctx, void *userdata)
 		// they haven't been addressed, but only the addressed device's
 		// response will end up in the RXFIFO. At the beginning of every
 		// transaction (CS going low), HI-Z is guaranteed (0xFF).
-		u8 ret = dev->transceive(dev->handle, ctx->sio0.txfifo.latched);
+		uint8_t ret = dev->transceive(dev->handle, ctx->sio0.txfifo.latched);
 
 		if (ctx->sio0.curr_dev == dev)
 			miso = ret;
@@ -235,8 +235,8 @@ static void transceive_event(struct p_ctx *ctx, void *userdata)
 
 P_NONNULL static void tx(struct p_ctx *ctx)
 {
-	uint baud_fact = baud_fact_get(ctx);
-	uint word_len  = word_len_get(ctx);
+	unsigned int baud_fact = baud_fact_get(ctx);
+	unsigned int word_len  = word_len_get(ctx);
 
 	ctx->sio0.tx_ev.ts = ctx->sio0.baud * baud_fact * word_len;
 
@@ -298,7 +298,7 @@ void p_sio0_rst(struct p_ctx *ctx)
 	p_sio0_baud_set(ctx, 0x0088);
 }
 
-void p_sio0_tx(struct p_ctx *ctx, u8 byte)
+void p_sio0_tx(struct p_ctx *ctx, uint8_t byte)
 {
 	LOG_TRACE(ctx, "TX FIFO push request: 0x%02X", byte);
 
@@ -324,7 +324,7 @@ void p_sio0_tx(struct p_ctx *ctx, u8 byte)
 	tx(ctx);
 }
 
-u8 p_sio0_rx_pop8(struct p_ctx *ctx)
+uint8_t p_sio0_rx_pop8(struct p_ctx *ctx)
 {
 	if (unlikely(!ctx->sio0.rxfifo.num_entries)) {
 		// Reading from Empty RX FIFO returns either the most recently
@@ -336,7 +336,7 @@ u8 p_sio0_rx_pop8(struct p_ctx *ctx)
 		return ctx->sio0.last_rx;
 	}
 
-	u8 byte = ctx->sio0.rxfifo.entries[0];
+	uint8_t byte = ctx->sio0.rxfifo.entries[0];
 	LOG_TRACE(ctx, "RX FIFO popped; returning 0x%02X", byte);
 
 	ctx->sio0.rxfifo.num_entries--;
@@ -351,7 +351,7 @@ u8 p_sio0_rx_pop8(struct p_ctx *ctx)
 	return byte;
 }
 
-void p_sio0_mode_set(struct p_ctx *ctx, u16 mode)
+void p_sio0_mode_set(struct p_ctx *ctx, uint16_t mode)
 {
 	mode &= MODE_BITS;
 
@@ -398,7 +398,7 @@ void p_sio0_mode_set(struct p_ctx *ctx, u16 mode)
 	ctx->sio0.mode = mode;
 }
 
-void p_sio0_ctrl_set(struct p_ctx *ctx, u16 ctrl)
+void p_sio0_ctrl_set(struct p_ctx *ctx, uint16_t ctrl)
 {
 	if (ctrl & CTRL_ACK) {
 		ctx->sio0.stat &= ~(STAT_RX_PAR_ERR | STAT_IRQ);
@@ -427,7 +427,7 @@ void p_sio0_ctrl_set(struct p_ctx *ctx, u16 ctrl)
 		[CTRL_RX_INT_IRQ_EIGHT_BYTES] = "8 bytes"
 	};
 
-	uint rx_intr_mode = (ctrl & CTRL_RX_INT_MODE_MASK) >>
+	unsigned int rx_intr_mode = (ctrl & CTRL_RX_INT_MODE_MASK) >>
 			    CTRL_RX_INT_MODE_SHIFT;
 
 	const char *tx_intr  = (ctrl & CTRL_TX_INT_EN) ? "enabled" : "disabled";
@@ -455,9 +455,9 @@ void p_sio0_ctrl_set(struct p_ctx *ctx, u16 ctrl)
 	ctx->sio0.ctrl = ctrl;
 }
 
-void p_sio0_baud_set(struct p_ctx *ctx, u16 baud)
+void p_sio0_baud_set(struct p_ctx *ctx, uint16_t baud)
 {
-	uint bps = calc_baud(ctx, baud);
+	unsigned int bps = calc_baud(ctx, baud);
 
 	LOG_INFO(ctx, "baud reload value set to %d (new baud rate = %u bps)",
 		 baud, bps);

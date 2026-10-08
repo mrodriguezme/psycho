@@ -22,9 +22,9 @@
 
 #pragma once
 
+#include <stdint.h>
 #include <stdbool.h>
 #include <stddef.h>
-#include "types.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -43,8 +43,8 @@ enum p_sched_ev_type {
 };
 
 struct p_sched_ev {
-	u64 ts;
-	u64 period;
+	uint64_t ts;
+	uint64_t period;
 
 	void (*cb)(struct p_ctx *ctx, void *userdata);
 	enum p_sched_ev_type type;
@@ -59,7 +59,7 @@ struct p_sched_ev {
 struct p_sched {
 	struct p_sched_ev *ev[P_SCHED_NUM_EVENTS];
 	size_t num_ev;
-	u64 ts_now;
+	uint64_t ts_now;
 };
 
 #ifdef __cplusplus

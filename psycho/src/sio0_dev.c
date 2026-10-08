@@ -27,7 +27,7 @@
 
 LOG_MOD(P_LOG_SIO0);
 
-void p_sio0_dev_ack(struct p_sio0_dev *dev, uint delay_us, uint pulse_us)
+void p_sio0_dev_ack(struct p_sio0_dev *dev, unsigned int delay_us, unsigned int pulse_us)
 {
 	dev->ack_pulse_begin_ev.cb	 = p_sio0_dsr_assert;
 	dev->ack_pulse_begin_ev.ts	 = us_to_cycles(delay_us);

@@ -34,18 +34,18 @@ struct p_ctx;
 struct p_cpu_ops {
 	void (*irq_mux_set)(struct p_ctx *ctx, bool state);
 
-	void (*gpr_set)(struct p_ctx *ctx, enum p_cpu_gpr gpr, u32 val);
-	u32 (*gpr_get)(struct p_ctx *ctx, enum p_cpu_gpr gpr);
+	void (*gpr_set)(struct p_ctx *ctx, enum p_cpu_gpr gpr, uint32_t val);
+	uint32_t (*gpr_get)(struct p_ctx *ctx, enum p_cpu_gpr gpr);
 
-	u32 (*lo_get)(struct p_ctx *ctx);
-	u32 (*hi_get)(struct p_ctx *ctx);
+	uint32_t (*lo_get)(struct p_ctx *ctx);
+	uint32_t (*hi_get)(struct p_ctx *ctx);
 
-	void (*pc_set)(struct p_ctx *ctx, u32 pc);
-	u32 (*pc_get)(struct p_ctx *ctx);
+	void (*pc_set)(struct p_ctx *ctx, uint32_t pc);
+	uint32_t (*pc_get)(struct p_ctx *ctx);
 
-	void (*run)(struct p_ctx *ctx, u64 instr_limit, bool stop_on_ev);
+	void (*run)(struct p_ctx *ctx, uint64_t instr_limit, bool stop_on_ev);
 
-	u32 (*instr_get)(struct p_ctx *ctx);
+	uint32_t (*instr_get)(struct p_ctx *ctx);
 
 	void (*rst)(struct p_ctx *ctx);
 };

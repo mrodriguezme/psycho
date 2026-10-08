@@ -220,84 +220,84 @@ enum instr_grp_cop2 {
 	NCCT  = 0x3F
 };
 
-P_NODISCARD P_ALWAYS_INLINE uint mvmva_mx(u32 instr)
+P_NODISCARD P_ALWAYS_INLINE unsigned int mvmva_mx(uint32_t instr)
 {
 	return (instr >> MVMVA_MX_SHIFT) & MVMVA_PARAM_MASK;
 }
 
-P_NODISCARD P_ALWAYS_INLINE uint mvmva_vx(u32 instr)
+P_NODISCARD P_ALWAYS_INLINE unsigned int mvmva_vx(uint32_t instr)
 {
 	return (instr >> MVMVA_VX_SHIFT) & MVMVA_PARAM_MASK;
 }
 
-P_NODISCARD P_ALWAYS_INLINE uint mvmva_tx(u32 instr)
+P_NODISCARD P_ALWAYS_INLINE unsigned int mvmva_tx(uint32_t instr)
 {
 	return (instr >> MVMVA_TX_SHIFT) & MVMVA_PARAM_MASK;
 }
 
-P_NODISCARD P_ALWAYS_INLINE uint shift_frac(u32 instr)
+P_NODISCARD P_ALWAYS_INLINE unsigned int shift_frac(uint32_t instr)
 {
 	return (instr & INSTR_SF) ? 12 : 0;
 }
 
-P_NODISCARD P_ALWAYS_INLINE bool ir123_lm(u32 instr)
+P_NODISCARD P_ALWAYS_INLINE bool ir123_lm(uint32_t instr)
 {
 	return instr & INSTR_LM;
 }
 
-P_NODISCARD P_ALWAYS_INLINE u32 vaddr_to_paddr(u32 vaddr)
+P_NODISCARD P_ALWAYS_INLINE uint32_t vaddr_to_paddr(uint32_t vaddr)
 {
 	return vaddr & 0x1FFFFFFF;
 }
 
-P_NODISCARD P_ALWAYS_INLINE uint instr_op(u32 instr)
+P_NODISCARD P_ALWAYS_INLINE unsigned int instr_op(uint32_t instr)
 {
 	return instr >> 26;
 }
 
-P_NODISCARD P_ALWAYS_INLINE uint instr_rs(u32 instr)
+P_NODISCARD P_ALWAYS_INLINE unsigned int instr_rs(uint32_t instr)
 {
 	return (instr >> 21) & 0x1F;
 }
 
-P_NODISCARD P_ALWAYS_INLINE uint instr_rt(u32 instr)
+P_NODISCARD P_ALWAYS_INLINE unsigned int instr_rt(uint32_t instr)
 {
 	return (instr >> 16) & 0x1F;
 }
 
-P_NODISCARD P_ALWAYS_INLINE uint instr_rd(u32 instr)
+P_NODISCARD P_ALWAYS_INLINE unsigned int instr_rd(uint32_t instr)
 {
 	return (instr >> 11) & 0x1F;
 }
 
-P_NODISCARD P_ALWAYS_INLINE uint instr_shamt(u32 instr)
+P_NODISCARD P_ALWAYS_INLINE unsigned int instr_shamt(uint32_t instr)
 {
 	return (instr >> 6) & 0x1F;
 }
 
-P_NODISCARD P_ALWAYS_INLINE uint instr_target(u32 instr)
+P_NODISCARD P_ALWAYS_INLINE unsigned int instr_target(uint32_t instr)
 {
 	return instr & 0x03FFFFFF;
 }
 
-P_NODISCARD P_ALWAYS_INLINE uint instr_funct(u32 instr)
+P_NODISCARD P_ALWAYS_INLINE unsigned int instr_funct(uint32_t instr)
 {
 	return instr & 0x0000003F;
 }
 
-P_NODISCARD P_ALWAYS_INLINE u16 instr_imm(u32 instr)
+P_NODISCARD P_ALWAYS_INLINE uint16_t instr_imm(uint32_t instr)
 {
 	return instr & UINT16_MAX;
 }
 
-P_NODISCARD P_ALWAYS_INLINE u32 jmp_addr(u32 pc, u32 instr)
+P_NODISCARD P_ALWAYS_INLINE uint32_t jmp_addr(uint32_t pc, uint32_t instr)
 {
 	return (instr_target(instr) << 2) + (pc & 0xF0000000);
 }
 
-P_NODISCARD P_ALWAYS_INLINE u32 branch_addr(u32 pc, u32 instr)
+P_NODISCARD P_ALWAYS_INLINE uint32_t branch_addr(uint32_t pc, uint32_t instr)
 {
 	return sext_16_32(instr_imm(instr) << 2) + pc + sizeof(instr);
 }
 
-extern const u8 unr[0x101];
+extern const uint8_t unr[0x101];

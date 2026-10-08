@@ -26,7 +26,6 @@
 #include <stddef.h>
 
 #include "cpu_defs.h"
-#include "types.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -35,29 +34,29 @@ extern "C" {
 struct p_ctx;
 
 struct p_cpu_cfg {
-	void (*illegal_instr)(struct p_ctx *ctx, u32 instr);
+	void (*illegal_instr)(struct p_ctx *ctx, uint32_t instr);
 };
 
 struct p_cpu_dly_slot {
 	size_t dst;
-	u32 val;
+	uint32_t val;
 };
 
 struct p_cpu_int {
-	u32 gpr[P_GPR_COUNT];
-	u32 cop0[P_COP0_COUNT];
+	uint32_t gpr[P_GPR_COUNT];
+	uint32_t cop0[P_COP0_COUNT];
 
 	struct {
 		struct p_cop2_cpr cpr;
 		struct p_cop2_ccr ccr;
 	} cop2;
 
-	u32 pc;
-	u32 npc;
-	u32 dly_pc;
-	u32 instr;
-	u32 lo;
-	u32 hi;
+	uint32_t pc;
+	uint32_t npc;
+	uint32_t dly_pc;
+	uint32_t instr;
+	uint32_t lo;
+	uint32_t hi;
 
 	struct p_cpu_dly_slot ld_pend;
 	struct p_cpu_dly_slot ld_next;

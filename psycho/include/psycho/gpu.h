@@ -24,7 +24,6 @@
 
 #include <stddef.h>
 #include "sched.h"
-#include "types.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -35,12 +34,12 @@ extern "C" {
 
 struct p_ctx;
 
-typedef u16 p_gpu_vram[VRAM_HEIGHT][VRAM_WIDTH];
+typedef uint16_t p_gpu_vram[VRAM_HEIGHT][VRAM_WIDTH];
 
 struct p_gpu_vertex {
-	s16 x;
-	s16 y;
-	uint color;
+	int16_t x;
+	int16_t y;
+	unsigned int color;
 };
 
 struct p_gpu_render_ops {
@@ -52,7 +51,7 @@ struct p_gpu {
 		void (*fn)(struct p_ctx *ctx);
 		size_t rem_params;
 		size_t params;
-		u32 data[64];
+		uint32_t data[64];
 	} init;
 
 	struct {
@@ -60,7 +59,7 @@ struct p_gpu {
 		size_t y;
 		size_t x_orig;
 		size_t x_max;
-		uint rem;
+		unsigned int rem;
 	} copy;
 
 	struct p_gpu_vertex rect;
@@ -69,12 +68,12 @@ struct p_gpu {
 
 	p_gpu_vram vram;
 
-	void (*cmd_fn)(struct p_ctx *ctx, u32 packet);
+	void (*cmd_fn)(struct p_ctx *ctx, uint32_t packet);
 
 	struct p_sched_ev ev_vblank;
 
-	u32 gpustat;
-	u32 gpuread;
+	uint32_t gpustat;
+	uint32_t gpuread;
 };
 
 #ifdef __cplusplus

@@ -28,7 +28,6 @@
 #include "psycho/common/compiler_support.h"
 #include "cpu_defs.h"
 #include "str.h"
-#include "types.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -60,8 +59,8 @@ struct p_disasm {
 	struct {
 		char str_buf[P_DISASM_TRACE_LEN_MAX];
 		struct p_str str;
-		u32 instr;
-		u32 pc;
+		uint32_t instr;
+		uint32_t pc;
 	} res;
 
 	struct p_disasm_traces traces;
@@ -70,7 +69,7 @@ struct p_disasm {
 P_NODISCARD P_CONST const char *p_gpr_get(enum p_cpu_gpr reg);
 P_NODISCARD P_CONST const char *p_cop0_get(enum p_cpu_cop0 reg);
 
-void p_disasm_instr(struct p_ctx *ctx, u32 pc, struct p_disasm_traces *traces)
+void p_disasm_instr(struct p_ctx *ctx, uint32_t pc, struct p_disasm_traces *traces)
 	__attribute__((nonnull(1)));
 
 void p_disasm_set_tracing_state(struct p_ctx *ctx, const bool enabled)

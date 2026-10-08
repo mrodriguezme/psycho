@@ -89,7 +89,7 @@ P_CONST static const char *btn_name(enum p_digital_ctrl_btns btn)
 
 static int btn_count(enum p_digital_ctrl_btns btns)
 {
-	return __builtin_popcount((uint)btns);
+	return __builtin_popcount((unsigned int)btns);
 }
 
 static void btn_list(enum p_digital_ctrl_btns btns, char *buf, size_t buf_sz)
@@ -99,7 +99,7 @@ static void btn_list(enum p_digital_ctrl_btns btns, char *buf, size_t buf_sz)
 
 	buf[0] = '\0';
 
-	for (u16 bit = 0; bit < 16; ++bit) {
+	for (uint16_t bit = 0; bit < 16; ++bit) {
 		enum p_digital_ctrl_btns cur = btns & (1 << bit);
 
 		if (!cur)
@@ -115,11 +115,11 @@ static void btn_list(enum p_digital_ctrl_btns btns, char *buf, size_t buf_sz)
 		snprintf(buf, buf_sz, "none");
 }
 
-static u8 transceive(void *dev, u8 mosi)
+static uint8_t transceive(void *dev, uint8_t mosi)
 {
 	struct p_digital_ctrl *ctrl = dev;
 
-	u8 miso	 = HI_Z;
+	uint8_t miso	 = HI_Z;
 	bool ack = false;
 
 	switch (ctrl->state) {

@@ -61,42 +61,42 @@ P_NONNULL static void irq_mux_set(struct p_ctx *ctx, bool set)
 	}
 }
 
-P_NONNULL static void pc_set(struct p_ctx *ctx, u32 pc)
+P_NONNULL static void pc_set(struct p_ctx *ctx, uint32_t pc)
 {
 	ctx->cpu_int.dly_pc = pc;
 	ctx->cpu_int.pc	    = pc;
 	ctx->cpu_int.npc    = pc + sizeof(ctx->cpu_int.instr);
 }
 
-P_NONNULL static u32 pc_get(struct p_ctx *ctx)
+P_NONNULL static uint32_t pc_get(struct p_ctx *ctx)
 {
 	return ctx->cpu_int.pc;
 }
 
-P_NONNULL static u32 instr_get(struct p_ctx *ctx)
+P_NONNULL static uint32_t instr_get(struct p_ctx *ctx)
 {
 	return ctx->cpu_int.instr;
 }
 
 P_NONNULL static void gpr_write_direct(struct p_ctx *ctx, enum p_cpu_gpr gpr,
-				       u32 val)
+				       uint32_t val)
 {
 	assert(gpr < P_GPR_COUNT);
 	ctx->cpu_int.gpr[gpr] = val;
 }
 
-P_NONNULL static u32 gpr_read(struct p_ctx *ctx, enum p_cpu_gpr gpr)
+P_NONNULL static uint32_t gpr_read(struct p_ctx *ctx, enum p_cpu_gpr gpr)
 {
 	assert(gpr < P_GPR_COUNT);
 	return ctx->cpu_int.gpr[gpr];
 }
 
-P_NONNULL static u32 lo_get(struct p_ctx *ctx)
+P_NONNULL static uint32_t lo_get(struct p_ctx *ctx)
 {
 	return ctx->cpu_int.lo;
 }
 
-P_NONNULL static u32 hi_get(struct p_ctx *ctx)
+P_NONNULL static uint32_t hi_get(struct p_ctx *ctx)
 {
 	return ctx->cpu_int.hi;
 }
@@ -121,7 +121,7 @@ P_NONNULL static void illegal_instr(struct p_ctx *ctx)
 	ctx->cfg.cpu.illegal_instr(ctx, ctx->cpu_int.instr);
 }
 
-P_NODISCARD P_NONNULL static u32 load32(struct p_ctx *ctx, u32 vaddr)
+P_NODISCARD P_NONNULL static uint32_t load32(struct p_ctx *ctx, uint32_t vaddr)
 {
 	p_sched_adv_ts(ctx, 1);
 
@@ -129,7 +129,7 @@ P_NODISCARD P_NONNULL static u32 load32(struct p_ctx *ctx, u32 vaddr)
 	return p_load32(ctx, vaddr);
 }
 
-P_NODISCARD P_NONNULL static u16 load16(struct p_ctx *ctx, u32 vaddr)
+P_NODISCARD P_NONNULL static uint16_t load16(struct p_ctx *ctx, uint32_t vaddr)
 {
 	p_sched_adv_ts(ctx, 1);
 
@@ -137,7 +137,7 @@ P_NODISCARD P_NONNULL static u16 load16(struct p_ctx *ctx, u32 vaddr)
 	return p_load16(ctx, vaddr);
 }
 
-P_NODISCARD P_NONNULL static u8 load8(struct p_ctx *ctx, u32 vaddr)
+P_NODISCARD P_NONNULL static uint8_t load8(struct p_ctx *ctx, uint32_t vaddr)
 {
 	p_sched_adv_ts(ctx, 1);
 
@@ -145,7 +145,7 @@ P_NODISCARD P_NONNULL static u8 load8(struct p_ctx *ctx, u32 vaddr)
 	return p_load8(ctx, vaddr);
 }
 
-P_NONNULL static void store32(struct p_ctx *ctx, u32 vaddr, u32 data)
+P_NONNULL static void store32(struct p_ctx *ctx, uint32_t vaddr, uint32_t data)
 {
 #define SR (ctx->cpu_int.cop0[P_SR])
 
@@ -160,7 +160,7 @@ P_NONNULL static void store32(struct p_ctx *ctx, u32 vaddr, u32 data)
 #undef SR
 }
 
-P_NONNULL static void store16(struct p_ctx *ctx, u32 vaddr, u16 data)
+P_NONNULL static void store16(struct p_ctx *ctx, uint32_t vaddr, uint16_t data)
 {
 #define SR (ctx->cpu_int.cop0[P_SR])
 
@@ -175,7 +175,7 @@ P_NONNULL static void store16(struct p_ctx *ctx, u32 vaddr, u16 data)
 #undef SR
 }
 
-P_NONNULL static void store8(struct p_ctx *ctx, u32 vaddr, u8 data)
+P_NONNULL static void store8(struct p_ctx *ctx, uint32_t vaddr, uint8_t data)
 {
 #define SR (ctx->cpu_int.cop0[P_SR])
 
@@ -190,7 +190,7 @@ P_NONNULL static void store8(struct p_ctx *ctx, u32 vaddr, u8 data)
 #undef SR
 }
 
-P_NONNULL static void gpr_set(struct p_ctx *ctx, size_t reg, u32 val)
+P_NONNULL static void gpr_set(struct p_ctx *ctx, size_t reg, uint32_t val)
 {
 	// If the instruction following a load writes to the same destination
 	// register, the load’s delay slot is canceled.
@@ -203,7 +203,7 @@ P_NONNULL static void gpr_set(struct p_ctx *ctx, size_t reg, u32 val)
 	ctx->cpu_int.gpr[reg] = val;
 }
 
-P_NONNULL static void branch(struct p_ctx *ctx, u32 addr)
+P_NONNULL static void branch(struct p_ctx *ctx, uint32_t addr)
 {
 	ctx->cpu_int.next_in_bd = true;
 	ctx->cpu_int.npc	= addr;
@@ -214,15 +214,15 @@ P_NONNULL static void branch_if(struct p_ctx *ctx, bool cond)
 	ctx->cpu_int.next_in_bd = true;
 
 	if (cond) {
-		u32 pc = unlikely(ctx->cpu_int.in_bd) ?
-				 ctx->cpu_int.dly_pc - sizeof(u32) :
+		uint32_t pc = unlikely(ctx->cpu_int.in_bd) ?
+				 ctx->cpu_int.dly_pc - sizeof(uint32_t) :
 				 ctx->cpu_int.pc;
 
 		ctx->cpu_int.npc = branch_addr(pc, ctx->cpu_int.instr);
 	}
 }
 
-P_NONNULL static void exc_base(struct p_ctx *ctx, enum cpu_exc exc, u32 vec)
+P_NONNULL static void exc_base(struct p_ctx *ctx, enum cpu_exc exc, uint32_t vec)
 {
 #define CAUSE (ctx->cpu_int.cop0[P_CAUSE])
 #define EPC   (ctx->cpu_int.cop0[P_EPC])
@@ -262,7 +262,7 @@ P_NONNULL static void exc_dbg(struct p_ctx *ctx)
 	exc_base(ctx, EXC_BP, DBG_VECTOR);
 }
 
-P_NONNULL static void dbg_bp_write(struct p_ctx *ctx, u32 vaddr)
+P_NONNULL static void dbg_bp_write(struct p_ctx *ctx, uint32_t vaddr)
 {
 #define BDA  (ctx->cpu_int.cop0[P_BDA])
 #define BDAM (ctx->cpu_int.cop0[P_BDAM])
@@ -279,7 +279,7 @@ P_NONNULL static void dbg_bp_write(struct p_ctx *ctx, u32 vaddr)
 #undef DCIC
 }
 
-P_NONNULL static void do_div(struct p_ctx *ctx, s32 dividend, s32 divisor)
+P_NONNULL static void do_div(struct p_ctx *ctx, int32_t dividend, int32_t divisor)
 {
 #define LO (ctx->cpu_int.lo)
 #define HI (ctx->cpu_int.hi)
@@ -304,7 +304,7 @@ P_NONNULL static void do_div(struct p_ctx *ctx, s32 dividend, s32 divisor)
 #undef HI
 }
 
-P_NONNULL static void do_divu(struct p_ctx *ctx, u32 dividend, u32 divisor)
+P_NONNULL static void do_divu(struct p_ctx *ctx, uint32_t dividend, uint32_t divisor)
 {
 #define LO (ctx->cpu_int.lo)
 #define HI (ctx->cpu_int.hi)
@@ -324,7 +324,7 @@ P_NONNULL static void do_divu(struct p_ctx *ctx, u32 dividend, u32 divisor)
 #undef HI
 }
 
-P_NONNULL static void do_add(struct p_ctx *ctx, size_t dst, u32 a0, u32 a1)
+P_NONNULL static void do_add(struct p_ctx *ctx, size_t dst, uint32_t a0, uint32_t a1)
 {
 	int sum;
 
@@ -334,8 +334,8 @@ P_NONNULL static void do_add(struct p_ctx *ctx, size_t dst, u32 a0, u32 a1)
 		gpr_set(ctx, dst, sum);
 }
 
-P_NONNULL static void do_sub(struct p_ctx *ctx, size_t dst, u32 minuend,
-			     u32 subtrahend)
+P_NONNULL static void do_sub(struct p_ctx *ctx, size_t dst, uint32_t minuend,
+			     uint32_t subtrahend)
 {
 	int diff;
 
@@ -345,7 +345,7 @@ P_NONNULL static void do_sub(struct p_ctx *ctx, size_t dst, u32 minuend,
 		gpr_set(ctx, dst, diff);
 }
 
-P_NONNULL static void do_cop0_instr(struct p_ctx *ctx, uint funct)
+P_NONNULL static void do_cop0_instr(struct p_ctx *ctx, unsigned int funct)
 {
 #define SR (ctx->cpu_int.cop0[P_SR])
 
@@ -369,7 +369,7 @@ P_NONNULL static void update_flag(struct p_ctx *ctx)
 #undef FLAG
 }
 
-P_NONNULL static void flag_set(struct p_ctx *ctx, u32 flags)
+P_NONNULL static void flag_set(struct p_ctx *ctx, uint32_t flags)
 {
 #define FLAG (ctx->cpu_int.cop2.ccr.flag)
 
@@ -378,8 +378,8 @@ P_NONNULL static void flag_set(struct p_ctx *ctx, u32 flags)
 #undef FLAG
 }
 
-P_NONNULL static s64 mac123_chk(struct p_ctx *ctx, s64 sum, s64 addend,
-				u32 neg_flag, u32 pos_flag)
+P_NONNULL static int64_t mac123_chk(struct p_ctx *ctx, int64_t sum, int64_t addend,
+				uint32_t neg_flag, uint32_t pos_flag)
 {
 	sum += addend;
 
@@ -388,10 +388,10 @@ P_NONNULL static s64 mac123_chk(struct p_ctx *ctx, s64 sum, s64 addend,
 	else if (sum < MAC123_MIN)
 		flag_set(ctx, neg_flag);
 
-	return (s64)((u64)sum << 20) >> 20;
+	return (int64_t)((uint64_t)sum << 20) >> 20;
 }
 
-P_NONNULL static s64 mac0_add(struct p_ctx *ctx, s64 res)
+P_NONNULL static int64_t mac0_add(struct p_ctx *ctx, int64_t res)
 {
 	if (res > INT32_MAX)
 		flag_set(ctx, MAC0_POS_OVF);
@@ -401,8 +401,8 @@ P_NONNULL static s64 mac0_add(struct p_ctx *ctx, s64 res)
 	return res;
 }
 
-P_NONNULL static s64 mac123_add(struct p_ctx *ctx, size_t mac, s64 sum,
-				s64 addend)
+P_NONNULL static int64_t mac123_add(struct p_ctx *ctx, size_t mac, int64_t sum,
+				int64_t addend)
 {
 	switch (mac) {
 	case 1:
@@ -419,14 +419,14 @@ P_NONNULL static s64 mac123_add(struct p_ctx *ctx, size_t mac, s64 sum,
 	}
 }
 
-P_NONNULL P_NODISCARD static s16 ir0_sat(struct p_ctx *ctx, s64 val)
+P_NONNULL P_NODISCARD static int16_t ir0_sat(struct p_ctx *ctx, int64_t val)
 {
 	return gte_clamp(ctx, val, IR0_MIN, IR0_MAX, IR0_SAT);
 }
 
-P_NONNULL static s16 ir123_sat(struct p_ctx *ctx, uint ir, s32 val, bool lm)
+P_NONNULL static int16_t ir123_sat(struct p_ctx *ctx, unsigned int ir, int32_t val, bool lm)
 {
-	s16 min = lm ? IR123_LM_MIN : IR123_MIN;
+	int16_t min = lm ? IR123_LM_MIN : IR123_MIN;
 
 	switch (ir) {
 	case 1:
@@ -443,7 +443,7 @@ P_NONNULL static s16 ir123_sat(struct p_ctx *ctx, uint ir, s32 val, bool lm)
 	}
 }
 
-P_NONNULL static void sx_push(struct p_ctx *ctx, s64 val)
+P_NONNULL static void sx_push(struct p_ctx *ctx, int64_t val)
 {
 #define SXY (ctx->cpu_int.cop2.cpr.sxy)
 
@@ -455,7 +455,7 @@ P_NONNULL static void sx_push(struct p_ctx *ctx, s64 val)
 #undef SXY
 }
 
-P_NONNULL static void sy_push(struct p_ctx *ctx, s64 val)
+P_NONNULL static void sy_push(struct p_ctx *ctx, int64_t val)
 {
 #define SXY (ctx->cpu_int.cop2.cpr.sxy)
 
@@ -467,7 +467,7 @@ P_NONNULL static void sy_push(struct p_ctx *ctx, s64 val)
 #undef SXY
 }
 
-P_NONNULL static void sz_push(struct p_ctx *ctx, s64 val)
+P_NONNULL static void sz_push(struct p_ctx *ctx, int64_t val)
 {
 #define SZ (ctx->cpu_int.cop2.cpr.sz)
 
@@ -479,12 +479,12 @@ P_NONNULL static void sz_push(struct p_ctx *ctx, s64 val)
 #undef SZ
 }
 
-P_NONNULL static u16 otz_set(struct p_ctx *ctx, s64 val)
+P_NONNULL static uint16_t otz_set(struct p_ctx *ctx, int64_t val)
 {
 	return gte_clamp(ctx, val, SZ_OTZ_MIN, SZ_OTZ_MAX, SZ3_OTZ_SAT);
 }
 
-P_NONNULL static u32 rgb_set(struct p_ctx *ctx, uint color, s32 val)
+P_NONNULL static uint32_t rgb_set(struct p_ctx *ctx, unsigned int color, int32_t val)
 {
 	switch (color) {
 	case 0:
@@ -501,18 +501,18 @@ P_NONNULL static u32 rgb_set(struct p_ctx *ctx, uint color, s32 val)
 	}
 }
 
-P_NONNULL P_NODISCARD static s64 gte_div(struct p_ctx *ctx)
+P_NONNULL P_NODISCARD static int64_t gte_div(struct p_ctx *ctx)
 {
 #define H   (ctx->cpu_int.cop2.ccr.h)
 #define SZ3 (ctx->cpu_int.cop2.cpr.sz[3].v)
 
-	s64 n;
+	int64_t n;
 
 	if (likely(H < (SZ3 * 2))) {
 		int z  = __builtin_clz(SZ3) - 16;
 		n      = H << z;
-		uint d = SZ3 << z;
-		uint u = unr[(d - 0x7FC0) >> 7] + 0x101;
+		unsigned int d = SZ3 << z;
+		unsigned int u = unr[(d - 0x7FC0) >> 7] + 0x101;
 		d      = ((0x2000080 - (d * u)) >> 8);
 		d      = ((0x0000080 + (d * u)) >> 8);
 		n      = min(0x1FFFF, (((n * d) + 0x8000) >> 16));
@@ -532,10 +532,10 @@ P_NONNULL static void color_fifo_push(struct p_ctx *ctx)
 #define RGB  (ctx->cpu_int.cop2.cpr.rgb)
 #define RGBC (ctx->cpu_int.cop2.cpr.rgbc)
 
-	u32 r = rgb_set(ctx, 0, (u32)(MAC[1] >> 4)) << 0;
-	u32 g = rgb_set(ctx, 1, (u32)(MAC[2] >> 4)) << 8;
-	u32 b = rgb_set(ctx, 2, (u32)(MAC[3] >> 4)) << 16;
-	u32 c = (u32)RGBC.code << 24;
+	uint32_t r = rgb_set(ctx, 0, (uint32_t)(MAC[1] >> 4)) << 0;
+	uint32_t g = rgb_set(ctx, 1, (uint32_t)(MAC[2] >> 4)) << 8;
+	uint32_t b = rgb_set(ctx, 2, (uint32_t)(MAC[3] >> 4)) << 16;
+	uint32_t c = (uint32_t)RGBC.code << 24;
 
 	RGB[0]	   = RGB[1];
 	RGB[1]	   = RGB[2];
@@ -557,14 +557,14 @@ P_NONNULL static void rtp(struct p_ctx *ctx, struct p_gte_vec *vec, bool dq)
 #define RT  (ctx->cpu_int.cop2.ccr.r)
 #define TR  (ctx->cpu_int.cop2.ccr.tr)
 
-	const uint sf = shift_frac(ctx->cpu_int.instr);
+	const unsigned int sf = shift_frac(ctx->cpu_int.instr);
 	const bool lm = ir123_lm(ctx->cpu_int.instr);
 
-	s64 sum;
+	int64_t sum;
 
 	for (size_t i = 1, j = 0; i < ARRAY_SIZE(MAC); ++i, ++j) {
 		sum = 0;
-		sum = mac123_add(ctx, i, sum, (u64)TR[j] << 12);
+		sum = mac123_add(ctx, i, sum, (uint64_t)TR[j] << 12);
 		sum = mac123_add(ctx, i, sum, RT[j][0] * vec->x);
 		sum = mac123_add(ctx, i, sum, RT[j][1] * vec->y);
 		sum = mac123_add(ctx, i, sum, RT[j][2] * vec->z);
@@ -584,7 +584,7 @@ P_NONNULL static void rtp(struct p_ctx *ctx, struct p_gte_vec *vec, bool dq)
 
 	sz_push(ctx, sum);
 
-	s64 quot = gte_div(ctx);
+	int64_t quot = gte_div(ctx);
 
 	sum = mac0_add(ctx, (quot * IR[1]) + OFX);
 	sx_push(ctx, sum >> 16);
@@ -614,11 +614,11 @@ P_NONNULL static void intpl_llm_vec(struct p_ctx *ctx, struct p_gte_vec *vec)
 #define LLM (ctx->cpu_int.cop2.ccr.llm)
 #define MAC (ctx->cpu_int.cop2.cpr.mac)
 
-	const uint sf = shift_frac(ctx->cpu_int.instr);
+	const unsigned int sf = shift_frac(ctx->cpu_int.instr);
 	const bool lm = ir123_lm(ctx->cpu_int.instr);
 
 	for (size_t i = 1, j = 0; i < ARRAY_SIZE(MAC); ++i, ++j) {
-		s64 sum = 0;
+		int64_t sum = 0;
 		sum	= mac123_add(ctx, i, sum, LLM[j][0] * vec->x);
 		sum	= mac123_add(ctx, i, sum, LLM[j][1] * vec->y);
 		sum	= mac123_add(ctx, i, sum, LLM[j][2] * vec->z);
@@ -639,12 +639,12 @@ P_NONNULL static void intpl_bk_lcm(struct p_ctx *ctx)
 #define LCM (ctx->cpu_int.cop2.ccr.lcm)
 #define MAC (ctx->cpu_int.cop2.cpr.mac)
 
-	const uint sf = shift_frac(ctx->cpu_int.instr);
+	const unsigned int sf = shift_frac(ctx->cpu_int.instr);
 	const bool lm = ir123_lm(ctx->cpu_int.instr);
 
 	for (size_t i = 1, j = 0; i < ARRAY_SIZE(MAC); ++i, ++j) {
-		s64 sum = 0;
-		sum	= mac123_add(ctx, i, sum, (u64)BK[j] << 12);
+		int64_t sum = 0;
+		sum	= mac123_add(ctx, i, sum, (uint64_t)BK[j] << 12);
 		sum	= mac123_add(ctx, i, sum, LCM[j][0] * IR[1]);
 		sum	= mac123_add(ctx, i, sum, LCM[j][1] * IR[2]);
 		sum	= mac123_add(ctx, i, sum, LCM[j][2] * IR[3]);
@@ -667,11 +667,11 @@ P_NONNULL static void intpl_rgb(struct p_ctx *ctx)
 #define MAC  (ctx->cpu_int.cop2.cpr.mac)
 #define RGBC (ctx->cpu_int.cop2.cpr.rgbc.arr)
 
-	const uint sf = shift_frac(ctx->cpu_int.instr);
+	const unsigned int sf = shift_frac(ctx->cpu_int.instr);
 	const bool lm = ir123_lm(ctx->cpu_int.instr);
 
 	for (size_t i = 1, j = 0; i < ARRAY_SIZE(MAC); ++i, ++j) {
-		MAC[i] = (((u64)(RGBC[j] * IR[i])) << 4) >> sf;
+		MAC[i] = (((uint64_t)(RGBC[j] * IR[i])) << 4) >> sf;
 		IR[i]  = ir123_sat(ctx, i, MAC[i], lm);
 	}
 
@@ -680,18 +680,18 @@ P_NONNULL static void intpl_rgb(struct p_ctx *ctx)
 #undef RGBC
 }
 
-P_NONNULL static void intpl_fc(struct p_ctx *ctx, s64 *sums)
+P_NONNULL static void intpl_fc(struct p_ctx *ctx, int64_t *sums)
 {
 #define FC  (ctx->cpu_int.cop2.ccr.fc)
 #define IR  (ctx->cpu_int.cop2.cpr.ir)
 #define MAC (ctx->cpu_int.cop2.cpr.mac)
 
-	const uint sf = shift_frac(ctx->cpu_int.instr);
+	const unsigned int sf = shift_frac(ctx->cpu_int.instr);
 	const bool lm = ir123_lm(ctx->cpu_int.instr);
 
 	for (size_t i = 1, j = 0; i < ARRAY_SIZE(MAC); ++i, ++j) {
-		s64 sum = 0;
-		sum	= mac123_add(ctx, i, sum, ((u64)FC[j] << 12) - sums[j]);
+		int64_t sum = 0;
+		sum	= mac123_add(ctx, i, sum, ((uint64_t)FC[j] << 12) - sums[j]);
 
 		MAC[i] = sum >> sf;
 		IR[i]  = ir123_sat(ctx, i, MAC[i], false);
@@ -709,12 +709,12 @@ P_NONNULL static void intpl_fc(struct p_ctx *ctx, s64 *sums)
 #undef MAC
 }
 
-P_NONNULL static void dpc(struct p_ctx *ctx, u8 *rgb)
+P_NONNULL static void dpc(struct p_ctx *ctx, uint8_t *rgb)
 {
-	s64 sums[3];
+	int64_t sums[3];
 
 	for (size_t i = 0; i < ARRAY_SIZE(sums); ++i)
-		sums[i] = (u32)rgb[i] << 16;
+		sums[i] = (uint32_t)rgb[i] << 16;
 
 	intpl_fc(ctx, sums);
 	color_fifo_push(ctx);
@@ -743,10 +743,10 @@ P_NONNULL static void ncd(struct p_ctx *ctx, struct p_gte_vec *vec)
 	intpl_llm_vec(ctx, vec);
 	intpl_bk_lcm(ctx);
 
-	s64 sums[3];
+	int64_t sums[3];
 
 	for (size_t i = 0, j = 1; i < ARRAY_SIZE(sums); ++i, ++j)
-		sums[i] = ((u64)(RGBC[i] * IR[j])) << 4;
+		sums[i] = ((uint64_t)(RGBC[i] * IR[j])) << 4;
 
 	intpl_fc(ctx, sums);
 	color_fifo_push(ctx);
@@ -755,7 +755,7 @@ P_NONNULL static void ncd(struct p_ctx *ctx, struct p_gte_vec *vec)
 #undef RGBC
 }
 
-P_NONNULL static void avsz(struct p_ctx *ctx, s16 scale, size_t sz_off)
+P_NONNULL static void avsz(struct p_ctx *ctx, int16_t scale, size_t sz_off)
 {
 #define FLAG (ctx->cpu_int.cop2.ccr.flag)
 #define MAC0 (ctx->cpu_int.cop2.cpr.mac[0])
@@ -764,7 +764,7 @@ P_NONNULL static void avsz(struct p_ctx *ctx, s16 scale, size_t sz_off)
 
 	FLAG = 0;
 
-	s64 sum = 0;
+	int64_t sum = 0;
 
 	while (sz_off < ARRAY_SIZE(SZ))
 		sum += SZ[sz_off++].v;
@@ -794,9 +794,9 @@ P_NONNULL static void do_cop2_mfc(struct p_ctx *ctx, size_t rt, size_t rd)
 
 	case P_IRGB:
 	case P_ORGB: {
-		u32 r = clamp(IR[1] >> 7, 0x00, 0x1F) << 0;
-		u32 g = clamp(IR[2] >> 7, 0x00, 0x1F) << 5;
-		u32 b = clamp(IR[3] >> 7, 0x00, 0x1F) << 10;
+		uint32_t r = clamp(IR[1] >> 7, 0x00, 0x1F) << 0;
+		uint32_t g = clamp(IR[2] >> 7, 0x00, 0x1F) << 5;
+		uint32_t b = clamp(IR[3] >> 7, 0x00, 0x1F) << 10;
 
 		gpr_set(ctx, rt, b | g | r);
 		break;
@@ -866,7 +866,7 @@ P_NONNULL static void do_cop2_mtc(struct p_ctx *ctx, size_t rd, size_t rt)
 	case P_LZCS: {
 		LZCS = gpr[rt];
 
-		u32 res = 32;
+		uint32_t res = 32;
 
 		if (LZCS > 0)
 			// Reading LZCR returns the leading 0 count of LZCS if
@@ -927,17 +927,17 @@ P_NONNULL static void do_cop2_ctc(struct p_ctx *ctx, size_t rd, size_t rt)
 #undef FLAG
 }
 
-static void mvmva(struct p_ctx *ctx, s16 (*Mx)[3], s16 *Vx, s32 *Tx)
+static void mvmva(struct p_ctx *ctx, int16_t (*Mx)[3], int16_t *Vx, int32_t *Tx)
 {
 #define IR  (ctx->cpu_int.cop2.cpr.ir)
 #define MAC (ctx->cpu_int.cop2.cpr.mac)
 
-	const uint sf = shift_frac(ctx->cpu_int.instr);
+	const unsigned int sf = shift_frac(ctx->cpu_int.instr);
 	const bool lm = ir123_lm(ctx->cpu_int.instr);
 
 	for (size_t i = 1, j = 0; i < ARRAY_SIZE(MAC); ++i, ++j) {
-		s64 sum = 0;
-		sum	= mac123_add(ctx, i, sum, (u64)Tx[j] << 12);
+		int64_t sum = 0;
+		sum	= mac123_add(ctx, i, sum, (uint64_t)Tx[j] << 12);
 		sum	= mac123_add(ctx, i, sum, Mx[j][0] * Vx[0]);
 		sum	= mac123_add(ctx, i, sum, Mx[j][1] * Vx[1]);
 		sum	= mac123_add(ctx, i, sum, Mx[j][2] * Vx[2]);
@@ -950,18 +950,18 @@ static void mvmva(struct p_ctx *ctx, s16 (*Mx)[3], s16 *Vx, s32 *Tx)
 #undef MAC
 }
 
-static void mvmva_bugged(struct p_ctx *ctx, s16 (*Mx)[3], s16 *Vx)
+static void mvmva_bugged(struct p_ctx *ctx, int16_t (*Mx)[3], int16_t *Vx)
 {
 #define FC  (ctx->cpu_int.cop2.ccr.fc)
 #define IR  (ctx->cpu_int.cop2.cpr.ir)
 #define MAC (ctx->cpu_int.cop2.cpr.mac)
 
-	const uint sf = shift_frac(ctx->cpu_int.instr);
+	const unsigned int sf = shift_frac(ctx->cpu_int.instr);
 	const bool lm = ir123_lm(ctx->cpu_int.instr);
 
 	for (size_t i = 1, j = 0; i < ARRAY_SIZE(MAC); ++i, ++j) {
-		s64 sum = 0;
-		sum	= mac123_add(ctx, i, sum, (u64)FC[j] << 12);
+		int64_t sum = 0;
+		sum	= mac123_add(ctx, i, sum, (uint64_t)FC[j] << 12);
 		sum	= mac123_add(ctx, i, sum, Mx[j][0] * Vx[0]);
 
 		MAC[i] = sum >> sf;
@@ -992,7 +992,7 @@ P_NONNULL static void dly_slot_process(struct p_ctx *ctx)
 	swap(&ctx->cpu_int.ld_pend, &ctx->cpu_int.ld_next);
 }
 
-P_NONNULL static void load_dly(struct p_ctx *ctx, size_t dst, u32 val)
+P_NONNULL static void load_dly(struct p_ctx *ctx, size_t dst, uint32_t val)
 {
 	if (unlikely(!dst)) {
 		LOG_DBG(ctx, "Load delay rejected - dest was $zero");
@@ -1014,7 +1014,7 @@ P_NONNULL static void do_jalr(struct p_ctx *ctx, size_t rs, size_t rd)
 #define instr (ctx->cpu_int.instr)
 #define pc    (ctx->cpu_int.pc)
 
-	u32 addr = gpr[rs];
+	uint32_t addr = gpr[rs];
 
 	gpr_set(ctx, rd, pc + (sizeof(instr) * 2));
 	branch(ctx, addr);
@@ -1030,7 +1030,7 @@ P_NONNULL static void do_mult(struct p_ctx *ctx, size_t rs, size_t rt)
 #define hi  (ctx->cpu_int.hi)
 #define lo  (ctx->cpu_int.lo)
 
-	u64 prod = sext_32_64(gpr[rs]) * sext_32_64(gpr[rt]);
+	uint64_t prod = sext_32_64(gpr[rs]) * sext_32_64(gpr[rt]);
 
 	lo = prod & UINT32_MAX;
 	hi = prod >> 32;
@@ -1046,7 +1046,7 @@ P_NONNULL static void do_multu(struct p_ctx *ctx, size_t rs, size_t rt)
 #define hi  (ctx->cpu_int.hi)
 #define lo  (ctx->cpu_int.lo)
 
-	u64 prod = zext_32_64(gpr[rs]) * zext_32_64(gpr[rt]);
+	uint64_t prod = zext_32_64(gpr[rs]) * zext_32_64(gpr[rt]);
 
 	lo = prod & UINT32_MAX;
 	hi = prod >> 32;
@@ -1063,7 +1063,7 @@ P_NONNULL static void regimm(struct p_ctx *ctx, size_t rs, size_t rt)
 #define instr (ctx->cpu_int.instr)
 
 	bool link   = (rt & 0x1E) == 0x10;
-	bool branch = (s32)(gpr[rs] ^ (rt << 31)) < 0;
+	bool branch = (int32_t)(gpr[rs] ^ (rt << 31)) < 0;
 
 	if (link)
 		gpr_set(ctx, P_RA, pc + (sizeof(instr) * 2));
@@ -1099,10 +1099,10 @@ P_NONNULL static void do_op(struct p_ctx *ctx)
 #define IR  (ctx->cpu_int.cop2.cpr.ir)
 #define MAC (ctx->cpu_int.cop2.cpr.mac)
 
-	const uint sf = shift_frac(ctx->cpu_int.instr);
+	const unsigned int sf = shift_frac(ctx->cpu_int.instr);
 	const bool lm = ir123_lm(ctx->cpu_int.instr);
 
-	s64 res[3] = {
+	int64_t res[3] = {
 		// clang-format off
 
 		[0] = (IR[3] * D2) - (IR[2] * D3),
@@ -1113,7 +1113,7 @@ P_NONNULL static void do_op(struct p_ctx *ctx)
 	};
 
 	for (size_t i = 0, reg = 1; i < ARRAY_SIZE(res); ++i, ++reg) {
-		s64 sum = 0;
+		int64_t sum = 0;
 		sum	= mac123_add(ctx, reg, sum, res[i]);
 
 		MAC[reg] = sum >> sf;
@@ -1131,10 +1131,10 @@ P_NONNULL static void do_intpl(struct p_ctx *ctx)
 {
 #define IR (ctx->cpu_int.cop2.cpr.ir)
 
-	s64 sums[3];
+	int64_t sums[3];
 
 	for (size_t i = 0, j = 1; i < ARRAY_SIZE(sums); ++i, ++j)
-		sums[i] = (u64)IR[j] << 12;
+		sums[i] = (uint64_t)IR[j] << 12;
 
 	intpl_fc(ctx, sums);
 	color_fifo_push(ctx);
@@ -1154,7 +1154,7 @@ P_NONNULL static void do_mvmva(struct p_ctx *ctx)
 #define TR   (ctx->cpu_int.cop2.ccr.tr)
 #define V    (ctx->cpu_int.cop2.cpr.v)
 
-	s16(*mx_lut[3])[3] = {
+	int16_t(*mx_lut[3])[3] = {
 		// clang-format off
 
 		[0] = RT,
@@ -1164,26 +1164,26 @@ P_NONNULL static void do_mvmva(struct p_ctx *ctx)
 		// clang-format on
 	};
 
-	s32 *tx_lut[4] = {
+	int32_t *tx_lut[4] = {
 		// clang-format off
 
 		[0] = TR,
 		[1] = BK,
 		[2] = FC,
-		[3] = (s32[3]){ 0 }
+		[3] = (int32_t[3]){ 0 }
 
 		// clang-format on
 	};
 
-	uint mx_sel = mvmva_mx(ctx->cpu_int.instr);
+	unsigned int mx_sel = mvmva_mx(ctx->cpu_int.instr);
 
-	s16(*mx)[3];
-	s16 mx_bugged[3][3];
+	int16_t(*mx)[3];
+	int16_t mx_bugged[3][3];
 
 	if (likely(mx_sel <= 2))
 		mx = mx_lut[mx_sel];
 	else {
-		mx_bugged[0][0] = (u32)-RGBC[0] << 4;
+		mx_bugged[0][0] = (uint32_t)-RGBC[0] << 4;
 		mx_bugged[0][1] = +RGBC[0] << 4;
 		mx_bugged[0][2] = IR[0];
 		mx_bugged[1][0] = RT[0][2];
@@ -1196,13 +1196,13 @@ P_NONNULL static void do_mvmva(struct p_ctx *ctx)
 		mx = mx_bugged;
 	}
 
-	uint tx_sel = mvmva_tx(ctx->cpu_int.instr);
-	s32 *tx	    = tx_lut[tx_sel];
+	unsigned int tx_sel = mvmva_tx(ctx->cpu_int.instr);
+	int32_t *tx	    = tx_lut[tx_sel];
 
-	uint vx_sel = mvmva_vx(ctx->cpu_int.instr);
+	unsigned int vx_sel = mvmva_vx(ctx->cpu_int.instr);
 
-	s16 vx_tmp[3];
-	s16 *vx;
+	int16_t vx_tmp[3];
+	int16_t *vx;
 
 	if (vx_sel <= 2)
 		vx = V[vx_sel].arr;
@@ -1238,10 +1238,10 @@ P_NONNULL static void do_cdp(struct p_ctx *ctx)
 
 	intpl_bk_lcm(ctx);
 
-	s64 sums[3];
+	int64_t sums[3];
 
 	for (size_t i = 0, j = 1; i < ARRAY_SIZE(sums); ++i, ++j)
-		sums[i] = ((u64)(RGBC[i] * IR[j])) << 4;
+		sums[i] = ((uint64_t)(RGBC[i] * IR[j])) << 4;
 
 	intpl_fc(ctx, sums);
 	color_fifo_push(ctx);
@@ -1255,11 +1255,11 @@ P_NONNULL static void do_sqr(struct p_ctx *ctx)
 #define IR  (ctx->cpu_int.cop2.cpr.ir)
 #define MAC (ctx->cpu_int.cop2.cpr.mac)
 
-	const uint sf = shift_frac(ctx->cpu_int.instr);
+	const unsigned int sf = shift_frac(ctx->cpu_int.instr);
 	const bool lm = ir123_lm(ctx->cpu_int.instr);
 
 	for (size_t i = 1; i < ARRAY_SIZE(IR); ++i) {
-		MAC[i] = ((s64)IR[i] * (s64)IR[i]) >> sf;
+		MAC[i] = ((int64_t)IR[i] * (int64_t)IR[i]) >> sf;
 		IR[i]  = ir123_sat(ctx, i, MAC[i], lm);
 	}
 
@@ -1272,10 +1272,10 @@ P_NONNULL static void do_dpcl(struct p_ctx *ctx)
 #define IR   (ctx->cpu_int.cop2.cpr.ir)
 #define RGBC (ctx->cpu_int.cop2.cpr.rgbc.arr)
 
-	s64 sums[3];
+	int64_t sums[3];
 
 	for (size_t i = 0, j = 1; i < ARRAY_SIZE(sums); ++i, ++j)
-		sums[i] = ((u64)(RGBC[i] * IR[j])) << 4;
+		sums[i] = ((uint64_t)(RGBC[i] * IR[j])) << 4;
 
 	intpl_fc(ctx, sums);
 	color_fifo_push(ctx);
@@ -1289,12 +1289,12 @@ P_NONNULL static void do_gpl(struct p_ctx *ctx)
 #define IR  (ctx->cpu_int.cop2.cpr.ir)
 #define MAC (ctx->cpu_int.cop2.cpr.mac)
 
-	const uint sf = shift_frac(ctx->cpu_int.instr);
+	const unsigned int sf = shift_frac(ctx->cpu_int.instr);
 	const bool lm = ir123_lm(ctx->cpu_int.instr);
 
 	for (size_t i = 1; i < ARRAY_SIZE(MAC); ++i) {
-		s64 sum = 0;
-		sum	= mac123_add(ctx, i, sum, (u64)MAC[i] << sf);
+		int64_t sum = 0;
+		sum	= mac123_add(ctx, i, sum, (uint64_t)MAC[i] << sf);
 		sum	= mac123_add(ctx, i, sum, IR[i] * IR[0]);
 
 		MAC[i] = sum >> sf;
@@ -1313,7 +1313,7 @@ P_NONNULL static void do_lh(struct p_ctx *ctx, size_t base, size_t offset,
 {
 #define gpr (ctx->cpu_int.gpr)
 
-	u32 vaddr = gpr[base] + offset;
+	uint32_t vaddr = gpr[base] + offset;
 
 	if (unlikely(vaddr & 1)) {
 		exc(ctx, EXC_ADEL);
@@ -1329,15 +1329,15 @@ P_NONNULL static void do_lwl(struct p_ctx *ctx, size_t base, size_t offset,
 {
 #define gpr (ctx->cpu_int.gpr)
 
-	u32 vaddr	  = gpr[base] + offset;
-	u32 aligned_vaddr = vaddr & ~3;
+	uint32_t vaddr	  = gpr[base] + offset;
+	uint32_t aligned_vaddr = vaddr & ~3;
 
-	u32 word = load32(ctx, aligned_vaddr);
+	uint32_t word = load32(ctx, aligned_vaddr);
 
-	uint shift = (vaddr & 3) * 8;
-	uint mask  = 0x00FFFFFF >> shift;
+	unsigned int shift = (vaddr & 3) * 8;
+	unsigned int mask  = 0x00FFFFFF >> shift;
 
-	u32 val = (ctx->cpu_int.ld_next.dst == rt) ? ctx->cpu_int.ld_next.val :
+	uint32_t val = (ctx->cpu_int.ld_next.dst == rt) ? ctx->cpu_int.ld_next.val :
 						     gpr[rt];
 
 	val = (val & mask) | (word << (24 - shift));
@@ -1351,7 +1351,7 @@ P_NONNULL static void do_lw(struct p_ctx *ctx, size_t base, size_t offset,
 {
 #define gpr (ctx->cpu_int.gpr)
 
-	u32 vaddr = gpr[base] + offset;
+	uint32_t vaddr = gpr[base] + offset;
 
 	if (unlikely(vaddr & 0x3)) {
 		exc(ctx, EXC_ADEL);
@@ -1367,7 +1367,7 @@ P_NONNULL static void do_lhu(struct p_ctx *ctx, size_t base, size_t offset,
 {
 #define gpr (ctx->cpu_int.gpr)
 
-	u32 vaddr = gpr[base] + offset;
+	uint32_t vaddr = gpr[base] + offset;
 
 	if (unlikely(vaddr & 1)) {
 		exc(ctx, EXC_ADEL);
@@ -1384,15 +1384,15 @@ P_NONNULL static void do_lwr(struct p_ctx *ctx, size_t base, size_t offset,
 {
 #define gpr (ctx->cpu_int.gpr)
 
-	u32 vaddr	  = gpr[base] + offset;
-	u32 aligned_vaddr = vaddr & ~3;
+	uint32_t vaddr	  = gpr[base] + offset;
+	uint32_t aligned_vaddr = vaddr & ~3;
 
-	u32 word = load32(ctx, aligned_vaddr);
+	uint32_t word = load32(ctx, aligned_vaddr);
 
-	uint shift = (vaddr & 3) * 8;
-	uint mask  = 0xFFFFFF00 << (24 - shift);
+	unsigned int shift = (vaddr & 3) * 8;
+	unsigned int mask  = 0xFFFFFF00 << (24 - shift);
 
-	u32 val = (ctx->cpu_int.ld_next.dst == rt) ? ctx->cpu_int.ld_next.val :
+	uint32_t val = (ctx->cpu_int.ld_next.dst == rt) ? ctx->cpu_int.ld_next.val :
 						     gpr[rt];
 
 	val = (val & mask) | (word >> shift);
@@ -1407,7 +1407,7 @@ P_NONNULL static void do_sh(struct p_ctx *ctx, size_t base, size_t offset,
 {
 #define gpr (ctx->cpu_int.gpr)
 
-	u32 vaddr = gpr[base] + offset;
+	uint32_t vaddr = gpr[base] + offset;
 
 	if (unlikely(vaddr & 1)) {
 		exc(ctx, EXC_ADES);
@@ -1424,13 +1424,13 @@ P_NONNULL static void do_swl(struct p_ctx *ctx, size_t base, size_t offset,
 {
 #define gpr (ctx->cpu_int.gpr)
 
-	u32 vaddr	  = gpr[base] + offset;
-	u32 aligned_vaddr = vaddr & ~3;
+	uint32_t vaddr	  = gpr[base] + offset;
+	uint32_t aligned_vaddr = vaddr & ~3;
 
-	uint shift = (vaddr & 3) * 8;
-	uint mask  = 0xFFFFFF00 << shift;
+	unsigned int shift = (vaddr & 3) * 8;
+	unsigned int mask  = 0xFFFFFF00 << shift;
 
-	u32 word = load32(ctx, aligned_vaddr);
+	uint32_t word = load32(ctx, aligned_vaddr);
 	word	 = (word & mask) | (gpr[rt] >> (24 - shift));
 	store32(ctx, aligned_vaddr, word);
 
@@ -1442,7 +1442,7 @@ P_NONNULL static void do_sw(struct p_ctx *ctx, size_t base, size_t offset,
 {
 #define gpr (ctx->cpu_int.gpr)
 
-	u32 vaddr = gpr[base] + offset;
+	uint32_t vaddr = gpr[base] + offset;
 
 	if (unlikely(vaddr & 3)) {
 		exc(ctx, EXC_ADES);
@@ -1461,20 +1461,20 @@ P_NONNULL static void do_swr(struct p_ctx *ctx, size_t base, size_t offset,
 {
 #define gpr (ctx->cpu_int.gpr)
 
-	u32 vaddr	  = gpr[base] + offset;
-	u32 aligned_vaddr = vaddr & ~3;
+	uint32_t vaddr	  = gpr[base] + offset;
+	uint32_t aligned_vaddr = vaddr & ~3;
 
-	uint shift = (vaddr & 3) * 8;
-	uint mask  = 0x00FFFFFF >> (24 - shift);
+	unsigned int shift = (vaddr & 3) * 8;
+	unsigned int mask  = 0x00FFFFFF >> (24 - shift);
 
-	u32 word = load32(ctx, aligned_vaddr);
+	uint32_t word = load32(ctx, aligned_vaddr);
 	word	 = (word & mask) | (gpr[rt] << shift);
 	store32(ctx, aligned_vaddr, word);
 
 #undef gpr
 }
 
-P_NONNULL static void run(struct p_ctx *ctx, u64 instr_limit, bool stop_on_ev)
+P_NONNULL static void run(struct p_ctx *ctx, uint64_t instr_limit, bool stop_on_ev)
 {
 #define gpr	(ctx->cpu_int.gpr)
 #define pc	(ctx->cpu_int.pc)
@@ -1510,7 +1510,7 @@ P_NONNULL static void run(struct p_ctx *ctx, u64 instr_limit, bool stop_on_ev)
 #define ZSF3	(ctx->cpu_int.cop2.ccr.zsf3)
 #define ZSF4	(ctx->cpu_int.cop2.ccr.zsf4)
 
-	static const s32 op_tbl[] = {
+	static const int32_t op_tbl[] = {
 		[GRP_SPECIAL]	= &&grp_special - &&grp_special,
 		[GRP_REGIMM]	= &&grp_regimm - &&grp_special,
 		[J]		= &&op_j - &&grp_special,
@@ -1547,7 +1547,7 @@ P_NONNULL static void run(struct p_ctx *ctx, u64 instr_limit, bool stop_on_ev)
 		[0x2F ... 0x3F] = &&illegal - &&grp_special
 	};
 
-	static const s32 special_tbl[] = {
+	static const int32_t special_tbl[] = {
 		[SLL]		= &&op_sll - &&op_sll,
 		[0x01]		= &&illegal - &&op_sll,
 		[SRL]		= &&op_srl - &&op_sll,
@@ -1586,7 +1586,7 @@ P_NONNULL static void run(struct p_ctx *ctx, u64 instr_limit, bool stop_on_ev)
 		[0x2C ... 0x3F] = &&illegal - &&op_sll
 	};
 
-	static const s32 cop0_tbl[] = {
+	static const int32_t cop0_tbl[] = {
 		[MFC]		= &&cop0_mfc - &&cop0_mfc,
 		[0x01 ... 0x03] = &&cop0_instr - &&cop0_mfc,
 		[MTC]		= &&cop0_mtc - &&cop0_mfc,
@@ -1594,13 +1594,13 @@ P_NONNULL static void run(struct p_ctx *ctx, u64 instr_limit, bool stop_on_ev)
 		[0x07 ... 0x1F] = &&cop0_instr - &&cop0_mfc
 	};
 
-	static const s32 cop0_instr_tbl[] = {
+	static const int32_t cop0_instr_tbl[] = {
 		[0x00 ... 0x0F] = &&illegal - &&illegal,
 		[RFE]		= &&op_rfe - &&illegal,
 		[0x11 ... 0x3F] = &&illegal - &&illegal
 	};
 
-	static const s32 cop2_tbl[] = {
+	static const int32_t cop2_tbl[] = {
 		[MFC]		= &&cop2_mfc - &&cop2_mfc,
 		[0x01]		= &&cop2_instr - &&cop2_mfc,
 		[CFC]		= &&cop2_cfc - &&cop2_mfc,
@@ -1611,7 +1611,7 @@ P_NONNULL static void run(struct p_ctx *ctx, u64 instr_limit, bool stop_on_ev)
 		[0x07 ... 0x1F] = &&cop2_instr - &&cop2_mfc
 	};
 
-	static const s32 cop2_instr_tbl[] = {
+	static const int32_t cop2_instr_tbl[] = {
 		[0x00]		= &&illegal - &&illegal,
 		[RTPS]		= &&op_rtps - &&illegal,
 		[0x02 ... 0x05] = &&illegal - &&illegal,
@@ -1648,7 +1648,7 @@ P_NONNULL static void run(struct p_ctx *ctx, u64 instr_limit, bool stop_on_ev)
 		[NCCT]		= &&op_ncct - &&illegal
 	};
 
-	u64 instrs_done = 0;
+	uint64_t instrs_done = 0;
 
 loop:
 	if (unlikely(!ctx->running))
@@ -1701,7 +1701,7 @@ op_srl:
 	goto end;
 
 op_sra:
-	gpr_set(ctx, rd, (s32)gpr[rt] >> shamt);
+	gpr_set(ctx, rd, (int32_t)gpr[rt] >> shamt);
 	goto end;
 
 op_sllv:
@@ -1713,7 +1713,7 @@ op_srlv:
 	goto end;
 
 op_srav:
-	gpr_set(ctx, rd, (s32)gpr[rt] >> (gpr[rs] & 0x1F));
+	gpr_set(ctx, rd, (int32_t)gpr[rt] >> (gpr[rs] & 0x1F));
 	goto end;
 
 op_jr:
@@ -1797,7 +1797,7 @@ op_nor:
 	goto end;
 
 op_slt:
-	gpr_set(ctx, rd, (s32)gpr[rs] < (s32)gpr[rt]);
+	gpr_set(ctx, rd, (int32_t)gpr[rs] < (int32_t)gpr[rt]);
 	goto end;
 
 op_sltu:
@@ -1827,11 +1827,11 @@ op_bne:
 	goto end;
 
 op_blez:
-	branch_if(ctx, (s32)gpr[rs] <= 0);
+	branch_if(ctx, (int32_t)gpr[rs] <= 0);
 	goto end;
 
 op_bgtz:
-	branch_if(ctx, (s32)gpr[rs] > 0);
+	branch_if(ctx, (int32_t)gpr[rs] > 0);
 	goto end;
 
 op_addi:
@@ -1843,7 +1843,7 @@ op_addiu:
 	goto end;
 
 op_slti:
-	gpr_set(ctx, rt, (s32)gpr[rs] < (s32)sextimm);
+	gpr_set(ctx, rt, (int32_t)gpr[rs] < (int32_t)sextimm);
 	goto end;
 
 op_sltiu:
@@ -1918,9 +1918,9 @@ op_nclip:
 	FLAG = 0;
 
 	MAC[0] = mac0_add(
-		ctx, ((u64)SX0 * (u64)SY1) + ((u64)SX1 * (u64)SY2) +
-			     ((u64)SX2 * (u64)SY0) - ((u64)SX0 * (u64)SY2) -
-			     ((u64)SX1 * (u64)SY0) - ((u64)SX2 * (u64)SY1));
+		ctx, ((uint64_t)SX0 * (uint64_t)SY1) + ((uint64_t)SX1 * (uint64_t)SY2) +
+			     ((uint64_t)SX2 * (uint64_t)SY0) - ((uint64_t)SX0 * (uint64_t)SY2) -
+			     ((uint64_t)SX1 * (uint64_t)SY0) - ((uint64_t)SX2 * (uint64_t)SY1));
 
 	update_flag(ctx);
 	goto end;
@@ -2036,7 +2036,7 @@ op_dpcl:
 op_dpct:
 	FLAG = 0;
 
-	for (uint i = 0; i < 3; ++i)
+	for (unsigned int i = 0; i < 3; ++i)
 		dpc(ctx, RGB0);
 
 	update_flag(ctx);

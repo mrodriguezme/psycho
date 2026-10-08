@@ -124,7 +124,7 @@ static const struct p_bios_fn call_tbl[3][0xFF] = {
 };
 
 P_NODISCARD P_NONNULL static const struct p_bios_fn *
-func_get(const struct p_bios_fn *arr, size_t arr_elems, u32 func)
+func_get(const struct p_bios_fn *arr, size_t arr_elems, uint32_t func)
 {
 	if (func >= arr_elems)
 		return NULL;
@@ -166,7 +166,7 @@ P_NODISCARD P_NONNULL static struct p_bios_frame *stack_pop(struct p_ctx *ctx)
 	return &ctx->bios_trace.stack.frames[--ctx->bios_trace.stack.top];
 }
 
-P_NODISCARD P_NONNULL static u32 get_arg(struct p_ctx *ctx,
+P_NODISCARD P_NONNULL static uint32_t get_arg(struct p_ctx *ctx,
 					 struct p_bios_frame *frame)
 {
 	if (frame->arg_pos <= P_A3)
@@ -237,12 +237,12 @@ P_NONNULL static void process_int(struct p_ctx *ctx, struct p_bios_frame *frame)
 
 P_NONNULL static void process_str(struct p_ctx *ctx, struct p_bios_frame *frame)
 {
-	const u32 ptr = get_arg(ctx, frame);
+	const uint32_t ptr = get_arg(ctx, frame);
 
 	if (!ctx->cfg.bios_trace.deref_ptrs)
 		goto end;
 
-	u8 *area = p_get_mem_area(ctx, vaddr_to_paddr(ptr));
+	uint8_t *area = p_get_mem_area(ctx, vaddr_to_paddr(ptr));
 
 	if (!area)
 		goto end;
@@ -327,7 +327,7 @@ void p_bios_trace_init(struct p_ctx *ctx)
 	rst_tty_strs(ctx);
 }
 
-void p_bios_trace_begin(struct p_ctx *ctx, u32 fn_def, u32 tbl_off)
+void p_bios_trace_begin(struct p_ctx *ctx, uint32_t fn_def, uint32_t tbl_off)
 {
 	const struct p_bios_fn *fn = &call_tbl[tbl_off][fn_def];
 
@@ -352,7 +352,7 @@ void p_bios_trace_begin(struct p_ctx *ctx, u32 fn_def, u32 tbl_off)
 	process_prototype(ctx, frame);
 }
 
-void p_bios_trace_end(struct p_ctx *const ctx, u32 v0)
+void p_bios_trace_end(struct p_ctx *const ctx, uint32_t v0)
 {
 	struct p_bios_frame *frame = stack_pop(ctx);
 

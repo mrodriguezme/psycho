@@ -60,7 +60,7 @@ struct p_ctx {
 	struct p_ctx_cfg cfg;
 
 	struct {
-		const u8 *data;
+		const uint8_t *data;
 		size_t size;
 	} exe;
 
@@ -82,7 +82,7 @@ void p_rst(struct p_ctx *ctx) P_NONNULL;
 
 void p_step(struct p_ctx *ctx) P_NONNULL;
 
-P_NODISCARD enum p_ctx_ret p_run_exe(struct p_ctx *ctx, u8 *exe,
+P_NODISCARD enum p_ctx_ret p_run_exe(struct p_ctx *ctx, uint8_t *exe,
 				     size_t size) P_NONNULL;
 
 void p_run_until_ev(struct p_ctx *ctx) P_NONNULL;

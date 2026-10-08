@@ -107,7 +107,7 @@ void p_sched_run(struct p_ctx *ctx)
 	assert(ctx->sched.num_ev > 0);
 
 	struct p_sched_ev *ev = ctx->sched.ev[0];
-	u64 latency	      = ctx->sched.ts_now - ev->ts;
+	uint64_t latency	      = ctx->sched.ts_now - ev->ts;
 
 	LOG_TRACE(ctx,
 		  "servicing event \"%s\" (ts_now=%" PRIu64 "), drift=%" PRIu64,
@@ -147,7 +147,7 @@ void p_sched_add(struct p_ctx *ctx, struct p_sched_ev *ev)
 
 	ctx->sched.ev[ctx->sched.num_ev++] = ev;
 
-	u64 expiry	   = ev->ts - ctx->sched.ts_now;
+	uint64_t expiry	   = ev->ts - ctx->sched.ts_now;
 	const char *plural = likely(expiry != 1) ? "s" : "";
 
 	LOG_TRACE(ctx,

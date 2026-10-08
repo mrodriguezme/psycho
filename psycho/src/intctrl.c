@@ -31,11 +31,11 @@ static const char *irq_names[IRQ_COUNT] = {
 	[8] = "sio1",	[9] = "spu",  [10] = "lightpen"
 };
 
-void p_irq_mask_set(struct p_ctx *ctx, u32 mask)
+void p_irq_mask_set(struct p_ctx *ctx, uint32_t mask)
 {
-	u32 m_mask = mask;
+	uint32_t m_mask = mask;
 
-	for (uint bit = 0; m_mask; m_mask >>= 1, ++bit)
+	for (unsigned int bit = 0; m_mask; m_mask >>= 1, ++bit)
 		LOG_DBG(ctx, "irq \"%s\" %s", irq_names[bit],
 			(m_mask & 1) ? "enabled" : "disabled");
 
@@ -43,11 +43,11 @@ void p_irq_mask_set(struct p_ctx *ctx, u32 mask)
 	ctx->cpu.irq_mux_set(ctx, (ctx->intctrl.i_mask & ctx->intctrl.i_stat));
 }
 
-void p_irq_ack(struct p_ctx *ctx, u32 mask)
+void p_irq_ack(struct p_ctx *ctx, uint32_t mask)
 {
-	u32 m_mask = mask;
+	uint32_t m_mask = mask;
 
-	for (uint bit = 0; m_mask; m_mask >>= 1, ++bit)
+	for (unsigned int bit = 0; m_mask; m_mask >>= 1, ++bit)
 		if (((ctx->intctrl.i_stat >> bit) & 1) && !(m_mask & 1))
 			LOG_DBG(ctx, "irq \"%s\" acked", irq_names[bit]);
 
@@ -55,11 +55,11 @@ void p_irq_ack(struct p_ctx *ctx, u32 mask)
 	ctx->cpu.irq_mux_set(ctx, (ctx->intctrl.i_mask & ctx->intctrl.i_stat));
 }
 
-void p_irq_pend(struct p_ctx *ctx, u32 mask)
+void p_irq_pend(struct p_ctx *ctx, uint32_t mask)
 {
-	u32 m_mask = mask;
+	uint32_t m_mask = mask;
 
-	for (uint bit = 0; m_mask; m_mask >>= 1, ++bit)
+	for (unsigned int bit = 0; m_mask; m_mask >>= 1, ++bit)
 		if (!((ctx->intctrl.i_stat >> bit) & 1) && (m_mask & 1))
 			LOG_DBG(ctx, "irq \"%s\" pending", irq_names[bit]);
 

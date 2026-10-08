@@ -44,22 +44,22 @@ LOG_MOD(P_LOG_BUS);
 #define SPAD_END   (0x1F8003FF)
 #define SPAD_MASK  (0x00000FFF)
 
-u8 *p_bios_data_get(struct p_ctx *ctx)
+uint8_t *p_bios_data_get(struct p_ctx *ctx)
 {
 	return ctx->bus.bios;
 }
 
-u32 p_load32(struct p_ctx *ctx, u32 paddr)
+uint32_t p_load32(struct p_ctx *ctx, uint32_t paddr)
 {
-	u32 ret;
+	uint32_t ret;
 
 	switch (paddr) {
 	case RAM_BEGIN ... RAM_END:
-		memcpy(&ret, &ctx->bus.ram[paddr & RAM_MASK], sizeof(u32));
+		memcpy(&ret, &ctx->bus.ram[paddr & RAM_MASK], sizeof(uint32_t));
 		return ret;
 
 	case SPAD_BEGIN ... SPAD_END:
-		memcpy(&ret, &ctx->bus.spad[paddr & SPAD_MASK], sizeof(u32));
+		memcpy(&ret, &ctx->bus.spad[paddr & SPAD_MASK], sizeof(uint32_t));
 		return ret;
 
 	case I_STAT:
@@ -75,7 +75,7 @@ u32 p_load32(struct p_ctx *ctx, u32 paddr)
 		return p_gpuread(ctx);
 
 	case BIOS_BEGIN ... BIOS_END:
-		memcpy(&ret, &ctx->bus.bios[paddr & BIOS_MASK], sizeof(u32));
+		memcpy(&ret, &ctx->bus.bios[paddr & BIOS_MASK], sizeof(uint32_t));
 		return ret;
 
 	default:
@@ -84,17 +84,17 @@ u32 p_load32(struct p_ctx *ctx, u32 paddr)
 	}
 }
 
-u16 p_load16(struct p_ctx *ctx, u32 paddr)
+uint16_t p_load16(struct p_ctx *ctx, uint32_t paddr)
 {
-	u16 ret;
+	uint16_t ret;
 
 	switch (paddr) {
 	case RAM_BEGIN ... RAM_END:
-		memcpy(&ret, &ctx->bus.ram[paddr & RAM_MASK], sizeof(u16));
+		memcpy(&ret, &ctx->bus.ram[paddr & RAM_MASK], sizeof(uint16_t));
 		return ret;
 
 	case SPAD_BEGIN ... SPAD_END:
-		memcpy(&ret, &ctx->bus.spad[paddr & SPAD_MASK], sizeof(u16));
+		memcpy(&ret, &ctx->bus.spad[paddr & SPAD_MASK], sizeof(uint16_t));
 		return ret;
 
 	case SIO0_CTRL:
@@ -106,7 +106,7 @@ u16 p_load16(struct p_ctx *ctx, u32 paddr)
 	}
 }
 
-u8 p_load8(struct p_ctx *ctx, u32 paddr)
+uint8_t p_load8(struct p_ctx *ctx, uint32_t paddr)
 {
 	switch (paddr) {
 	case RAM_BEGIN ... RAM_END:
@@ -127,15 +127,15 @@ u8 p_load8(struct p_ctx *ctx, u32 paddr)
 	}
 }
 
-void p_store32(struct p_ctx *ctx, u32 paddr, u32 data)
+void p_store32(struct p_ctx *ctx, uint32_t paddr, uint32_t data)
 {
 	switch (paddr) {
 	case RAM_BEGIN ... RAM_END:
-		memcpy(&ctx->bus.ram[paddr & RAM_MASK], &data, sizeof(u32));
+		memcpy(&ctx->bus.ram[paddr & RAM_MASK], &data, sizeof(uint32_t));
 		return;
 
 	case SPAD_BEGIN ... SPAD_END:
-		memcpy(&ctx->bus.spad[paddr & SPAD_MASK], &data, sizeof(u32));
+		memcpy(&ctx->bus.spad[paddr & SPAD_MASK], &data, sizeof(uint32_t));
 		return;
 
 	case I_STAT:
@@ -161,15 +161,15 @@ void p_store32(struct p_ctx *ctx, u32 paddr, u32 data)
 	LOG_WARN(ctx, "bad store32 0x%08X <- 0x%08X; ignoring", paddr, data);
 }
 
-void p_store16(struct p_ctx *ctx, u32 paddr, u16 data)
+void p_store16(struct p_ctx *ctx, uint32_t paddr, uint16_t data)
 {
 	switch (paddr) {
 	case RAM_BEGIN ... RAM_END:
-		memcpy(&ctx->bus.ram[paddr & RAM_MASK], &data, sizeof(u16));
+		memcpy(&ctx->bus.ram[paddr & RAM_MASK], &data, sizeof(uint16_t));
 		return;
 
 	case SPAD_BEGIN ... SPAD_END:
-		memcpy(&ctx->bus.spad[paddr & SPAD_MASK], &data, sizeof(u16));
+		memcpy(&ctx->bus.spad[paddr & SPAD_MASK], &data, sizeof(uint16_t));
 		return;
 
 	case SIO0_MODE:
@@ -191,7 +191,7 @@ void p_store16(struct p_ctx *ctx, u32 paddr, u16 data)
 	LOG_WARN(ctx, "bad store16 0x%08X <- 0x%04X; ignoring", paddr, data);
 }
 
-void p_store8(struct p_ctx *ctx, u32 paddr, u8 data)
+void p_store8(struct p_ctx *ctx, uint32_t paddr, uint8_t data)
 {
 	switch (paddr) {
 	case RAM_BEGIN ... RAM_END:
@@ -213,7 +213,7 @@ void p_store8(struct p_ctx *ctx, u32 paddr, u8 data)
 	LOG_WARN(ctx, "bad store8 0x%08X <- 0x%02X; ignoring", paddr, data);
 }
 
-void *p_get_mem_area(struct p_ctx *ctx, const u32 paddr)
+void *p_get_mem_area(struct p_ctx *ctx, const uint32_t paddr)
 {
 	switch (paddr) {
 	case RAM_BEGIN ... RAM_END:

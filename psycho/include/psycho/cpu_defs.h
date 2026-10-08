@@ -23,7 +23,6 @@
 #pragma once
 
 #include <stddef.h>
-#include "types.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -159,42 +158,42 @@ enum p_cpu_cop2_ccr {
 		       #t "." #m " is not in raw[" #idx "]")
 
 struct p_gte_sz {
-	u16 v;
-	const u16 pad;
+	uint16_t v;
+	const uint16_t pad;
 };
 
 struct p_gte_vec {
 	union {
 		struct {
-			s16 x;
-			s16 y;
-			s16 z;
-			const u16 pad0;
+			int16_t x;
+			int16_t y;
+			int16_t z;
+			const uint16_t pad0;
 		};
-		s16 arr[3];
+		int16_t arr[3];
 	};
 };
 
 struct p_gte_sxy {
 	union {
 		struct {
-			s16 x;
-			s16 y;
+			int16_t x;
+			int16_t y;
 		};
-		s32 raw;
+		int32_t raw;
 	};
 };
 
 struct p_gte_rgb {
 	union {
 		struct {
-			u8 r;
-			u8 g;
-			u8 b;
-			u8 code;
+			uint8_t r;
+			uint8_t g;
+			uint8_t b;
+			uint8_t code;
 		};
-		u32 raw;
-		u8 arr[4];
+		uint32_t raw;
+		uint8_t arr[4];
 	};
 };
 
@@ -203,23 +202,23 @@ struct p_cop2_cpr {
 		struct {
 			struct p_gte_vec v[3];
 			struct p_gte_rgb rgbc;
-			u16 otz;
-			const u16 pad0;
-			s32 ir[4];
+			uint16_t otz;
+			const uint16_t pad0;
+			int32_t ir[4];
 			struct p_gte_sxy sxy[3];
-			const s32 sxyp;
+			const int32_t sxyp;
 			struct p_gte_sz sz[4];
 			struct p_gte_rgb rgb[3];
-			const u32 res1;
-			s32 mac[4];
-			u16 irgb;
-			const u16 pad1;
-			u16 orgb;
-			const u16 pad2;
-			s32 lzcs;
-			s32 lzcr;
+			const uint32_t res1;
+			int32_t mac[4];
+			uint16_t irgb;
+			const uint16_t pad1;
+			uint16_t orgb;
+			const uint16_t pad2;
+			int32_t lzcs;
+			int32_t lzcr;
 		};
-		u32 raw[P_COP2_CPR_CNT];
+		uint32_t raw[P_COP2_CPR_CNT];
 	};
 };
 
@@ -274,29 +273,29 @@ static_assert_same_word(struct p_cop2_cpr, lzcr, 31);
 struct p_cop2_ccr {
 	union {
 		struct {
-			s16 r[3][3];
-			const u16 pad0;
-			s32 tr[3];
-			s16 llm[3][3];
-			const u16 pad1;
-			s32 bk[3];
-			s16 lcm[3][3];
-			const u16 pad2;
-			s32 fc[3];
-			s32 ofx;
-			s32 ofy;
-			u16 h;
-			const u16 pad3;
-			s16 dqa;
-			const u16 pad4;
-			s32 dqb;
-			s16 zsf3;
-			const u16 pad5;
-			s16 zsf4;
-			const u16 pad6;
-			u32 flag;
+			int16_t r[3][3];
+			const uint16_t pad0;
+			int32_t tr[3];
+			int16_t llm[3][3];
+			const uint16_t pad1;
+			int32_t bk[3];
+			int16_t lcm[3][3];
+			const uint16_t pad2;
+			int32_t fc[3];
+			int32_t ofx;
+			int32_t ofy;
+			uint16_t h;
+			const uint16_t pad3;
+			int16_t dqa;
+			const uint16_t pad4;
+			int32_t dqb;
+			int16_t zsf3;
+			const uint16_t pad5;
+			int16_t zsf4;
+			const uint16_t pad6;
+			uint32_t flag;
 		};
-		u32 raw[P_COP2_CCR_CNT];
+		uint32_t raw[P_COP2_CCR_CNT];
 	};
 };
 

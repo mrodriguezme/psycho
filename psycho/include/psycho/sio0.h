@@ -45,25 +45,25 @@ struct p_sio0 {
 	struct p_sio0_dev *curr_dev;
 
 	struct {
-		u32 entry;
-		u32 latched;
+		uint32_t entry;
+		uint32_t latched;
 	} txfifo;
 
 	struct {
 		size_t num_entries;
 
 		union {
-			u8 entries[4];
-			u32 raw;
+			uint8_t entries[4];
+			uint32_t raw;
 		};
 	} rxfifo;
 
-	u32 stat;
-	u16 mode;
-	u16 ctrl;
-	u16 baud;
+	uint32_t stat;
+	uint16_t mode;
+	uint16_t ctrl;
+	uint16_t baud;
 
-	u8 last_rx;
+	uint8_t last_rx;
 
 	struct p_sched_ev tx_ev;
 };

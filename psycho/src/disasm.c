@@ -78,7 +78,7 @@ static const char *cop2_ccr[P_COP2_CCR_CNT] = {
 	[P_R13R21] = "R13R21"
 };
 
-P_NODISCARD P_NONNULL static u32 instr_get(struct p_ctx *ctx, u32 pc)
+P_NODISCARD P_NONNULL static uint32_t instr_get(struct p_ctx *ctx, uint32_t pc)
 {
 	pc = vaddr_to_paddr(pc);
 	return p_load32(ctx, pc);
@@ -104,12 +104,12 @@ P_NODISCARD const char *p_cop0_get(enum p_cpu_cop0 reg)
 	return cop0[reg];
 }
 
-void p_disasm_instr(struct p_ctx *ctx, u32 pc, struct p_disasm_traces *traces)
+void p_disasm_instr(struct p_ctx *ctx, uint32_t pc, struct p_disasm_traces *traces)
 {
 	p_str_init_fixed(&ctx->disasm.res.str, ctx->disasm.res.str_buf,
 			 sizeof(ctx->disasm.res.str_buf));
 
-	u32 instr = instr_get(ctx, pc);
+	uint32_t instr = instr_get(ctx, pc);
 
 	ctx->disasm.res.instr = instr;
 	ctx->disasm.res.pc    = pc;
@@ -128,7 +128,7 @@ void p_disasm_instr(struct p_ctx *ctx, u32 pc, struct p_disasm_traces *traces)
 #define shamt	    (instr_shamt(instr))
 #define funct	    (instr_funct(instr))
 #define imm	    (instr_imm(instr))
-#define simm	    ((s16)imm)
+#define simm	    ((int16_t)imm)
 #define offset	    (simm)
 #define base	    (rs)
 #define branch_addr (branch_addr(pc, instr))
@@ -525,7 +525,7 @@ void p_disasm_instr(struct p_ctx *ctx, u32 pc, struct p_disasm_traces *traces)
 #undef branch_addr
 }
 
-void p_disasm_trace_begin(struct p_ctx *ctx, u32 pc)
+void p_disasm_trace_begin(struct p_ctx *ctx, uint32_t pc)
 {
 	memset(&ctx->disasm.traces, 0, sizeof(ctx->disasm.traces));
 	p_disasm_instr(ctx, pc, &ctx->disasm.traces);
@@ -561,14 +561,14 @@ void p_disasm_trace_end(struct p_ctx *ctx)
 
 		switch (ctx->disasm.traces.data[trace]) {
 		case P_DISASM_TRACE_GPR_RT: {
-			u32 val = ctx->cpu.gpr_get(ctx, rt);
+			uint32_t val = ctx->cpu.gpr_get(ctx, rt);
 
 			fmt("%s=0x%08X", gpr[rt], val);
 			break;
 		}
 
 		case P_DISASM_TRACE_GPR_RD: {
-			u32 val = ctx->cpu.gpr_get(ctx, rd);
+			uint32_t val = ctx->cpu.gpr_get(ctx, rd);
 			fmt("%s=0x%08X", gpr[rd], val);
 
 			break;
@@ -583,10 +583,10 @@ void p_disasm_trace_end(struct p_ctx *ctx)
 			break;
 
 		case P_DISASM_TRACE_CPU_PADDR: {
-			u32 instr = ctx->cpu.instr_get(ctx);
-			u32 vaddr = ctx->cpu.gpr_get(ctx, rs);
+			uint32_t instr = ctx->cpu.instr_get(ctx);
+			uint32_t vaddr = ctx->cpu.gpr_get(ctx, rs);
 
-			u32 val = instr_imm(instr) + (vaddr & 0x1FFFFFFF);
+			uint32_t val = instr_imm(instr) + (vaddr & 0x1FFFFFFF);
 
 			fmt("paddr=0x%08X", val);
 			break;

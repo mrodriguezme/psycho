@@ -61,7 +61,7 @@ enum p_digital_ctrl_btns {
 struct p_digital_ctrl {
 	struct p_sio0_dev dev;
 	enum p_digital_ctrl_state state;
-	u16 btns;
+	uint16_t btns;
 };
 
 void p_digital_ctrl_init(struct p_ctx *ctx,

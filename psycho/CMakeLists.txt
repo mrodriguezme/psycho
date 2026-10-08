@@ -38,7 +38,6 @@ target_sources(
 	include/psycho/log.h
 	include/psycho/sched.h
 	include/psycho/str.h
-	include/psycho/types.h
 	src/bios_trace.c
 	src/bios_trace.h
 	src/bus.c

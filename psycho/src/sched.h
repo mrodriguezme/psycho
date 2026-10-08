@@ -24,7 +24,7 @@
 
 #include "psycho/ctx.h"
 
-P_ALWAYS_INLINE void p_sched_adv_ts(struct p_ctx *ctx, u64 ts)
+P_ALWAYS_INLINE void p_sched_adv_ts(struct p_ctx *ctx, uint64_t ts)
 {
 	ctx->sched.ts_now += ts;
 }

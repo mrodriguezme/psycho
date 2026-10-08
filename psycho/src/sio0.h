@@ -33,15 +33,15 @@
 
 void p_sio0_rst(struct p_ctx *ctx) P_NONNULL;
 
-void p_sio0_tx(struct p_ctx *ctx, u8 byte) P_NONNULL;
+void p_sio0_tx(struct p_ctx *ctx, uint8_t byte) P_NONNULL;
 
-P_NODISCARD u8 p_sio0_rx_pop8(struct p_ctx *ctx) P_NONNULL;
+P_NODISCARD uint8_t p_sio0_rx_pop8(struct p_ctx *ctx) P_NONNULL;
 
-void p_sio0_mode_set(struct p_ctx *ctx, u16 mode) P_NONNULL;
+void p_sio0_mode_set(struct p_ctx *ctx, uint16_t mode) P_NONNULL;
 
-void p_sio0_ctrl_set(struct p_ctx *ctx, u16 ctrl) P_NONNULL;
+void p_sio0_ctrl_set(struct p_ctx *ctx, uint16_t ctrl) P_NONNULL;
 
-void p_sio0_baud_set(struct p_ctx *ctx, u16 baud) P_NONNULL;
+void p_sio0_baud_set(struct p_ctx *ctx, uint16_t baud) P_NONNULL;
 
 void p_sio0_dsr_assert(struct p_ctx *ctx, void *dev) P_NONNULL;
 void p_sio0_dsr_deassert(struct p_ctx *ctx, void *userdata) P_NONNULL;

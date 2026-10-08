@@ -28,17 +28,17 @@
 
 void p_bios_trace_init(struct p_ctx *ctx) P_NONNULL;
 
-P_NONNULL P_ALWAYS_INLINE bool p_bios_trace_in_bios_call(u32 pc)
+P_NONNULL P_ALWAYS_INLINE bool p_bios_trace_in_bios_call(uint32_t pc)
 {
 	return (pc == 0xA0) || (pc == 0xB0) || (pc == 0xC0);
 }
 
-void p_bios_trace_begin(struct p_ctx *ctx, u32 fn, u32 tbl_off) P_NONNULL;
+void p_bios_trace_begin(struct p_ctx *ctx, uint32_t fn, uint32_t tbl_off) P_NONNULL;
 
 P_NONNULL P_ALWAYS_INLINE bool p_bios_trace_end_of_call(struct p_ctx *ctx,
-							u32 instr)
+							uint32_t instr)
 {
 	return (instr == JR_RA) && (ctx->bios_trace.stack.top);
 }
 
-void p_bios_trace_end(struct p_ctx *ctx, u32 v0) P_NONNULL;
+void p_bios_trace_end(struct p_ctx *ctx, uint32_t v0) P_NONNULL;

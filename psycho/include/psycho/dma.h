@@ -34,16 +34,16 @@ struct p_ctx;
 #define P_DMA_NUM_CH (7)
 
 struct p_dma_ch {
-	u32 madr;
-	u32 bcr;
-	u32 chcr;
+	uint32_t madr;
+	uint32_t bcr;
+	uint32_t chcr;
 	struct p_sched_ev xfer_ev;
 };
 
 struct p_dma {
 	struct p_dma_ch ch[P_DMA_NUM_CH];
-	u32 dpcr;
-	u32 dicr;
+	uint32_t dpcr;
+	uint32_t dicr;
 };
 
 #ifdef __cplusplus

@@ -39,27 +39,27 @@
 void p_gpu_init(struct p_ctx *ctx) P_NONNULL;
 void p_gpu_rst(struct p_ctx *ctx) P_NONNULL;
 
-void p_gp0(struct p_ctx *ctx, u32 packet) P_NONNULL;
-void p_gp1(struct p_ctx *ctx, u32 packet) P_NONNULL;
+void p_gp0(struct p_ctx *ctx, uint32_t packet) P_NONNULL;
+void p_gp1(struct p_ctx *ctx, uint32_t packet) P_NONNULL;
 
 P_NONNULL P_ALWAYS_INLINE void vram_px_set(struct p_ctx *ctx, size_t x,
-					   size_t y, u16 data)
+					   size_t y, uint16_t data)
 {
 	ctx->gpu.vram[y][x] = data;
 }
 
-P_NONNULL P_ALWAYS_INLINE u16 vram_px_get(struct p_ctx *ctx, size_t x, size_t y)
+P_NONNULL P_ALWAYS_INLINE uint16_t vram_px_get(struct p_ctx *ctx, size_t x, size_t y)
 {
 	return ctx->gpu.vram[y][x];
 }
 
-P_NODISCARD P_ALWAYS_INLINE u16 color_to_15bit(u32 px)
+P_NODISCARD P_ALWAYS_INLINE uint16_t color_to_15bit(uint32_t px)
 {
-	const uint r = (px & UINT8_MAX) >> 3;
-	const uint g = ((px >> 8) & UINT8_MAX) >> 3;
-	const uint b = ((px >> 16) & UINT8_MAX) >> 3;
+	const unsigned int r = (px & UINT8_MAX) >> 3;
+	const unsigned int g = ((px >> 8) & UINT8_MAX) >> 3;
+	const unsigned int b = ((px >> 16) & UINT8_MAX) >> 3;
 
 	return (b << 10) | (g << 5) | r;
 }
 
-P_NODISCARD u32 p_gpuread(struct p_ctx *ctx) P_NONNULL;
+P_NODISCARD uint32_t p_gpuread(struct p_ctx *ctx) P_NONNULL;

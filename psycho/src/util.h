@@ -28,7 +28,6 @@
 
 #include "psycho/cpu_defs.h"
 #include "psycho/common/compiler_support.h"
-#include "psycho/types.h"
 
 #define likely(x)		    __builtin_expect(!!(x), 1)
 #define unlikely(x)		    __builtin_expect(!!(x), 0)
@@ -67,7 +66,7 @@
 		_val < _min ? _min : (_val > _max ? _max : _val); \
 	})
 
-P_ALWAYS_INLINE u64 us_to_cycles(u64 us)
+P_ALWAYS_INLINE uint64_t us_to_cycles(uint64_t us)
 {
 	return (us * P_CPU_CLKFREQ_HZ) / 1000000UL;
 }
@@ -75,16 +74,18 @@ P_ALWAYS_INLINE u64 us_to_cycles(u64 us)
 #define static_assert_offset(x, memb, off) \
 	_Static_assert(offsetof(x, memb) == (off), "Offset is not correct.")
 
-#define ZEXT_FUNC(from, to)                                               \
-	P_NODISCARD P_ALWAYS_INLINE u##to zext_##from##_##to(u##from val) \
-	{                                                                 \
-		return val;                                               \
+#define ZEXT_FUNC(from, to)                                          \
+	P_NODISCARD P_ALWAYS_INLINE uint##to##_t zext_##from##_##to( \
+		uint##from##_t val)                                  \
+	{                                                            \
+		return val;                                          \
 	}
 
-#define SEXT_FUNC(from, to)                                               \
-	P_NODISCARD P_ALWAYS_INLINE u##to sext_##from##_##to(u##from val) \
-	{                                                                 \
-		return (s##from)val;                                      \
+#define SEXT_FUNC(from, to)                                          \
+	P_NODISCARD P_ALWAYS_INLINE uint##to##_t sext_##from##_##to( \
+		uint##from##_t val)                                  \
+	{                                                            \
+		return (int##from##_t)val;                           \
 	}
 
 ZEXT_FUNC(8, 32);

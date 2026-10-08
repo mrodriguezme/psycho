@@ -36,7 +36,7 @@ struct p_sio0_dev {
 	struct p_ctx *ctx;
 	void *handle;
 
-	u8 (*transceive)(void *dev, u8 mosi);
+	uint8_t (*transceive)(void *dev, uint8_t mosi);
 	void (*reset)(void *dev);
 
 	const char *name;
@@ -46,4 +46,4 @@ struct p_sio0_dev {
 	struct p_sched_ev ack_pulse_end_ev;
 };
 
-void p_sio0_dev_ack(struct p_sio0_dev *dev, uint delay_us, uint pulse_us);
+void p_sio0_dev_ack(struct p_sio0_dev *dev, unsigned int delay_us, unsigned int pulse_us);

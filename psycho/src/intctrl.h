@@ -40,8 +40,8 @@
 #define IRQ_CTRL   (1 << 10)
 #define IRQ_COUNT  (11)
 
-void p_irq_mask_set(struct p_ctx *ctx, u32 mask) P_NONNULL;
+void p_irq_mask_set(struct p_ctx *ctx, uint32_t mask) P_NONNULL;
 
-void p_irq_ack(struct p_ctx *ctx, u32 mask) P_NONNULL;
+void p_irq_ack(struct p_ctx *ctx, uint32_t mask) P_NONNULL;
 
-void p_irq_pend(struct p_ctx *ctx, u32 mask) P_NONNULL;
+void p_irq_pend(struct p_ctx *ctx, uint32_t mask) P_NONNULL;

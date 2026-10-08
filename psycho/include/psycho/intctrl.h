@@ -22,8 +22,6 @@
 
 #pragma once
 
-#include "types.h"
-
 #ifdef __cplusplus
 extern "C" {
 #endif // __cplusplus
@@ -31,8 +29,8 @@ extern "C" {
 struct p_ctx;
 
 struct p_intctrl {
-	u32 i_stat;
-	u32 i_mask;
+	uint32_t i_stat;
+	uint32_t i_mask;
 };
 
 #ifdef __cplusplus

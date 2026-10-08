@@ -31,21 +31,21 @@ LOG_MOD(P_LOG_CTX);
 
 struct exe_hdr {
 	const char id[0x008 - 0x000];
-	const u8 zero[0x010 - 0x008];
-	const u32 pc;
-	const u32 gp;
-	const u32 dst_ram;
-	const u32 file_size;
-	const u32 data_sect_addr;
-	const u32 data_sect_size;
-	const u32 bss_sect_addr;
-	const u32 bss_sect_size;
-	const u32 sp_fp_base;
-	const u32 sp_fp_offs;
-	const u8 resv_bios_fn[0x4C - 0x38];
-	const u8 ascii_marker;
-	const u8 ascii_or_zerofilled[1971];
-	const u8 code;
+	const uint8_t zero[0x010 - 0x008];
+	const uint32_t pc;
+	const uint32_t gp;
+	const uint32_t dst_ram;
+	const uint32_t file_size;
+	const uint32_t data_sect_addr;
+	const uint32_t data_sect_size;
+	const uint32_t bss_sect_addr;
+	const uint32_t bss_sect_size;
+	const uint32_t sp_fp_base;
+	const uint32_t sp_fp_offs;
+	const uint8_t resv_bios_fn[0x4C - 0x38];
+	const uint8_t ascii_marker;
+	const uint8_t ascii_or_zerofilled[1971];
+	const uint8_t code;
 } __attribute__((packed));
 
 static_assert_offset(struct exe_hdr, id, 0x000);
@@ -64,7 +64,7 @@ static_assert_offset(struct exe_hdr, resv_bios_fn, 0x38);
 static_assert_offset(struct exe_hdr, ascii_marker, 0x4C);
 static_assert_offset(struct exe_hdr, code, 0x800);
 
-P_NODISCARD enum p_ctx_ret p_run_exe(struct p_ctx *ctx, u8 *exe, size_t size)
+P_NODISCARD enum p_ctx_ret p_run_exe(struct p_ctx *ctx, uint8_t *exe, size_t size)
 {
 	if (unlikely(size < sizeof(struct exe_hdr)))
 		return P_EXE_SIZE_INVALID;
@@ -97,13 +97,13 @@ void p_exe_inject(struct p_ctx *ctx)
 	ctx->cpu.gpr_set(ctx, P_GP, exe->gp);
 
 	if (exe->sp_fp_base) {
-		const u32 val = exe->sp_fp_base + exe->sp_fp_offs;
+		const uint32_t val = exe->sp_fp_base + exe->sp_fp_offs;
 
 		ctx->cpu.gpr_set(ctx, P_SP, val);
 		ctx->cpu.gpr_set(ctx, P_FP, val);
 	}
 
-	const u32 paddr = vaddr_to_paddr(exe->dst_ram);
+	const uint32_t paddr = vaddr_to_paddr(exe->dst_ram);
 	memcpy(&ctx->bus.ram[paddr], &exe->code, exe->file_size);
 
 	memset(&ctx->exe, 0, sizeof(ctx->exe));
