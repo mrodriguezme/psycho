@@ -30,7 +30,7 @@
 #include "ansi-color-codes.h"
 
 static struct emu_runner *m_emu;
-u16 btns_prev = 0;
+uint16_t btns_prev = 0;
 
 static void emu_poll_ctrl(struct emu_runner *emu)
 {
@@ -88,7 +88,7 @@ static void on_vblank(struct p_ctx *ctx)
 	SDL_AddAtomicInt(&m_emu->frame_count, 1);
 }
 
-static void illegal_instr_cb(struct p_ctx *ctx, u32 instr)
+static void illegal_instr_cb(struct p_ctx *ctx, uint32_t instr)
 {
 	(void)instr;
 
@@ -123,7 +123,7 @@ static void on_stdout_line(struct p_ctx *ctx, struct p_str *str)
 	(void)str;
 }
 
-void emu_init(struct emu_runner *emu, u8 *bios_data, u8 *exe_data,
+void emu_init(struct emu_runner *emu, uint8_t *bios_data, uint8_t *exe_data,
 	      size_t exe_size)
 {
 	m_emu = emu;
@@ -132,6 +132,7 @@ void emu_init(struct emu_runner *emu, u8 *bios_data, u8 *exe_data,
 
 	cfg->cpu.illegal_instr = illegal_instr_cb;
 
+	#if 0
 	cfg->log.log_cb = log_cb;
 
 	cfg->log.mod[P_LOG_CTX]		 = P_LOG_TRACE;
@@ -139,14 +140,14 @@ void emu_init(struct emu_runner *emu, u8 *bios_data, u8 *exe_data,
 	cfg->log.mod[P_LOG_DIGITAL_CTRL] = P_LOG_TRACE;
 	cfg->log.mod[P_LOG_SIO0]	 = P_LOG_TRACE;
 	cfg->log.mod[P_LOG_SCHED]	 = P_LOG_TRACE;
-
+#endif
 	cfg->bios_trace.stdout_line = on_stdout_line;
 	cfg->bios_trace.deref_ptrs  = true;
 
 	cfg->on_vblank = on_vblank;
 
 	// I'm lazy.
-	u8 *data = p_bios_data_get(&emu->ctx);
+	uint8_t *data = p_bios_data_get(&emu->ctx);
 	memcpy(data, bios_data, P_BUS_BIOS_SIZE_BYTES);
 
 	p_init(&emu->ctx);
@@ -162,7 +163,7 @@ void emu_init(struct emu_runner *emu, u8 *bios_data, u8 *exe_data,
 
 static int emu_thread_func(void *data)
 {
-	u32 last_frame_count = SDL_GetAtomicInt(&m_emu->frame_count);
+	uint32_t last_frame_count = SDL_GetAtomicInt(&m_emu->frame_count);
 
 	while (SDL_GetAtomicInt(&m_emu->running)) {
 		emu_poll_ctrl(m_emu);
@@ -170,7 +171,7 @@ static int emu_thread_func(void *data)
 		const Uint64 start_ns = SDL_GetTicksNS();
 		p_run_until_ev(&m_emu->ctx);
 
-		u32 current_frame_count = SDL_GetAtomicInt(&m_emu->frame_count);
+		uint32_t current_frame_count = SDL_GetAtomicInt(&m_emu->frame_count);
 
 		if (current_frame_count == last_frame_count)
 			continue;

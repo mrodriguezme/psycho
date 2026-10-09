@@ -2,23 +2,18 @@
 //
 // Copyright 2026 Michael Rodriguez
 //
-// Permission is hereby granted, free of charge, to any person obtaining a copy
-// of this software and associated documentation files (the “Software”), to deal
-// in the Software without restriction, including without limitation the rights
-// to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-// copies of the Software, and to permit persons to whom the Software is
-// furnished to do so, subject to the following conditions:
+// Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated
+// documentation files (the "Software"), to deal in the Software without restriction, including without limitation the
+// rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to
+// permit persons to whom the Software is furnished to do so, subject to the following conditions:
 //
-// The above copyright notice and this permission notice shall be included in
-// all copies or substantial portions of the Software.
+// The above copyright notice and this permission notice shall be included in all copies or substantial portions of the
+// Software.
 //
-// THE SOFTWARE IS PROVIDED “AS IS”, WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-// SOFTWARE.
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE
+// WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR
+// COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR
+// OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 #include <assert.h>
 #include <stdio.h>
@@ -123,8 +118,8 @@ static const struct p_bios_fn call_tbl[3][0xFF] = {
 	},
 };
 
-P_NODISCARD P_NONNULL static const struct p_bios_fn *
-func_get(const struct p_bios_fn *arr, size_t arr_elems, uint32_t func)
+P_NODISCARD P_NONNULL static const struct p_bios_fn *func_get(const struct p_bios_fn *arr, size_t arr_elems,
+							      uint32_t func)
 {
 	if (func >= arr_elems)
 		return NULL;
@@ -132,8 +127,7 @@ func_get(const struct p_bios_fn *arr, size_t arr_elems, uint32_t func)
 	return arr[func].prototype ? &arr[func] : NULL;
 }
 
-P_NONNULL static void frame_init(struct p_ctx *ctx, struct p_bios_frame *frame,
-				 const struct p_bios_fn *fn)
+P_NONNULL static void frame_init(struct p_ctx *ctx, struct p_bios_frame *frame, const struct p_bios_fn *fn)
 {
 	frame->fn      = fn;
 	frame->arg_pos = 0;
@@ -149,8 +143,7 @@ P_NONNULL static void frame_init(struct p_ctx *ctx, struct p_bios_frame *frame,
 	p_str_init_fixed(&frame->str, frame->str_buf, sizeof(frame->str_buf));
 }
 
-P_NODISCARD P_NONNULL static struct p_bios_frame *
-stack_emplace(struct p_ctx *ctx)
+P_NODISCARD P_NONNULL static struct p_bios_frame *stack_emplace(struct p_ctx *ctx)
 {
 	if (ctx->bios_trace.stack.top >= sizeof(ctx->bios_trace.stack.frames))
 		return NULL;
@@ -166,8 +159,7 @@ P_NODISCARD P_NONNULL static struct p_bios_frame *stack_pop(struct p_ctx *ctx)
 	return &ctx->bios_trace.stack.frames[--ctx->bios_trace.stack.top];
 }
 
-P_NODISCARD P_NONNULL static uint32_t get_arg(struct p_ctx *ctx,
-					 struct p_bios_frame *frame)
+P_NODISCARD P_NONNULL static uint32_t get_arg(struct p_ctx *ctx, struct p_bios_frame *frame)
 {
 	if (frame->arg_pos <= P_A3)
 		return (&frame->a0)[frame->arg_pos++];
@@ -177,12 +169,10 @@ P_NODISCARD P_NONNULL static uint32_t get_arg(struct p_ctx *ctx,
 
 P_NONNULL static void rst_tty_strs(struct p_ctx *ctx)
 {
-	p_str_init_fixed(&ctx->bios_trace.tty_orig.str,
-			 ctx->bios_trace.tty_orig.buf,
+	p_str_init_fixed(&ctx->bios_trace.tty_orig.str, ctx->bios_trace.tty_orig.buf,
 			 sizeof(ctx->bios_trace.tty_orig.buf));
 
-	p_str_init_fixed(&ctx->bios_trace.tty_log.str,
-			 ctx->bios_trace.tty_log.buf,
+	p_str_init_fixed(&ctx->bios_trace.tty_log.str, ctx->bios_trace.tty_log.buf,
 			 sizeof(ctx->bios_trace.tty_log.buf));
 }
 
@@ -217,8 +207,7 @@ P_NODISCARD static const char *esc_seq(char c)
 	}
 }
 
-P_NONNULL static void process_char(struct p_ctx *ctx,
-				   struct p_bios_frame *frame)
+P_NONNULL static void process_char(struct p_ctx *ctx, struct p_bios_frame *frame)
 {
 	const char c = get_arg(ctx, frame);
 
@@ -277,15 +266,13 @@ P_NONNULL static void on_putchar(struct p_ctx *ctx, struct p_bios_frame *frame)
 		LOG_INFO(ctx, "[stdout] %s", ctx->bios_trace.tty_log.str.ptr);
 
 		if (ctx->cfg.bios_trace.stdout_line)
-			ctx->cfg.bios_trace.stdout_line(
-				ctx, &ctx->bios_trace.tty_log.str);
+			ctx->cfg.bios_trace.stdout_line(ctx, &ctx->bios_trace.tty_log.str);
 
 		rst_tty_strs(ctx);
 	}
 }
 
-P_NONNULL static void process_prototype(struct p_ctx *ctx,
-					struct p_bios_frame *frame)
+P_NONNULL static void process_prototype(struct p_ctx *ctx, struct p_bios_frame *frame)
 {
 	const char *src = frame->fn->prototype;
 
@@ -332,9 +319,7 @@ void p_bios_trace_begin(struct p_ctx *ctx, uint32_t fn_def, uint32_t tbl_off)
 	const struct p_bios_fn *fn = &call_tbl[tbl_off][fn_def];
 
 	if (!fn->prototype) {
-		LOG_WARN(ctx,
-			 "Unimplemented BIOS call: 0x%02X:0x%08X; ignoring",
-			 tbl_off, fn_def);
+		LOG_WARN(ctx, "Unimplemented BIOS call: 0x%02X:0x%08X; ignoring", tbl_off, fn_def);
 		return;
 	}
 

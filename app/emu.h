@@ -39,16 +39,16 @@ struct emu_runner {
 	SDL_Thread *thread;
 };
 
-void emu_init(struct emu_runner *emu, u8 *bios_data, u8 *exe_data,
+void emu_init(struct emu_runner *emu, uint8_t *bios_data, uint8_t *exe_data,
 	      size_t exe_size);
 
 void emu_run(struct emu_runner *emu);
 
 void emu_stop(struct emu_runner *emu);
 
-P_NONNULL P_ALWAYS_INLINE u16 *emu_front_buffer_get(struct emu_runner *emu)
+P_NONNULL P_ALWAYS_INLINE uint16_t *emu_front_buffer_get(struct emu_runner *emu)
 {
-	return (u16 *)emu->fbufs[SDL_GetAtomicInt(&emu->write_idx) ^ 1];
+	return (uint16_t *)emu->fbufs[SDL_GetAtomicInt(&emu->write_idx) ^ 1];
 }
 
 void emu_btn_press(struct emu_runner *emu, SDL_Event *ev);

@@ -2,23 +2,18 @@
 //
 // Copyright 2026 Michael Rodriguez
 //
-// Permission is hereby granted, free of charge, to any person obtaining a copy
-// of this software and associated documentation files (the “Software”), to deal
-// in the Software without restriction, including without limitation the rights
-// to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-// copies of the Software, and to permit persons to whom the Software is
-// furnished to do so, subject to the following conditions:
+// Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated
+// documentation files (the "Software"), to deal in the Software without restriction, including without limitation the
+// rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to
+// permit persons to whom the Software is furnished to do so, subject to the following conditions:
 //
-// The above copyright notice and this permission notice shall be included in
-// all copies or substantial portions of the Software.
+// The above copyright notice and this permission notice shall be included in all copies or substantial portions of the
+// Software.
 //
-// THE SOFTWARE IS PROVIDED “AS IS”, WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-// SOFTWARE.
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE
+// WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR
+// COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR
+// OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 #pragma once
 
@@ -53,16 +48,14 @@
 #define SY2_SAT	     (1 << 13)
 #define IR0_SAT	     (1 << 12)
 
-#define FLAG_MASK                                                    \
-	(MAC1_OVF_POS | MAC2_OVF_POS | MAC3_OVF_POS | MAC1_OVF_NEG | \
-	 MAC2_OVF_NEG | MAC3_OVF_NEG | IR1_SAT | IR2_SAT | IR3_SAT | \
-	 RGB_R_SAT | RGB_G_SAT | RGB_B_SAT | SZ3_OTZ_SAT | DIV_OVF | \
-	 MAC0_POS_OVF | MAC0_NEG_OVF | SX2_SAT | SY2_SAT | IR0_SAT)
+#define FLAG_MASK                                                                                                      \
+	(MAC1_OVF_POS | MAC2_OVF_POS | MAC3_OVF_POS | MAC1_OVF_NEG | MAC2_OVF_NEG | MAC3_OVF_NEG | IR1_SAT | IR2_SAT | \
+	 IR3_SAT | RGB_R_SAT | RGB_G_SAT | RGB_B_SAT | SZ3_OTZ_SAT | DIV_OVF | MAC0_POS_OVF | MAC0_NEG_OVF | SX2_SAT | \
+	 SY2_SAT | IR0_SAT)
 
-#define FLAG_ERR_MASK                                                    \
-	(MAC1_OVF_POS | MAC2_OVF_POS | MAC3_OVF_POS | MAC1_OVF_NEG |     \
-	 MAC2_OVF_NEG | MAC3_OVF_NEG | IR1_SAT | IR2_SAT | SZ3_OTZ_SAT | \
-	 DIV_OVF | MAC0_POS_OVF | MAC0_NEG_OVF | SX2_SAT | SY2_SAT)
+#define FLAG_ERR_MASK                                                                                                  \
+	(MAC1_OVF_POS | MAC2_OVF_POS | MAC3_OVF_POS | MAC1_OVF_NEG | MAC2_OVF_NEG | MAC3_OVF_NEG | IR1_SAT | IR2_SAT | \
+	 SZ3_OTZ_SAT | DIV_OVF | MAC0_POS_OVF | MAC0_NEG_OVF | SX2_SAT | SY2_SAT)
 
 #define MAC123_MAX	      ((INT64_C(1) << 43) - 1)
 #define MAC123_MIN	      (-(INT64_C(1) << 43))

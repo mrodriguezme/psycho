@@ -37,9 +37,9 @@ static SDL_Texture *texture;
 static struct emu_runner emu;
 static bool vsync_enabled;
 
-static u8 *exe_data;
+static uint8_t *exe_data;
 static size_t exe_size;
-static u8 bios_data[P_BUS_BIOS_SIZE_BYTES];
+static uint8_t bios_data[P_BUS_BIOS_SIZE_BYTES];
 
 static void update_window_title(int render_fps, int emu_fps)
 {
@@ -192,7 +192,7 @@ static void gfx_fini(void)
 
 static void render_frame(void)
 {
-	u16 *src = emu_front_buffer_get(&emu);
+	uint16_t *src = emu_front_buffer_get(&emu);
 
 	void *pixels;
 	int pitch;
@@ -202,13 +202,13 @@ static void render_frame(void)
 		return;
 	}
 
-	const size_t row_bytes = VRAM_WIDTH * sizeof(u16);
+	const size_t row_bytes = VRAM_WIDTH * sizeof(uint16_t);
 
 	if (pitch == (int)row_bytes) {
 		memcpy(pixels, src, row_bytes * VRAM_HEIGHT);
 	} else {
-		u8 *src_bytes = (u8 *)src;
-		u8 *dst_bytes = (u8 *)pixels;
+		uint8_t *src_bytes = (uint8_t *)src;
+		uint8_t *dst_bytes = (uint8_t *)pixels;
 		for (int y = 0; y < VRAM_HEIGHT; ++y)
 			memcpy(dst_bytes + y * pitch, src_bytes + y * row_bytes,
 			       row_bytes);

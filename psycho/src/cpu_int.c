@@ -2,23 +2,18 @@
 //
 // Copyright 2026 Michael Rodriguez
 //
-// Permission is hereby granted, free of charge, to any person obtaining a copy
-// of this software and associated documentation files (the “Software”), to deal
-// in the Software without restriction, including without limitation the rights
-// to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-// copies of the Software, and to permit persons to whom the Software is
-// furnished to do so, subject to the following conditions:
+// Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated
+// documentation files (the "Software"), to deal in the Software without restriction, including without limitation the
+// rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to
+// permit persons to whom the Software is furnished to do so, subject to the following conditions:
 //
-// The above copyright notice and this permission notice shall be included in
-// all copies or substantial portions of the Software.
+// The above copyright notice and this permission notice shall be included in all copies or substantial portions of the
+// Software.
 //
-// THE SOFTWARE IS PROVIDED “AS IS”, WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-// SOFTWARE.
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE
+// WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR
+// COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR
+// OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 #include <assert.h>
 #include <string.h>
@@ -78,8 +73,7 @@ P_NONNULL static uint32_t instr_get(struct p_ctx *ctx)
 	return ctx->cpu_int.instr;
 }
 
-P_NONNULL static void gpr_write_direct(struct p_ctx *ctx, enum p_cpu_gpr gpr,
-				       uint32_t val)
+P_NONNULL static void gpr_write_direct(struct p_ctx *ctx, enum p_cpu_gpr gpr, uint32_t val)
 {
 	assert(gpr < P_GPR_COUNT);
 	ctx->cpu_int.gpr[gpr] = val;
@@ -115,8 +109,7 @@ P_NONNULL static void rst(struct p_ctx *ctx)
 
 P_NONNULL static void illegal_instr(struct p_ctx *ctx)
 {
-	LOG_ERR(ctx, "illegal instruction trapped (pc=0x%08X, instr=0x%08X)",
-		ctx->cpu_int.pc, ctx->cpu_int.instr);
+	LOG_ERR(ctx, "illegal instruction trapped (pc=0x%08X, instr=0x%08X)", ctx->cpu_int.pc, ctx->cpu_int.instr);
 
 	ctx->cfg.cpu.illegal_instr(ctx, ctx->cpu_int.instr);
 }
@@ -214,9 +207,7 @@ P_NONNULL static void branch_if(struct p_ctx *ctx, bool cond)
 	ctx->cpu_int.next_in_bd = true;
 
 	if (cond) {
-		uint32_t pc = unlikely(ctx->cpu_int.in_bd) ?
-				 ctx->cpu_int.dly_pc - sizeof(uint32_t) :
-				 ctx->cpu_int.pc;
+		uint32_t pc = unlikely(ctx->cpu_int.in_bd) ? ctx->cpu_int.dly_pc - sizeof(uint32_t) : ctx->cpu_int.pc;
 
 		ctx->cpu_int.npc = branch_addr(pc, ctx->cpu_int.instr);
 	}
@@ -268,8 +259,7 @@ P_NONNULL static void dbg_bp_write(struct p_ctx *ctx, uint32_t vaddr)
 #define BDAM (ctx->cpu_int.cop0[P_BDAM])
 #define DCIC (ctx->cpu_int.cop0[P_DCIC])
 
-	if (unlikely((DCIC & DCIC_BP_WRITE_EN_MASK) &&
-		     !((vaddr ^ BDA) & BDAM))) {
+	if (unlikely((DCIC & DCIC_BP_WRITE_EN_MASK) && !((vaddr ^ BDA) & BDAM))) {
 		DCIC |= (DCIC_DB | DCIC_W);
 		exc_dbg(ctx);
 	}
@@ -334,8 +324,7 @@ P_NONNULL static void do_add(struct p_ctx *ctx, size_t dst, uint32_t a0, uint32_
 		gpr_set(ctx, dst, sum);
 }
 
-P_NONNULL static void do_sub(struct p_ctx *ctx, size_t dst, uint32_t minuend,
-			     uint32_t subtrahend)
+P_NONNULL static void do_sub(struct p_ctx *ctx, size_t dst, uint32_t minuend, uint32_t subtrahend)
 {
 	int diff;
 
@@ -378,8 +367,8 @@ P_NONNULL static void flag_set(struct p_ctx *ctx, uint32_t flags)
 #undef FLAG
 }
 
-P_NONNULL static int64_t mac123_chk(struct p_ctx *ctx, int64_t sum, int64_t addend,
-				uint32_t neg_flag, uint32_t pos_flag)
+P_NONNULL static int64_t mac123_chk(struct p_ctx *ctx, int64_t sum, int64_t addend, uint32_t neg_flag,
+				    uint32_t pos_flag)
 {
 	sum += addend;
 
@@ -401,8 +390,7 @@ P_NONNULL static int64_t mac0_add(struct p_ctx *ctx, int64_t res)
 	return res;
 }
 
-P_NONNULL static int64_t mac123_add(struct p_ctx *ctx, size_t mac, int64_t sum,
-				int64_t addend)
+P_NONNULL static int64_t mac123_add(struct p_ctx *ctx, size_t mac, int64_t sum, int64_t addend)
 {
 	switch (mac) {
 	case 1:
@@ -509,13 +497,13 @@ P_NONNULL P_NODISCARD static int64_t gte_div(struct p_ctx *ctx)
 	int64_t n;
 
 	if (likely(H < (SZ3 * 2))) {
-		int z  = __builtin_clz(SZ3) - 16;
-		n      = H << z;
+		int z	       = __builtin_clz(SZ3) - 16;
+		n	       = H << z;
 		unsigned int d = SZ3 << z;
 		unsigned int u = unr[(d - 0x7FC0) >> 7] + 0x101;
-		d      = ((0x2000080 - (d * u)) >> 8);
-		d      = ((0x0000080 + (d * u)) >> 8);
-		n      = min(0x1FFFF, (((n * d) + 0x8000) >> 16));
+		d	       = ((0x2000080 - (d * u)) >> 8);
+		d	       = ((0x0000080 + (d * u)) >> 8);
+		n	       = min(0x1FFFF, (((n * d) + 0x8000) >> 16));
 	} else {
 		flag_set(ctx, DIV_OVF);
 		n = 0x1FFFF;
@@ -558,7 +546,7 @@ P_NONNULL static void rtp(struct p_ctx *ctx, struct p_gte_vec *vec, bool dq)
 #define TR  (ctx->cpu_int.cop2.ccr.tr)
 
 	const unsigned int sf = shift_frac(ctx->cpu_int.instr);
-	const bool lm = ir123_lm(ctx->cpu_int.instr);
+	const bool lm	      = ir123_lm(ctx->cpu_int.instr);
 
 	int64_t sum;
 
@@ -615,13 +603,13 @@ P_NONNULL static void intpl_llm_vec(struct p_ctx *ctx, struct p_gte_vec *vec)
 #define MAC (ctx->cpu_int.cop2.cpr.mac)
 
 	const unsigned int sf = shift_frac(ctx->cpu_int.instr);
-	const bool lm = ir123_lm(ctx->cpu_int.instr);
+	const bool lm	      = ir123_lm(ctx->cpu_int.instr);
 
 	for (size_t i = 1, j = 0; i < ARRAY_SIZE(MAC); ++i, ++j) {
 		int64_t sum = 0;
-		sum	= mac123_add(ctx, i, sum, LLM[j][0] * vec->x);
-		sum	= mac123_add(ctx, i, sum, LLM[j][1] * vec->y);
-		sum	= mac123_add(ctx, i, sum, LLM[j][2] * vec->z);
+		sum	    = mac123_add(ctx, i, sum, LLM[j][0] * vec->x);
+		sum	    = mac123_add(ctx, i, sum, LLM[j][1] * vec->y);
+		sum	    = mac123_add(ctx, i, sum, LLM[j][2] * vec->z);
 
 		MAC[i] = sum >> sf;
 		IR[i]  = ir123_sat(ctx, i, MAC[i], lm);
@@ -640,14 +628,14 @@ P_NONNULL static void intpl_bk_lcm(struct p_ctx *ctx)
 #define MAC (ctx->cpu_int.cop2.cpr.mac)
 
 	const unsigned int sf = shift_frac(ctx->cpu_int.instr);
-	const bool lm = ir123_lm(ctx->cpu_int.instr);
+	const bool lm	      = ir123_lm(ctx->cpu_int.instr);
 
 	for (size_t i = 1, j = 0; i < ARRAY_SIZE(MAC); ++i, ++j) {
 		int64_t sum = 0;
-		sum	= mac123_add(ctx, i, sum, (uint64_t)BK[j] << 12);
-		sum	= mac123_add(ctx, i, sum, LCM[j][0] * IR[1]);
-		sum	= mac123_add(ctx, i, sum, LCM[j][1] * IR[2]);
-		sum	= mac123_add(ctx, i, sum, LCM[j][2] * IR[3]);
+		sum	    = mac123_add(ctx, i, sum, (uint64_t)BK[j] << 12);
+		sum	    = mac123_add(ctx, i, sum, LCM[j][0] * IR[1]);
+		sum	    = mac123_add(ctx, i, sum, LCM[j][1] * IR[2]);
+		sum	    = mac123_add(ctx, i, sum, LCM[j][2] * IR[3]);
 
 		MAC[i] = sum >> sf;
 	}
@@ -668,7 +656,7 @@ P_NONNULL static void intpl_rgb(struct p_ctx *ctx)
 #define RGBC (ctx->cpu_int.cop2.cpr.rgbc.arr)
 
 	const unsigned int sf = shift_frac(ctx->cpu_int.instr);
-	const bool lm = ir123_lm(ctx->cpu_int.instr);
+	const bool lm	      = ir123_lm(ctx->cpu_int.instr);
 
 	for (size_t i = 1, j = 0; i < ARRAY_SIZE(MAC); ++i, ++j) {
 		MAC[i] = (((uint64_t)(RGBC[j] * IR[i])) << 4) >> sf;
@@ -687,11 +675,11 @@ P_NONNULL static void intpl_fc(struct p_ctx *ctx, int64_t *sums)
 #define MAC (ctx->cpu_int.cop2.cpr.mac)
 
 	const unsigned int sf = shift_frac(ctx->cpu_int.instr);
-	const bool lm = ir123_lm(ctx->cpu_int.instr);
+	const bool lm	      = ir123_lm(ctx->cpu_int.instr);
 
 	for (size_t i = 1, j = 0; i < ARRAY_SIZE(MAC); ++i, ++j) {
 		int64_t sum = 0;
-		sum	= mac123_add(ctx, i, sum, ((uint64_t)FC[j] << 12) - sums[j]);
+		sum	    = mac123_add(ctx, i, sum, ((uint64_t)FC[j] << 12) - sums[j]);
 
 		MAC[i] = sum >> sf;
 		IR[i]  = ir123_sat(ctx, i, MAC[i], false);
@@ -869,11 +857,10 @@ P_NONNULL static void do_cop2_mtc(struct p_ctx *ctx, size_t rd, size_t rt)
 		uint32_t res = 32;
 
 		if (LZCS > 0)
-			// Reading LZCR returns the leading 0 count of LZCS if
-			// LZCS is positive...
+			// Reading LZCR returns the leading 0 count of LZCS if LZCS is positive...
 			res = __builtin_clz(LZCS);
 		else if (LZCS < 0)
-			// and the leading 1 count of LZCS if LZCS is negative.
+			// ...and the leading 1 count of LZCS if LZCS is negative.
 			res = (LZCS == -1) ? 32 : __builtin_clz(~LZCS);
 
 		// The results are in range 1..32.
@@ -933,14 +920,14 @@ static void mvmva(struct p_ctx *ctx, int16_t (*Mx)[3], int16_t *Vx, int32_t *Tx)
 #define MAC (ctx->cpu_int.cop2.cpr.mac)
 
 	const unsigned int sf = shift_frac(ctx->cpu_int.instr);
-	const bool lm = ir123_lm(ctx->cpu_int.instr);
+	const bool lm	      = ir123_lm(ctx->cpu_int.instr);
 
 	for (size_t i = 1, j = 0; i < ARRAY_SIZE(MAC); ++i, ++j) {
 		int64_t sum = 0;
-		sum	= mac123_add(ctx, i, sum, (uint64_t)Tx[j] << 12);
-		sum	= mac123_add(ctx, i, sum, Mx[j][0] * Vx[0]);
-		sum	= mac123_add(ctx, i, sum, Mx[j][1] * Vx[1]);
-		sum	= mac123_add(ctx, i, sum, Mx[j][2] * Vx[2]);
+		sum	    = mac123_add(ctx, i, sum, (uint64_t)Tx[j] << 12);
+		sum	    = mac123_add(ctx, i, sum, Mx[j][0] * Vx[0]);
+		sum	    = mac123_add(ctx, i, sum, Mx[j][1] * Vx[1]);
+		sum	    = mac123_add(ctx, i, sum, Mx[j][2] * Vx[2]);
 
 		MAC[i] = sum >> sf;
 		IR[i]  = ir123_sat(ctx, i, MAC[i], lm);
@@ -957,12 +944,12 @@ static void mvmva_bugged(struct p_ctx *ctx, int16_t (*Mx)[3], int16_t *Vx)
 #define MAC (ctx->cpu_int.cop2.cpr.mac)
 
 	const unsigned int sf = shift_frac(ctx->cpu_int.instr);
-	const bool lm = ir123_lm(ctx->cpu_int.instr);
+	const bool lm	      = ir123_lm(ctx->cpu_int.instr);
 
 	for (size_t i = 1, j = 0; i < ARRAY_SIZE(MAC); ++i, ++j) {
 		int64_t sum = 0;
-		sum	= mac123_add(ctx, i, sum, (uint64_t)FC[j] << 12);
-		sum	= mac123_add(ctx, i, sum, Mx[j][0] * Vx[0]);
+		sum	    = mac123_add(ctx, i, sum, (uint64_t)FC[j] << 12);
+		sum	    = mac123_add(ctx, i, sum, Mx[j][0] * Vx[0]);
 
 		MAC[i] = sum >> sf;
 		IR[i]  = ir123_sat(ctx, i, MAC[i], false);
@@ -985,8 +972,8 @@ P_NONNULL static void dly_slot_process(struct p_ctx *ctx)
 	ctx->cpu_int.gpr[ctx->cpu_int.ld_next.dst] = ctx->cpu_int.ld_next.val;
 
 	if (ctx->cpu_int.ld_next.dst)
-		LOG_TRACE(ctx, "load delay eviction: %zu <- 0x%08X",
-			  ctx->cpu_int.ld_next.dst, ctx->cpu_int.ld_next.val);
+		LOG_TRACE(ctx, "load delay eviction: %zu <- 0x%08X", ctx->cpu_int.ld_next.dst,
+			  ctx->cpu_int.ld_next.val);
 
 	memset(&ctx->cpu_int.ld_next, 0, sizeof(ctx->cpu_int.ld_next));
 	swap(&ctx->cpu_int.ld_pend, &ctx->cpu_int.ld_next);
@@ -1100,7 +1087,7 @@ P_NONNULL static void do_op(struct p_ctx *ctx)
 #define MAC (ctx->cpu_int.cop2.cpr.mac)
 
 	const unsigned int sf = shift_frac(ctx->cpu_int.instr);
-	const bool lm = ir123_lm(ctx->cpu_int.instr);
+	const bool lm	      = ir123_lm(ctx->cpu_int.instr);
 
 	int64_t res[3] = {
 		// clang-format off
@@ -1114,7 +1101,7 @@ P_NONNULL static void do_op(struct p_ctx *ctx)
 
 	for (size_t i = 0, reg = 1; i < ARRAY_SIZE(res); ++i, ++reg) {
 		int64_t sum = 0;
-		sum	= mac123_add(ctx, reg, sum, res[i]);
+		sum	    = mac123_add(ctx, reg, sum, res[i]);
 
 		MAC[reg] = sum >> sf;
 		IR[reg]	 = ir123_sat(ctx, reg, MAC[reg], lm);
@@ -1154,7 +1141,7 @@ P_NONNULL static void do_mvmva(struct p_ctx *ctx)
 #define TR   (ctx->cpu_int.cop2.ccr.tr)
 #define V    (ctx->cpu_int.cop2.cpr.v)
 
-	int16_t(*mx_lut[3])[3] = {
+	int16_t (*mx_lut[3])[3] = {
 		// clang-format off
 
 		[0] = RT,
@@ -1177,7 +1164,7 @@ P_NONNULL static void do_mvmva(struct p_ctx *ctx)
 
 	unsigned int mx_sel = mvmva_mx(ctx->cpu_int.instr);
 
-	int16_t(*mx)[3];
+	int16_t (*mx)[3];
 	int16_t mx_bugged[3][3];
 
 	if (likely(mx_sel <= 2))
@@ -1256,7 +1243,7 @@ P_NONNULL static void do_sqr(struct p_ctx *ctx)
 #define MAC (ctx->cpu_int.cop2.cpr.mac)
 
 	const unsigned int sf = shift_frac(ctx->cpu_int.instr);
-	const bool lm = ir123_lm(ctx->cpu_int.instr);
+	const bool lm	      = ir123_lm(ctx->cpu_int.instr);
 
 	for (size_t i = 1; i < ARRAY_SIZE(IR); ++i) {
 		MAC[i] = ((int64_t)IR[i] * (int64_t)IR[i]) >> sf;
@@ -1290,12 +1277,12 @@ P_NONNULL static void do_gpl(struct p_ctx *ctx)
 #define MAC (ctx->cpu_int.cop2.cpr.mac)
 
 	const unsigned int sf = shift_frac(ctx->cpu_int.instr);
-	const bool lm = ir123_lm(ctx->cpu_int.instr);
+	const bool lm	      = ir123_lm(ctx->cpu_int.instr);
 
 	for (size_t i = 1; i < ARRAY_SIZE(MAC); ++i) {
 		int64_t sum = 0;
-		sum	= mac123_add(ctx, i, sum, (uint64_t)MAC[i] << sf);
-		sum	= mac123_add(ctx, i, sum, IR[i] * IR[0]);
+		sum	    = mac123_add(ctx, i, sum, (uint64_t)MAC[i] << sf);
+		sum	    = mac123_add(ctx, i, sum, IR[i] * IR[0]);
 
 		MAC[i] = sum >> sf;
 		IR[i]  = ir123_sat(ctx, i, MAC[i], lm);
@@ -1308,8 +1295,7 @@ P_NONNULL static void do_gpl(struct p_ctx *ctx)
 #undef MAC
 }
 
-P_NONNULL static void do_lh(struct p_ctx *ctx, size_t base, size_t offset,
-			    size_t rt)
+P_NONNULL static void do_lh(struct p_ctx *ctx, size_t base, size_t offset, size_t rt)
 {
 #define gpr (ctx->cpu_int.gpr)
 
@@ -1324,12 +1310,11 @@ P_NONNULL static void do_lh(struct p_ctx *ctx, size_t base, size_t offset,
 #undef gpr
 }
 
-P_NONNULL static void do_lwl(struct p_ctx *ctx, size_t base, size_t offset,
-			     size_t rt)
+P_NONNULL static void do_lwl(struct p_ctx *ctx, size_t base, size_t offset, size_t rt)
 {
 #define gpr (ctx->cpu_int.gpr)
 
-	uint32_t vaddr	  = gpr[base] + offset;
+	uint32_t vaddr	       = gpr[base] + offset;
 	uint32_t aligned_vaddr = vaddr & ~3;
 
 	uint32_t word = load32(ctx, aligned_vaddr);
@@ -1337,8 +1322,7 @@ P_NONNULL static void do_lwl(struct p_ctx *ctx, size_t base, size_t offset,
 	unsigned int shift = (vaddr & 3) * 8;
 	unsigned int mask  = 0x00FFFFFF >> shift;
 
-	uint32_t val = (ctx->cpu_int.ld_next.dst == rt) ? ctx->cpu_int.ld_next.val :
-						     gpr[rt];
+	uint32_t val = (ctx->cpu_int.ld_next.dst == rt) ? ctx->cpu_int.ld_next.val : gpr[rt];
 
 	val = (val & mask) | (word << (24 - shift));
 	load_dly(ctx, rt, val);
@@ -1346,8 +1330,7 @@ P_NONNULL static void do_lwl(struct p_ctx *ctx, size_t base, size_t offset,
 #undef gpr
 }
 
-P_NONNULL static void do_lw(struct p_ctx *ctx, size_t base, size_t offset,
-			    size_t rt)
+P_NONNULL static void do_lw(struct p_ctx *ctx, size_t base, size_t offset, size_t rt)
 {
 #define gpr (ctx->cpu_int.gpr)
 
@@ -1362,8 +1345,7 @@ P_NONNULL static void do_lw(struct p_ctx *ctx, size_t base, size_t offset,
 #undef gpr
 }
 
-P_NONNULL static void do_lhu(struct p_ctx *ctx, size_t base, size_t offset,
-			     size_t rt)
+P_NONNULL static void do_lhu(struct p_ctx *ctx, size_t base, size_t offset, size_t rt)
 {
 #define gpr (ctx->cpu_int.gpr)
 
@@ -1379,12 +1361,11 @@ P_NONNULL static void do_lhu(struct p_ctx *ctx, size_t base, size_t offset,
 #undef gpr
 }
 
-P_NONNULL static void do_lwr(struct p_ctx *ctx, size_t base, size_t offset,
-			     size_t rt)
+P_NONNULL static void do_lwr(struct p_ctx *ctx, size_t base, size_t offset, size_t rt)
 {
 #define gpr (ctx->cpu_int.gpr)
 
-	uint32_t vaddr	  = gpr[base] + offset;
+	uint32_t vaddr	       = gpr[base] + offset;
 	uint32_t aligned_vaddr = vaddr & ~3;
 
 	uint32_t word = load32(ctx, aligned_vaddr);
@@ -1392,8 +1373,7 @@ P_NONNULL static void do_lwr(struct p_ctx *ctx, size_t base, size_t offset,
 	unsigned int shift = (vaddr & 3) * 8;
 	unsigned int mask  = 0xFFFFFF00 << (24 - shift);
 
-	uint32_t val = (ctx->cpu_int.ld_next.dst == rt) ? ctx->cpu_int.ld_next.val :
-						     gpr[rt];
+	uint32_t val = (ctx->cpu_int.ld_next.dst == rt) ? ctx->cpu_int.ld_next.val : gpr[rt];
 
 	val = (val & mask) | (word >> shift);
 
@@ -1402,8 +1382,7 @@ P_NONNULL static void do_lwr(struct p_ctx *ctx, size_t base, size_t offset,
 #undef gpr
 }
 
-P_NONNULL static void do_sh(struct p_ctx *ctx, size_t base, size_t offset,
-			    size_t rt)
+P_NONNULL static void do_sh(struct p_ctx *ctx, size_t base, size_t offset, size_t rt)
 {
 #define gpr (ctx->cpu_int.gpr)
 
@@ -1419,26 +1398,24 @@ P_NONNULL static void do_sh(struct p_ctx *ctx, size_t base, size_t offset,
 #undef gpr
 }
 
-P_NONNULL static void do_swl(struct p_ctx *ctx, size_t base, size_t offset,
-			     size_t rt)
+P_NONNULL static void do_swl(struct p_ctx *ctx, size_t base, size_t offset, size_t rt)
 {
 #define gpr (ctx->cpu_int.gpr)
 
-	uint32_t vaddr	  = gpr[base] + offset;
+	uint32_t vaddr	       = gpr[base] + offset;
 	uint32_t aligned_vaddr = vaddr & ~3;
 
 	unsigned int shift = (vaddr & 3) * 8;
 	unsigned int mask  = 0xFFFFFF00 << shift;
 
 	uint32_t word = load32(ctx, aligned_vaddr);
-	word	 = (word & mask) | (gpr[rt] >> (24 - shift));
+	word	      = (word & mask) | (gpr[rt] >> (24 - shift));
 	store32(ctx, aligned_vaddr, word);
 
 #undef gpr
 }
 
-P_NONNULL static void do_sw(struct p_ctx *ctx, size_t base, size_t offset,
-			    size_t rt)
+P_NONNULL static void do_sw(struct p_ctx *ctx, size_t base, size_t offset, size_t rt)
 {
 #define gpr (ctx->cpu_int.gpr)
 
@@ -1456,19 +1433,18 @@ P_NONNULL static void do_sw(struct p_ctx *ctx, size_t base, size_t offset,
 #undef gpr
 }
 
-P_NONNULL static void do_swr(struct p_ctx *ctx, size_t base, size_t offset,
-			     size_t rt)
+P_NONNULL static void do_swr(struct p_ctx *ctx, size_t base, size_t offset, size_t rt)
 {
 #define gpr (ctx->cpu_int.gpr)
 
-	uint32_t vaddr	  = gpr[base] + offset;
+	uint32_t vaddr	       = gpr[base] + offset;
 	uint32_t aligned_vaddr = vaddr & ~3;
 
 	unsigned int shift = (vaddr & 3) * 8;
 	unsigned int mask  = 0x00FFFFFF >> (24 - shift);
 
 	uint32_t word = load32(ctx, aligned_vaddr);
-	word	 = (word & mask) | (gpr[rt] << shift);
+	word	      = (word & mask) | (gpr[rt] << shift);
 	store32(ctx, aligned_vaddr, word);
 
 #undef gpr
@@ -1511,144 +1487,166 @@ P_NONNULL static void run(struct p_ctx *ctx, uint64_t instr_limit, bool stop_on_
 #define ZSF4	(ctx->cpu_int.cop2.ccr.zsf4)
 
 	static const int32_t op_tbl[] = {
-		[GRP_SPECIAL]	= &&grp_special - &&grp_special,
-		[GRP_REGIMM]	= &&grp_regimm - &&grp_special,
-		[J]		= &&op_j - &&grp_special,
-		[JAL]		= &&op_jal - &&grp_special,
-		[BEQ]		= &&op_beq - &&grp_special,
-		[BNE]		= &&op_bne - &&grp_special,
-		[BLEZ]		= &&op_blez - &&grp_special,
-		[BGTZ]		= &&op_bgtz - &&grp_special,
-		[ADDI]		= &&op_addi - &&grp_special,
-		[ADDIU]		= &&op_addiu - &&grp_special,
-		[SLTI]		= &&op_slti - &&grp_special,
-		[SLTIU]		= &&op_sltiu - &&grp_special,
-		[ANDI]		= &&op_andi - &&grp_special,
-		[ORI]		= &&op_ori - &&grp_special,
-		[XORI]		= &&op_xori - &&grp_special,
-		[LUI]		= &&op_lui - &&grp_special,
-		[GRP_COP0]	= &&grp_cop0 - &&grp_special,
-		[0x11]		= &&illegal - &&grp_special,
-		[GRP_COP2]	= &&grp_cop2 - &&grp_special,
-		[0x13 ... 0x1F] = &&illegal - &&grp_special,
-		[LB]		= &&op_lb - &&grp_special,
-		[LH]		= &&op_lh - &&grp_special,
-		[LWL]		= &&op_lwl - &&grp_special,
-		[LW]		= &&op_lw - &&grp_special,
-		[LBU]		= &&op_lbu - &&grp_special,
-		[LHU]		= &&op_lhu - &&grp_special,
-		[LWR]		= &&op_lwr - &&grp_special,
-		[0x27]		= &&illegal - &&grp_special,
-		[SB]		= &&op_sb - &&grp_special,
-		[SH]		= &&op_sh - &&grp_special,
-		[SWL]		= &&op_swl - &&grp_special,
-		[SW]		= &&op_sw - &&grp_special,
-		[SWR]		= &&op_swr - &&grp_special,
-		[0x2F ... 0x3F] = &&illegal - &&grp_special
+		// clang-format off
+
+		[GRP_SPECIAL]	= &&grp_special	- &&grp_special,
+		[GRP_REGIMM]	= &&grp_regimm	- &&grp_special,
+		[J]		= &&op_j	- &&grp_special,
+		[JAL]		= &&op_jal	- &&grp_special,
+		[BEQ]		= &&op_beq	- &&grp_special,
+		[BNE]		= &&op_bne	- &&grp_special,
+		[BLEZ]		= &&op_blez	- &&grp_special,
+		[BGTZ]		= &&op_bgtz	- &&grp_special,
+		[ADDI]		= &&op_addi	- &&grp_special,
+		[ADDIU]		= &&op_addiu	- &&grp_special,
+		[SLTI]		= &&op_slti	- &&grp_special,
+		[SLTIU]		= &&op_sltiu	- &&grp_special,
+		[ANDI]		= &&op_andi	- &&grp_special,
+		[ORI]		= &&op_ori	- &&grp_special,
+		[XORI]		= &&op_xori	- &&grp_special,
+		[LUI]		= &&op_lui	- &&grp_special,
+		[GRP_COP0]	= &&grp_cop0	- &&grp_special,
+		[0x11]		= &&illegal	- &&grp_special,
+		[GRP_COP2]	= &&grp_cop2	- &&grp_special,
+		[0x13 ... 0x1F]	= &&illegal	- &&grp_special,
+		[LB]		= &&op_lb	- &&grp_special,
+		[LH]		= &&op_lh	- &&grp_special,
+		[LWL]		= &&op_lwl	- &&grp_special,
+		[LW]		= &&op_lw	- &&grp_special,
+		[LBU]		= &&op_lbu	- &&grp_special,
+		[LHU]		= &&op_lhu	- &&grp_special,
+		[LWR]		= &&op_lwr	- &&grp_special,
+		[0x27]		= &&illegal	- &&grp_special,
+		[SB]		= &&op_sb	- &&grp_special,
+		[SH]		= &&op_sh	- &&grp_special,
+		[SWL]		= &&op_swl	- &&grp_special,
+		[SW]		= &&op_sw	- &&grp_special,
+		[SWR]		= &&op_swr	- &&grp_special,
+		[0x2F ... 0x3F]	= &&illegal	- &&grp_special
+
+		// clang-format on
 	};
 
 	static const int32_t special_tbl[] = {
-		[SLL]		= &&op_sll - &&op_sll,
-		[0x01]		= &&illegal - &&op_sll,
-		[SRL]		= &&op_srl - &&op_sll,
-		[SRA]		= &&op_sra - &&op_sll,
-		[SLLV]		= &&op_sllv - &&op_sll,
-		[0x05]		= &&illegal - &&op_sll,
-		[SRLV]		= &&op_srlv - &&op_sll,
-		[SRAV]		= &&op_srav - &&op_sll,
-		[JR]		= &&op_jr - &&op_sll,
-		[JALR]		= &&op_jalr - &&op_sll,
-		[0x0A ... 0x0B] = &&illegal - &&op_sll,
-		[SYSCALL]	= &&op_syscall - &&op_sll,
-		[BREAK]		= &&op_break - &&op_sll,
-		[0x0E ... 0x0F] = &&illegal - &&op_sll,
-		[MFHI]		= &&op_mfhi - &&op_sll,
-		[MTHI]		= &&op_mthi - &&op_sll,
-		[MFLO]		= &&op_mflo - &&op_sll,
-		[MTLO]		= &&op_mtlo - &&op_sll,
-		[0x14 ... 0x17] = &&illegal - &&op_sll,
-		[MULT]		= &&op_mult - &&op_sll,
-		[MULTU]		= &&op_multu - &&op_sll,
-		[DIV]		= &&op_div - &&op_sll,
-		[DIVU]		= &&op_divu - &&op_sll,
-		[0x1C ... 0x1F] = &&illegal - &&op_sll,
-		[ADD]		= &&op_add - &&op_sll,
-		[ADDU]		= &&op_addu - &&op_sll,
-		[SUB]		= &&op_sub - &&op_sll,
-		[SUBU]		= &&op_subu - &&op_sll,
-		[AND]		= &&op_and - &&op_sll,
-		[OR]		= &&op_or - &&op_sll,
-		[XOR]		= &&op_xor - &&op_sll,
-		[NOR]		= &&op_nor - &&op_sll,
-		[0x28 ... 0x29] = &&illegal - &&op_sll,
-		[SLT]		= &&op_slt - &&op_sll,
-		[SLTU]		= &&op_sltu - &&op_sll,
-		[0x2C ... 0x3F] = &&illegal - &&op_sll
+		// clang-format off
+
+		[SLL]		= &&op_sll	- &&op_sll,
+		[0x01]		= &&illegal	- &&op_sll,
+		[SRL]		= &&op_srl	- &&op_sll,
+		[SRA]		= &&op_sra	- &&op_sll,
+		[SLLV]		= &&op_sllv	- &&op_sll,
+		[0x05]		= &&illegal	- &&op_sll,
+		[SRLV]		= &&op_srlv	- &&op_sll,
+		[SRAV]		= &&op_srav	- &&op_sll,
+		[JR]		= &&op_jr	- &&op_sll,
+		[JALR]		= &&op_jalr	- &&op_sll,
+		[0x0A ... 0x0B]	= &&illegal	- &&op_sll,
+		[SYSCALL]	= &&op_syscall	- &&op_sll,
+		[BREAK]		= &&op_break	- &&op_sll,
+		[0x0E ... 0x0F]	= &&illegal	- &&op_sll,
+		[MFHI]		= &&op_mfhi	- &&op_sll,
+		[MTHI]		= &&op_mthi	- &&op_sll,
+		[MFLO]		= &&op_mflo	- &&op_sll,
+		[MTLO]		= &&op_mtlo	- &&op_sll,
+		[0x14 ... 0x17]	= &&illegal	- &&op_sll,
+		[MULT]		= &&op_mult	- &&op_sll,
+		[MULTU]		= &&op_multu	- &&op_sll,
+		[DIV]		= &&op_div	- &&op_sll,
+		[DIVU]		= &&op_divu	- &&op_sll,
+		[0x1C ... 0x1F]	= &&illegal	- &&op_sll,
+		[ADD]		= &&op_add	- &&op_sll,
+		[ADDU]		= &&op_addu	- &&op_sll,
+		[SUB]		= &&op_sub	- &&op_sll,
+		[SUBU]		= &&op_subu	- &&op_sll,
+		[AND]		= &&op_and	- &&op_sll,
+		[OR]		= &&op_or	- &&op_sll,
+		[XOR]		= &&op_xor	- &&op_sll,
+		[NOR]		= &&op_nor	- &&op_sll,
+		[0x28 ... 0x29]	= &&illegal	- &&op_sll,
+		[SLT]		= &&op_slt	- &&op_sll,
+		[SLTU]		= &&op_sltu	- &&op_sll,
+		[0x2C ... 0x3F]	= &&illegal	- &&op_sll
+
+		// clang-format on
 	};
 
 	static const int32_t cop0_tbl[] = {
-		[MFC]		= &&cop0_mfc - &&cop0_mfc,
-		[0x01 ... 0x03] = &&cop0_instr - &&cop0_mfc,
-		[MTC]		= &&cop0_mtc - &&cop0_mfc,
-		[0x05 ... CTC]	= &&cop0_instr - &&cop0_mfc,
-		[0x07 ... 0x1F] = &&cop0_instr - &&cop0_mfc
+		// clang-format off
+
+		[MFC]		= &&cop0_mfc	- &&cop0_mfc,
+		[0x01 ... 0x03]	= &&cop0_instr	- &&cop0_mfc,
+		[MTC]		= &&cop0_mtc	- &&cop0_mfc,
+		[0x05 ... CTC]	= &&cop0_instr	- &&cop0_mfc,
+		[0x07 ... 0x1F]	= &&cop0_instr	- &&cop0_mfc
+
+		// clang-format on
 	};
 
 	static const int32_t cop0_instr_tbl[] = {
-		[0x00 ... 0x0F] = &&illegal - &&illegal,
-		[RFE]		= &&op_rfe - &&illegal,
-		[0x11 ... 0x3F] = &&illegal - &&illegal
+		// clang-format off
+
+		[0x00 ... 0x0F]	= &&illegal	- &&illegal,
+		[RFE]		= &&op_rfe	- &&illegal,
+		[0x11 ... 0x3F]	= &&illegal	- &&illegal
+
+		// clang-format on
 	};
 
 	static const int32_t cop2_tbl[] = {
-		[MFC]		= &&cop2_mfc - &&cop2_mfc,
-		[0x01]		= &&cop2_instr - &&cop2_mfc,
-		[CFC]		= &&cop2_cfc - &&cop2_mfc,
-		[0x03]		= &&cop2_instr - &&cop2_mfc,
-		[MTC]		= &&cop2_mtc - &&cop2_mfc,
-		[0x05]		= &&cop2_instr - &&cop2_mfc,
-		[CTC]		= &&cop2_ctc - &&cop2_mfc,
-		[0x07 ... 0x1F] = &&cop2_instr - &&cop2_mfc
+		// clang-format off
+
+		[MFC]		= &&cop2_mfc	- &&cop2_mfc,
+		[0x01]		= &&cop2_instr	- &&cop2_mfc,
+		[CFC]		= &&cop2_cfc	- &&cop2_mfc,
+		[0x03]		= &&cop2_instr	- &&cop2_mfc,
+		[MTC]		= &&cop2_mtc	- &&cop2_mfc,
+		[0x05]		= &&cop2_instr	- &&cop2_mfc,
+		[CTC]		= &&cop2_ctc	- &&cop2_mfc,
+		[0x07 ... 0x1F]	= &&cop2_instr	- &&cop2_mfc
+
+		// clang-format on
 	};
 
 	static const int32_t cop2_instr_tbl[] = {
-		[0x00]		= &&illegal - &&illegal,
-		[RTPS]		= &&op_rtps - &&illegal,
-		[0x02 ... 0x05] = &&illegal - &&illegal,
-		[NCLIP]		= &&op_nclip - &&illegal,
-		[0x07 ... 0x0B] = &&illegal - &&illegal,
-		[OP]		= &&op_op - &&illegal,
-		[0x0D ... 0x0F] = &&illegal - &&illegal,
-		[DPCS]		= &&op_dpcs - &&illegal,
-		[INTPL]		= &&op_intpl - &&illegal,
-		[MVMVA]		= &&op_mvmva - &&illegal,
-		[NCDS]		= &&op_ncds - &&illegal,
-		[CDP]		= &&op_cdp - &&illegal,
-		[0x15]		= &&illegal - &&illegal,
-		[NCDT]		= &&op_ncdt - &&illegal,
-		[0x17 ... 0x1A] = &&illegal - &&illegal,
-		[NCCS]		= &&op_nccs - &&illegal,
-		[CC]		= &&op_cc - &&illegal,
-		[0x1D]		= &&illegal - &&illegal,
-		[NCS]		= &&op_ncs - &&illegal,
-		[0x1F]		= &&illegal - &&illegal,
-		[NCT]		= &&op_nct - &&illegal,
-		[0x21 ... 0x27] = &&illegal - &&illegal,
-		[SQR]		= &&op_sqr - &&illegal,
-		[DPCL]		= &&op_dpcl - &&illegal,
-		[DPCT]		= &&op_dpct - &&illegal,
-		[0x2B ... 0x2C] = &&illegal - &&illegal,
-		[AVSZ3]		= &&op_avsz3 - &&illegal,
-		[AVSZ4]		= &&op_avsz4 - &&illegal,
-		[0x2F]		= &&illegal - &&illegal,
-		[RTPT]		= &&op_rtpt - &&illegal,
-		[0x31 ... 0x3C] = &&illegal - &&illegal,
-		[GPF]		= &&op_gpf - &&illegal,
-		[GPL]		= &&op_gpl - &&illegal,
-		[NCCT]		= &&op_ncct - &&illegal
-	};
+		// clang-format off
 
-	uint64_t instrs_done = 0;
+		[0x00]		= &&illegal	- &&illegal,
+		[RTPS]		= &&op_rtps	- &&illegal,
+		[0x02 ... 0x05]	= &&illegal	- &&illegal,
+		[NCLIP]		= &&op_nclip	- &&illegal,
+		[0x07 ... 0x0B]	= &&illegal	- &&illegal,
+		[OP]		= &&op_op	- &&illegal,
+		[0x0D ... 0x0F]	= &&illegal	- &&illegal,
+		[DPCS]		= &&op_dpcs	- &&illegal,
+		[INTPL]		= &&op_intpl	- &&illegal,
+		[MVMVA]		= &&op_mvmva	- &&illegal,
+		[NCDS]		= &&op_ncds	- &&illegal,
+		[CDP]		= &&op_cdp	- &&illegal,
+		[0x15]		= &&illegal	- &&illegal,
+		[NCDT]		= &&op_ncdt	- &&illegal,
+		[0x17 ... 0x1A]	= &&illegal	- &&illegal,
+		[NCCS]		= &&op_nccs	- &&illegal,
+		[CC]		= &&op_cc	- &&illegal,
+		[0x1D]		= &&illegal	- &&illegal,
+		[NCS]		= &&op_ncs	- &&illegal,
+		[0x1F]		= &&illegal	- &&illegal,
+		[NCT]		= &&op_nct	- &&illegal,
+		[0x21 ... 0x27]	= &&illegal	- &&illegal,
+		[SQR]		= &&op_sqr	- &&illegal,
+		[DPCL]		= &&op_dpcl	- &&illegal,
+		[DPCT]		= &&op_dpct	- &&illegal,
+		[0x2B ... 0x2C]	= &&illegal	- &&illegal,
+		[AVSZ3]		= &&op_avsz3	- &&illegal,
+		[AVSZ4]		= &&op_avsz4	- &&illegal,
+		[0x2F]		= &&illegal	- &&illegal,
+		[RTPT]		= &&op_rtpt	- &&illegal,
+		[0x31 ... 0x3C]	= &&illegal	- &&illegal,
+		[GPF]		= &&op_gpf	- &&illegal,
+		[GPL]		= &&op_gpl	- &&illegal,
+		[NCCT]		= &&op_ncct	- &&illegal
+
+		// clang-format on
+	};
 
 loop:
 	if (unlikely(!ctx->running))
@@ -1661,8 +1659,10 @@ loop:
 			goto done;
 	}
 
-	if (unlikely(instrs_done++ >= instr_limit))
+	if (unlikely(!instr_limit))
 		goto done;
+
+	instr_limit--;
 
 	if (unlikely((ctx->exe.data) && (pc == KERNEL_INIT_PC)))
 		p_exe_inject(ctx);
@@ -1917,10 +1917,9 @@ op_rtps:
 op_nclip:
 	FLAG = 0;
 
-	MAC[0] = mac0_add(
-		ctx, ((uint64_t)SX0 * (uint64_t)SY1) + ((uint64_t)SX1 * (uint64_t)SY2) +
-			     ((uint64_t)SX2 * (uint64_t)SY0) - ((uint64_t)SX0 * (uint64_t)SY2) -
-			     ((uint64_t)SX1 * (uint64_t)SY0) - ((uint64_t)SX2 * (uint64_t)SY1));
+	MAC[0] = mac0_add(ctx, ((uint64_t)SX0 * (uint64_t)SY1) + ((uint64_t)SX1 * (uint64_t)SY2) +
+				       ((uint64_t)SX2 * (uint64_t)SY0) - ((uint64_t)SX0 * (uint64_t)SY2) -
+				       ((uint64_t)SX1 * (uint64_t)SY0) - ((uint64_t)SX2 * (uint64_t)SY1));
 
 	update_flag(ctx);
 	goto end;
