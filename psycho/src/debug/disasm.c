@@ -24,53 +24,164 @@
 #include "psycho/ctx.h"
 
 #include "bus.h"
-#include "cpu_defs.h"
+#include "system/cpu/defs.h"
 #include "disasm.h"
 #include "str.h"
 
 #define TRACE_NUM_SPACES (40)
 
-static const char *gpr[P_GPR_COUNT] = {
-	[P_ZERO] = "$zero", [P_AT] = "$at", [P_V0] = "$v0", [P_V1] = "$v1",
-	[P_A0] = "$a0",	    [P_A1] = "$a1", [P_A2] = "$a2", [P_A3] = "$a3",
-	[P_T0] = "$t0",	    [P_T1] = "$t1", [P_T2] = "$t2", [P_T3] = "$t3",
-	[P_T4] = "$t4",	    [P_T5] = "$t5", [P_T6] = "$t6", [P_T7] = "$t7",
-	[P_S0] = "$s0",	    [P_S1] = "$s1", [P_S2] = "$s2", [P_S3] = "$s3",
-	[P_S4] = "$s4",	    [P_S5] = "$s5", [P_S6] = "$s6", [P_S7] = "$s7",
-	[P_T8] = "$t8",	    [P_T9] = "$t9", [P_K0] = "$k0", [P_K1] = "$k1",
-	[P_GP] = "$gp",	    [P_SP] = "$sp", [P_FP] = "$fp", [P_RA] = "$ra"
+static const char *const gpr[PSYCHO_CPU_GPR_COUNT] = {
+	// clang-format off
+
+	[PSYCHO_CPU_GPR_ZERO]	= "$zero",
+	[PSYCHO_CPU_GPR_AT]	= "$at",
+	[PSYCHO_CPU_GPR_V0]	= "$v0",
+	[PSYCHO_CPU_GPR_V1]	= "$v1",
+	[PSYCHO_CPU_GPR_A0]	= "$a0",
+	[PSYCHO_CPU_GPR_A1]	= "$a1",
+	[PSYCHO_CPU_GPR_A2]	= "$a2",
+	[PSYCHO_CPU_GPR_A3]	= "$a3",
+	[PSYCHO_CPU_GPR_T0]	= "$t0",
+	[PSYCHO_CPU_GPR_T1]	= "$t1",
+	[PSYCHO_CPU_GPR_T2]	= "$t2",
+	[PSYCHO_CPU_GPR_T3]	= "$t3",
+	[PSYCHO_CPU_GPR_T4]	= "$t4",
+	[PSYCHO_CPU_GPR_T5]	= "$t5",
+	[PSYCHO_CPU_GPR_T6]	= "$t6",
+	[PSYCHO_CPU_GPR_T7]	= "$t7",
+	[PSYCHO_CPU_GPR_S0]	= "$s0",
+	[PSYCHO_CPU_GPR_S1]	= "$s1",
+	[PSYCHO_CPU_GPR_S2]	= "$s2",
+	[PSYCHO_CPU_GPR_S3]	= "$s3",
+	[PSYCHO_CPU_GPR_S4]	= "$s4",
+	[PSYCHO_CPU_GPR_S5]	= "$s5",
+	[PSYCHO_CPU_GPR_S6]	= "$s6",
+	[PSYCHO_CPU_GPR_S7]	= "$s7",
+	[PSYCHO_CPU_GPR_T8]	= "$t8",
+	[PSYCHO_CPU_GPR_T9]	= "$t9",
+	[PSYCHO_CPU_GPR_K0]	= "$k0",
+	[PSYCHO_CPU_GPR_K1]	= "$k1",
+	[PSYCHO_CPU_GPR_GP]	= "$gp",
+	[PSYCHO_CPU_GPR_SP]	= "$sp",
+	[PSYCHO_CPU_GPR_FP]	= "$fp",
+	[PSYCHO_CPU_GPR_RA]	= "$ra"
+
+	// clang-format on
 };
 
-static const char *cop0[P_COP0_COUNT] = {
-	[0] = "REG0",	   [1] = "REG1",	[2] = "REG2",
-	[P_BPC] = "BPC",   [4] = "REG4",	[P_BDA] = "BDA",
-	[P_TAR] = "TAR",   [P_DCIC] = "DCIC",	[P_BADVADDR] = "BADVADDR",
-	[P_BDAM] = "BDAM", [10] = "REG10",	[P_BPCM] = "BPCM",
-	[P_SR] = "SR",	   [P_CAUSE] = "CAUSE", [P_EPC] = "EPC",
-	[P_PRID] = "PRID", [16] = "REG16",	[17] = "REG17",
-	[18] = "REG18",	   [19] = "REG19",	[20] = "REG20",
-	[21] = "REG21",	   [22] = "REG22",	[23] = "REG23",
-	[24] = "REG24",	   [25] = "REG25",	[26] = "REG26",
-	[27] = "REG27",	   [28] = "REG28",	[29] = "REG29",
-	[30] = "REG30",	   [31] = "REG31"
+static const char *const cop0_cpr[PSYCHO_CPU_COP0_CPR_COUNT] = {
+	// clang-format off
+
+	[0]				= "C0_REG0",
+	[1]				= "C0_REG1",
+	[2]				= "C0_REG2",
+	[PSYCHO_CPU_COP0_CPR_BPC]	= "C0_BPC",
+	[4]				= "C0_REG4",
+	[PSYCHO_CPU_COP0_CPR_BDA]	= "C0_BDA",
+	[PSYCHO_CPU_COP0_CPR_TAR]	= "C0_TAR",
+	[PSYCHO_CPU_COP0_CPR_DCIC]	= "C0_DCIC",
+	[PSYCHO_CPU_COP0_CPR_BADVADDR]	= "C0_BADVADDR",
+	[PSYCHO_CPU_COP0_CPR_BDAM]	= "C0_BDAM",
+	[10]				= "C0_REG10",
+	[PSYCHO_CPU_COP0_CPR_BPCM]	= "C0_BPCM",
+	[PSYCHO_CPU_COP0_CPR_SR]	= "C0_SR",
+	[PSYCHO_CPU_COP0_CPR_CAUSE]	= "C0_CAUSE",
+	[PSYCHO_CPU_COP0_CPR_EPC]	= "C0_EPC",
+	[PSYCHO_CPU_COP0_CPR_PRID]	= "C0_PRID",
+	[16]				= "C0_REG16",
+	[17]				= "C0_REG17",
+	[18]				= "C0_REG18",
+	[19]				= "C0_REG19",
+	[20]				= "C0_REG20",
+	[21]				= "C0_REG21",
+	[22]				= "C0_REG22",
+	[23]				= "C0_REG23",
+	[24]				= "C0_REG24",
+	[25]				= "C0_REG25",
+	[26]				= "C0_REG26",
+	[27]				= "C0_REG27",
+	[28]				= "C0_REG28",
+	[29]				= "C0_REG29",
+	[30]				= "C0_REG30",
+	[31]				= "C0_REG31"
+
+	// clang-format on
 };
 
-static const char *cop2_cpr[P_COP2_CPR_CNT] = {
-	[P_VXY0] = "VXY0", [P_VZ0] = "VZ0",   [P_VXY1] = "VXY1",
-	[P_VZ1] = "VZ1",   [P_RGBC] = "RGBC", [P_OTZ] = "OTZ",
-	[P_IR0] = "IR0",   [P_IR1] = "IR1",   [P_IR2] = "IR2",
-	[P_IR3] = "IR3",   [P_SXY0] = "SXY0", [P_SXY1] = "SXY1",
-	[P_SXY2] = "SXY2", [P_SXYP] = "SXYP", [P_SZ0] = "SZ0",
-	[P_SZ1] = "SZ1",   [P_SZ2] = "SZ2",   [P_SZ3] = "SZ3",
-	[P_RGB0] = "RGB0", [P_RGB1] = "RGB1", [P_RGB2] = "RGB2",
-	[P_RES1] = "RES1", [P_MAC0] = "MAC0", [P_MAC1] = "MAC1",
-	[P_MAC2] = "MAC2", [P_MAC3] = "MAC3", [P_IRGB] = "IRGB",
-	[P_ORGB] = "ORGB", [P_LZCS] = "LZCS", [P_LZCR] = "LZCR"
+static const char *const cop2_cpr[PSYCHO_CPU_COP2_CPR_COUNT] = {
+	// clang-format off
+
+	[PSYCHO_CPU_COP2_CPR_VXY0]	= "C2_VXY0",
+	[PSYCHO_CPU_COP2_CPR_VZ0]	= "C2_VZ0",
+	[PSYCHO_CPU_COP2_CPR_VXY1]	= "C2_VXY1",
+	[PSYCHO_CPU_COP2_CPR_VZ1]	= "C2_VZ1",
+	[PSYCHO_CPU_COP2_CPR_RGBC]	= "C2_RGBC",
+	[PSYCHO_CPU_COP2_CPR_OTZ]	= "C2_OTZ",
+	[PSYCHO_CPU_COP2_CPR_IR0]	= "C2_IR0",
+	[PSYCHO_CPU_COP2_CPR_IR1]	= "C2_IR1",
+	[PSYCHO_CPU_COP2_CPR_IR2]	= "C2_IR2",
+	[PSYCHO_CPU_COP2_CPR_IR3]	= "C2_IR3",
+	[PSYCHO_CPU_COP2_CPR_SXY0]	= "C2_SXY0",
+	[PSYCHO_CPU_COP2_CPR_SXY1]	= "C2_SXY1",
+	[PSYCHO_CPU_COP2_CPR_SXY2]	= "C2_SXY2",
+	[PSYCHO_CPU_COP2_CPR_SXYP]	= "C2_SXYP",
+	[PSYCHO_CPU_COP2_CPR_SZ0]	= "C2_SZ0",
+	[PSYCHO_CPU_COP2_CPR_SZ1]	= "C2_SZ1",
+	[PSYCHO_CPU_COP2_CPR_SZ2]	= "C2_SZ2",
+	[PSYCHO_CPU_COP2_CPR_SZ3]	= "C2_SZ3",
+	[PSYCHO_CPU_COP2_CPR_RGB0]	= "C2_RGB0",
+	[PSYCHO_CPU_COP2_CPR_RGB1]	= "C2_RGB1",
+	[PSYCHO_CPU_COP2_CPR_RGB2]	= "C2_RGB2",
+	[PSYCHO_CPU_COP2_CPR_RES1]	= "C2_RES1",
+	[PSYCHO_CPU_COP2_CPR_MAC0]	= "C2_MAC0",
+	[PSYCHO_CPU_COP2_CPR_MAC1]	= "C2_MAC1",
+	[PSYCHO_CPU_COP2_CPR_MAC2]	= "C2_MAC2",
+	[PSYCHO_CPU_COP2_CPR_MAC3]	= "C2_MAC3",
+	[PSYCHO_CPU_COP2_CPR_IRGB]	= "C2_IRGB",
+	[PSYCHO_CPU_COP2_CPR_ORGB]	= "C2_ORGB",
+	[PSYCHO_CPU_COP2_CPR_LZCS]	= "C2_LZCS",
+	[PSYCHO_CPU_COP2_CPR_LZCR]	= "C2_LZCR"
+
+	// clang-format on
 };
 
-static const char *cop2_ccr[P_COP2_CCR_CNT] = {
-	[P_R11R12] = "R11R12",
-	[P_R13R21] = "R13R21"
+static const char *const cop2_ccr[PSYCHO_CPU_COP2_CCR_COUNT] = {
+	// clang-format off
+
+	[PSYCHO_CPU_COP2_CCR_R11R12]	= "C2_R11R12",
+	[PSYCHO_CPU_COP2_CCR_R13R21]	= "C2_R13R21",
+	[PSYCHO_CPU_COP2_CCR_R22R23]	= "C2_R22R23",
+	[PSYCHO_CPU_COP2_CCR_R31R32]	= "C2_R31R32",
+	[PSYCHO_CPU_COP2_CCR_R33]	= "C2_R33",
+	[PSYCHO_CPU_COP2_CCR_TRX]	= "C2_TRX",
+	[PSYCHO_CPU_COP2_CCR_TRY]	= "C2_TRY",
+	[PSYCHO_CPU_COP2_CCR_TRZ]	= "C2_TRZ",
+	[PSYCHO_CPU_COP2_CCR_L11L12]	= "C2_L11L12",
+	[PSYCHO_CPU_COP2_CCR_L13L21]	= "C2_L13L21",
+	[PSYCHO_CPU_COP2_CCR_L22L23]	= "C2_L22L23",
+	[PSYCHO_CPU_COP2_CCR_L31L32]	= "C2_L31L32",
+	[PSYCHO_CPU_COP2_CCR_L33]	= "C2_L33",
+	[PSYCHO_CPU_COP2_CCR_RBK]	= "C2_RBK",
+	[PSYCHO_CPU_COP2_CCR_GBK]	= "C2_GBK",
+	[PSYCHO_CPU_COP2_CCR_BBK]	= "C2_BBK",
+	[PSYCHO_CPU_COP2_CCR_LR1LR2]	= "C2_LR1LR2",
+	[PSYCHO_CPU_COP2_CCR_LR3LG1]	= "C2_LR3LG1",
+	[PSYCHO_CPU_COP2_CCR_LG2LG3]	= "C2_LG2LG3",
+	[PSYCHO_CPU_COP2_CCR_LB1LB2]	= "C2_LB1LB2",
+	[PSYCHO_CPU_COP2_CCR_LB3]	= "C2_LB3",
+	[PSYCHO_CPU_COP2_CCR_RFC]	= "C2_RFC",
+	[PSYCHO_CPU_COP2_CCR_GFC]	= "C2_GFC",
+	[PSYCHO_CPU_COP2_CCR_BFC]	= "C2_BFC",
+	[PSYCHO_CPU_COP2_CCR_OFX]	= "C2_OFX",
+	[PSYCHO_CPU_COP2_CCR_OFY]	= "C2_OFY",
+	[PSYCHO_CPU_COP2_CCR_H]		= "C2_H",
+	[PSYCHO_CPU_COP2_CCR_DQA]	= "C2_DQA",
+	[PSYCHO_CPU_COP2_CCR_DQB]	= "C2_DQB",
+	[PSYCHO_CPU_COP2_CCR_ZSF3]	= "C2_ZSF3",
+	[PSYCHO_CPU_COP2_CCR_ZSF4]	= "C2_ZSF4",
+	[PSYCHO_CPU_COP2_CCR_FLAG]	= "C2_FLAG"
+
+	// clang-format on
 };
 
 P_NODISCARD P_NONNULL static uint32_t instr_get(struct p_ctx *ctx, uint32_t pc)
@@ -87,22 +198,21 @@ static void trace_add(struct p_disasm_traces *traces, enum p_disasm_trace trace)
 	}
 }
 
-P_NODISCARD const char *p_gpr_get(enum p_cpu_gpr reg)
+P_NODISCARD const char *p_gpr_get(enum psycho_cpu_gpr reg)
 {
-	assert(reg < P_GPR_COUNT);
+	assert(reg < PSYCHO_CPU_GPR_COUNT);
 	return gpr[reg];
 }
 
-P_NODISCARD const char *p_cop0_get(enum p_cpu_cop0 reg)
+P_NODISCARD const char *p_cop0_get(enum psycho_cpu_cop0_cpr reg)
 {
-	assert(reg < P_COP0_COUNT);
-	return cop0[reg];
+	assert(reg < PSYCHO_CPU_COP0_CPR_COUNT);
+	return cop0_cpr[reg];
 }
 
 void p_disasm_instr(struct p_ctx *ctx, uint32_t pc, struct p_disasm_traces *traces)
 {
-	p_str_init_fixed(&ctx->disasm.res.str, ctx->disasm.res.str_buf,
-			 sizeof(ctx->disasm.res.str_buf));
+	p_str_init_fixed(&ctx->disasm.res.str, ctx->disasm.res.str_buf, sizeof(ctx->disasm.res.str_buf));
 
 	uint32_t instr = instr_get(ctx, pc);
 
@@ -385,13 +495,13 @@ void p_disasm_instr(struct p_ctx *ctx, uint32_t pc, struct p_disasm_traces *trac
 	case GRP_COP0:
 		switch (rs) {
 		case MFC:
-			fmt("mfc0 %s, %s", gpr[rt], cop0[rd]);
+			fmt("mfc0 %s, %s", gpr[rt], cop0_cpr[rd]);
 			trace_add(traces, P_DISASM_TRACE_GPR_RT);
 
 			return;
 
 		case MTC:
-			fmt("mtc0 %s, %s", cop0[rd], gpr[rt]);
+			fmt("mtc0 %s, %s", cop0_cpr[rd], gpr[rt]);
 			return;
 
 		default:

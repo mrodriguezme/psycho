@@ -20,7 +20,7 @@
 #include <stdbool.h>
 #include <stddef.h>
 
-#include "cpu_defs.h"
+#include "psycho/system/cpu/defs.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -38,12 +38,12 @@ struct p_cpu_dly_slot {
 };
 
 struct p_cpu_int {
-	uint32_t gpr[P_GPR_COUNT];
-	uint32_t cop0[P_COP0_COUNT];
+	uint32_t gpr[PSYCHO_CPU_GPR_COUNT];
+	uint32_t cop0[PSYCHO_CPU_COP0_CPR_COUNT];
 
 	struct {
-		struct p_cop2_cpr cpr;
-		struct p_cop2_ccr ccr;
+		struct psycho_cpu_cop2_cpr_layout cpr;
+		struct psycho_cpu_cop2_ccr_layout ccr;
 	} cop2;
 
 	uint32_t pc;

@@ -21,8 +21,8 @@
 
 #include "bios_trace.h"
 #include "bus.h"
-#include "cpu_int.h"
-#include "cpu_defs.h"
+#include "system/cpu/interpreter.h"
+#include "system/cpu/defs.h"
 #include "gpu.h"
 #include "log.h"
 #include "sched.h"

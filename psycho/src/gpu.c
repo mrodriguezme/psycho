@@ -201,7 +201,7 @@ void p_gpu_rst(struct p_ctx *ctx)
 {
 	ctx->gpu.ev_vblank.type	     = P_SCHED_EV_VBLANK;
 	ctx->gpu.ev_vblank.cb	     = on_vblank;
-	ctx->gpu.ev_vblank.ts	     = P_CPU_CLKFREQ_HZ / 60;
+	ctx->gpu.ev_vblank.ts	     = PSYCHO_CPU_CLKFREQ_HZ / 60;
 	ctx->gpu.ev_vblank.permanent = true;
 
 	p_sched_add(ctx, &ctx->gpu.ev_vblank);

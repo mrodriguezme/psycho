@@ -20,10 +20,10 @@
 #include <string.h>
 #include <inttypes.h>
 
-#include "psycho/cpu_defs.h"
+#include "psycho/system/cpu/defs.h"
 #include "bios_trace.h"
 #include "bus.h"
-#include "cpu_defs.h"
+#include "system/cpu/defs.h"
 #include "log.h"
 #include "str.h"
 
@@ -132,13 +132,13 @@ P_NONNULL static void frame_init(struct p_ctx *ctx, struct p_bios_frame *frame, 
 	frame->fn      = fn;
 	frame->arg_pos = 0;
 
-	frame->a0 = ctx->cpu.gpr_get(ctx, P_A0);
-	frame->a1 = ctx->cpu.gpr_get(ctx, P_A1);
-	frame->a2 = ctx->cpu.gpr_get(ctx, P_A2);
-	frame->a3 = ctx->cpu.gpr_get(ctx, P_A3);
+	frame->a0 = ctx->cpu.gpr_get(ctx, PSYCHO_CPU_GPR_A0);
+	frame->a1 = ctx->cpu.gpr_get(ctx, PSYCHO_CPU_GPR_A1);
+	frame->a2 = ctx->cpu.gpr_get(ctx, PSYCHO_CPU_GPR_A2);
+	frame->a3 = ctx->cpu.gpr_get(ctx, PSYCHO_CPU_GPR_A3);
 
-	frame->sp = ctx->cpu.gpr_get(ctx, P_SP);
-	frame->ra = ctx->cpu.gpr_get(ctx, P_RA);
+	frame->sp = ctx->cpu.gpr_get(ctx, PSYCHO_CPU_GPR_SP);
+	frame->ra = ctx->cpu.gpr_get(ctx, PSYCHO_CPU_GPR_RA);
 
 	p_str_init_fixed(&frame->str, frame->str_buf, sizeof(frame->str_buf));
 }
@@ -161,7 +161,7 @@ P_NODISCARD P_NONNULL static struct p_bios_frame *stack_pop(struct p_ctx *ctx)
 
 P_NODISCARD P_NONNULL static uint32_t get_arg(struct p_ctx *ctx, struct p_bios_frame *frame)
 {
-	if (frame->arg_pos <= P_A3)
+	if (frame->arg_pos <= PSYCHO_CPU_GPR_A3)
 		return (&frame->a0)[frame->arg_pos++];
 
 	return p_load32(ctx, frame->sp + 16 + (frame->arg_pos++ - 4) * 4);

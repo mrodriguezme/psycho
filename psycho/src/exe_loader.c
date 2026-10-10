@@ -20,7 +20,7 @@
 #include "exe_loader.h"
 #include "log.h"
 #include "util.h"
-#include "cpu_defs.h"
+#include "system/cpu/defs.h"
 
 LOG_MOD(P_LOG_CTX);
 
@@ -89,13 +89,13 @@ void p_exe_inject(struct p_ctx *ctx)
 		 exe->file_size);
 
 	ctx->cpu.pc_set(ctx, exe->pc);
-	ctx->cpu.gpr_set(ctx, P_GP, exe->gp);
+	ctx->cpu.gpr_set(ctx, PSYCHO_CPU_GPR_GP, exe->gp);
 
 	if (exe->sp_fp_base) {
 		const uint32_t val = exe->sp_fp_base + exe->sp_fp_offs;
 
-		ctx->cpu.gpr_set(ctx, P_SP, val);
-		ctx->cpu.gpr_set(ctx, P_FP, val);
+		ctx->cpu.gpr_set(ctx, PSYCHO_CPU_GPR_SP, val);
+		ctx->cpu.gpr_set(ctx, PSYCHO_CPU_GPR_FP, val);
 	}
 
 	const uint32_t paddr = vaddr_to_paddr(exe->dst_ram);

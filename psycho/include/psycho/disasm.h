@@ -21,7 +21,7 @@
 #include <stddef.h>
 
 #include "psycho/common/compiler_support.h"
-#include "cpu_defs.h"
+#include "psycho/system/cpu/defs.h"
 #include "str.h"
 
 #ifdef __cplusplus
@@ -61,8 +61,8 @@ struct p_disasm {
 	struct p_disasm_traces traces;
 };
 
-P_NODISCARD P_CONST const char *p_gpr_get(enum p_cpu_gpr reg);
-P_NODISCARD P_CONST const char *p_cop0_get(enum p_cpu_cop0 reg);
+P_NODISCARD P_CONST const char *p_gpr_get(enum psycho_cpu_gpr reg);
+P_NODISCARD P_CONST const char *p_cop0_get(enum psycho_cpu_cop0_cpr reg);
 
 void p_disasm_instr(struct p_ctx *ctx, uint32_t pc, struct p_disasm_traces *traces) __attribute__((nonnull(1)));
 

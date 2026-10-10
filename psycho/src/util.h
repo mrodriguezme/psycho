@@ -21,7 +21,7 @@
 #include <stddef.h>
 #include <stdint.h>
 
-#include "psycho/cpu_defs.h"
+#include "psycho/system/cpu/defs.h"
 #include "psycho/common/compiler_support.h"
 
 #define likely(x)		    __builtin_expect(!!(x), 1)
@@ -63,7 +63,7 @@
 
 P_ALWAYS_INLINE uint64_t us_to_cycles(uint64_t us)
 {
-	return (us * P_CPU_CLKFREQ_HZ) / 1000000UL;
+	return (us * PSYCHO_CPU_CLKFREQ_HZ) / UINT64_C(1000000);
 }
 
 #define static_assert_offset(x, memb, off) \

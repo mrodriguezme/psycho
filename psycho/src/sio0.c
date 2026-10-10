@@ -158,7 +158,7 @@ P_NODISCARD P_NONNULL static unsigned int rxfifo_intr_lvl_get(struct p_ctx *ctx)
 P_NODISCARD P_NONNULL static unsigned int calc_baud(struct p_ctx *ctx, uint16_t baud)
 {
 	baud *= baud_fact_get(ctx);
-	return P_CPU_CLKFREQ_HZ / baud;
+	return PSYCHO_CPU_CLKFREQ_HZ / baud;
 }
 
 P_NONNULL static void rx_push(struct p_ctx *ctx, uint8_t byte)
