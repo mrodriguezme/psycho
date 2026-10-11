@@ -23,12 +23,12 @@ extern "C" {
 
 #include "bios_trace.h"
 #include "bus.h"
-#include "cpu_int.h"
+#include "system/cpu/interpreter.h"
 #include "cpu_ops.h"
-#include "disasm.h"
+#include "debug/disasm.h"
 #include "gpu.h"
 #include "intctrl.h"
-#include "log.h"
+#include "debug/log.h"
 #include "sched.h"
 #include "sio0.h"
 

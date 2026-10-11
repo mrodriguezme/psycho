@@ -18,7 +18,7 @@
 #pragma once
 
 #include <stdbool.h>
-#include "sched.h"
+#include "common/sched.h"
 
 struct p_ctx;
 

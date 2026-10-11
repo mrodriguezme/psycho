@@ -20,7 +20,7 @@
 #include <string.h>
 
 #include "sched.h"
-#include "log.h"
+#include "debug/log.h"
 #include "util.h"
 
 LOG_MOD(P_LOG_SCHED);

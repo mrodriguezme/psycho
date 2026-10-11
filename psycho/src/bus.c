@@ -22,7 +22,7 @@
 #include "bus.h"
 #include "gpu.h"
 #include "intctrl.h"
-#include "log.h"
+#include "debug/log.h"
 #include "sio0.h"
 
 LOG_MOD(P_LOG_BUS);

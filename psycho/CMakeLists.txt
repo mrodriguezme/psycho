@@ -26,20 +26,28 @@ target_link_libraries(psycho PRIVATE psycho_cfg_base_c)
 target_sources(
 	psycho PRIVATE
 	include/psycho/common/compiler_support.h
+	include/psycho/common/sched.h
+	include/psycho/debug/disasm.h
+	include/psycho/debug/log.h
 	include/psycho/system/cpu/defs.h
+	include/psycho/system/cpu/interpreter.h
 	include/psycho/bios_trace.h
 	include/psycho/bus.h
-	include/psycho/cpu_int.h
 	include/psycho/cpu_ops.h
 	include/psycho/ctx.h
-	include/psycho/disasm.h
+	include/psycho/digital_ctrl.h
+	include/psycho/dma.h
 	include/psycho/gpu.h
 	include/psycho/intctrl.h
-	include/psycho/log.h
-	include/psycho/sched.h
+	include/psycho/sio0_dev.h
+	include/psycho/sio0.h
 	include/psycho/str.h
+	src/common/sched.c
+	src/common/sched.h
 	src/debug/disasm.c
 	src/debug/disasm.h
+	src/debug/log.c
+	src/debug/log.h
 	src/system/cpu/defs.c
 	src/system/cpu/defs.h
 	src/system/cpu/interpreter.c
@@ -58,11 +66,7 @@ target_sources(
 	src/gpu.h
 	src/intctrl.c
 	src/intctrl.h
-	src/log.c
-	src/log.h
-	src/sched.c
 	src/sio0_dev.c
-	src/sched.h
 	src/sio0.c
 	src/str.c
 	src/str.h

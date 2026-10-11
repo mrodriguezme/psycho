@@ -24,8 +24,8 @@
 #include "system/cpu/interpreter.h"
 #include "system/cpu/defs.h"
 #include "gpu.h"
-#include "log.h"
-#include "sched.h"
+#include "debug/log.h"
+#include "common/sched.h"
 #include "util.h"
 #include "sio0.h"
 

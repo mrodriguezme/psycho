@@ -21,8 +21,8 @@
 #include "gpu_sw.h"
 #include "gpu.h"
 #include "intctrl.h"
-#include "log.h"
-#include "sched.h"
+#include "debug/log.h"
+#include "common/sched.h"
 
 LOG_MOD(P_LOG_GPU);
 

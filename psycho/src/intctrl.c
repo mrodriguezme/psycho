@@ -16,7 +16,7 @@
 // OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 #include "intctrl.h"
-#include "log.h"
+#include "debug/log.h"
 
 LOG_MOD(P_LOG_INTCTRL);
 

@@ -17,8 +17,12 @@
 
 #pragma once
 
+#include <stdbool.h>
 #include <stddef.h>
-#include "str.h"
+
+#include "psycho/common/compiler_support.h"
+#include "psycho/system/cpu/defs.h"
+#include "psycho/str.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -26,39 +30,43 @@ extern "C" {
 
 struct p_ctx;
 
-enum p_log_lvl {
-	P_LOG_OFF,
-	P_LOG_INFO,
-	P_LOG_WARN,
-	P_LOG_ERR,
-	P_LOG_DBG,
-	P_LOG_TRACE,
-	P_LOG_COUNT,
+#define P_DISASM_TRACE_LEN_MAX (512)
+
+enum p_disasm_trace {
+	P_DISASM_TRACE_GPR_RT,
+	P_DISASM_TRACE_GPR_RD,
+	P_DISASM_TRACE_CPU_LO,
+	P_DISASM_TRACE_CPU_HI,
+	P_DISASM_TRACE_CPU_PADDR,
+	P_DISASM_TRACE_COUNT
 };
 
-enum p_log_mod {
-	P_LOG_CTX,
-	P_LOG_CPU,
-	P_LOG_BUS,
-	P_LOG_BIOS,
-	P_LOG_SCHED,
-	P_LOG_GPU,
-	P_LOG_INTCTRL,
-	P_LOG_SIO0,
-	P_LOG_DIGITAL_CTRL,
-	P_LOG_MOD_COUNT,
+struct p_disasm_cfg {
+	bool tracing;
 };
 
-struct p_log_msg {
-	struct p_str str;
-	enum p_log_mod mod;
-	enum p_log_lvl lvl;
+struct p_disasm_traces {
+	enum p_disasm_trace data[P_DISASM_TRACE_COUNT];
+	size_t count;
 };
 
-struct p_log_cfg {
-	void (*log_cb)(struct p_ctx *ctx, struct p_log_msg *msg);
-	enum p_log_lvl mod[P_LOG_MOD_COUNT];
+struct p_disasm {
+	struct {
+		char str_buf[P_DISASM_TRACE_LEN_MAX];
+		struct p_str str;
+		uint32_t instr;
+		uint32_t pc;
+	} res;
+
+	struct p_disasm_traces traces;
 };
+
+P_NODISCARD P_CONST const char *p_gpr_get(enum psycho_cpu_gpr reg);
+P_NODISCARD P_CONST const char *p_cop0_get(enum psycho_cpu_cop0_cpr reg);
+
+void p_disasm_instr(struct p_ctx *ctx, uint32_t pc, struct p_disasm_traces *traces) __attribute__((nonnull(1)));
+
+void p_disasm_set_tracing_state(struct p_ctx *ctx, const bool enabled) __attribute__((nonnull));
 
 #ifdef __cplusplus
 }

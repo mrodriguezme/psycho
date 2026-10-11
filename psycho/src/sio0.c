@@ -18,9 +18,9 @@
 #include <string.h>
 
 #include "sio0.h"
-#include "log.h"
+#include "debug/log.h"
 #include "util.h"
-#include "sched.h"
+#include "common/sched.h"
 #include "intctrl.h"
 
 LOG_MOD(P_LOG_SIO0);

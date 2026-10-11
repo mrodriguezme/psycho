@@ -18,7 +18,7 @@
 #pragma once
 
 #include <stddef.h>
-#include "sched.h"
+#include "common/sched.h"
 
 #ifdef __cplusplus
 extern "C" {

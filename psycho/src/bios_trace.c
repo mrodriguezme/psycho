@@ -24,7 +24,7 @@
 #include "bios_trace.h"
 #include "bus.h"
 #include "system/cpu/defs.h"
-#include "log.h"
+#include "debug/log.h"
 #include "str.h"
 
 LOG_MOD(P_LOG_BIOS);

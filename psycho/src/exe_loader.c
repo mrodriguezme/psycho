@@ -18,7 +18,7 @@
 #include <string.h>
 
 #include "exe_loader.h"
-#include "log.h"
+#include "debug/log.h"
 #include "util.h"
 #include "system/cpu/defs.h"
 

@@ -24,9 +24,9 @@
 #include "defs.h"
 #include "debug/disasm.h"
 #include "exe_loader.h"
-#include "log.h"
+#include "debug/log.h"
 #include "util.h"
-#include "sched.h"
+#include "common/sched.h"
 
 static bool tracing = false;
 
