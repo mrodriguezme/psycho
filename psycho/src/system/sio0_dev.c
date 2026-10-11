@@ -15,10 +15,24 @@
 // COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR
 // OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
-#include "gpu_sw.h"
-#include "gpu.h"
+#include "common/sched.h"
+#include "common/util.h"
+#include "sio0.h"
+#include "debug/log.h"
 
-void p_gpu_sw_draw_rect(struct p_ctx *ctx, struct p_gpu_vertex *v0)
+LOG_MOD(P_LOG_SIO0);
+
+void p_sio0_dev_ack(struct p_sio0_dev *dev, unsigned int delay_us, unsigned int pulse_us)
 {
-	vram_px_set(ctx, v0->x, v0->y, color_to_15bit(v0->color));
+	dev->ack_pulse_begin_ev.cb	 = p_sio0_dsr_assert;
+	dev->ack_pulse_begin_ev.ts	 = us_to_cycles(delay_us);
+	dev->ack_pulse_begin_ev.type	 = P_SCHED_EV_SIO0_DEV_ACK_PULSE_BEGIN;
+	dev->ack_pulse_begin_ev.userdata = dev;
+
+	dev->ack_pulse_end_ev.cb   = p_sio0_dsr_deassert;
+	dev->ack_pulse_end_ev.ts   = us_to_cycles(delay_us + pulse_us);
+	dev->ack_pulse_end_ev.type = P_SCHED_EV_SIO0_DEV_ACK_PULSE_END;
+
+	p_sched_add(dev->ctx, &dev->ack_pulse_begin_ev);
+	p_sched_add(dev->ctx, &dev->ack_pulse_end_ev);
 }

@@ -22,7 +22,7 @@
 
 #include "psycho/system/cpu/defs.h"
 #include "bios_trace.h"
-#include "bus.h"
+#include "system/bus.h"
 #include "system/cpu/defs.h"
 #include "debug/log.h"
 #include "str.h"

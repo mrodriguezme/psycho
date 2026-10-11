@@ -19,7 +19,7 @@
 
 #include "sio0.h"
 #include "debug/log.h"
-#include "util.h"
+#include "common/util.h"
 #include "common/sched.h"
 #include "intctrl.h"
 

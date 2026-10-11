@@ -19,15 +19,15 @@
 #include <stddef.h>
 #include <string.h>
 
-#include "bios_trace.h"
-#include "bus.h"
+#include "debug/bios_trace.h"
+#include "system/bus.h"
 #include "system/cpu/interpreter.h"
 #include "system/cpu/defs.h"
-#include "gpu.h"
+#include "system/gpu/gpu.h"
 #include "debug/log.h"
 #include "common/sched.h"
-#include "util.h"
-#include "sio0.h"
+#include "common/util.h"
+#include "system/sio0.h"
 
 LOG_MOD(P_LOG_CTX);
 

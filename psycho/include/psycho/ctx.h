@@ -21,16 +21,16 @@
 extern "C" {
 #endif // __cplusplus
 
-#include "bios_trace.h"
-#include "bus.h"
+#include "debug/bios_trace.h"
+#include "system/bus.h"
 #include "system/cpu/interpreter.h"
-#include "cpu_ops.h"
+#include "system/cpu/ops.h"
 #include "debug/disasm.h"
-#include "gpu.h"
-#include "intctrl.h"
+#include "system/gpu.h"
+#include "system/intctrl.h"
 #include "debug/log.h"
-#include "sched.h"
-#include "sio0.h"
+#include "common/sched.h"
+#include "system/sio0.h"
 
 struct p_ctx_cfg {
 	struct p_cpu_cfg cpu;

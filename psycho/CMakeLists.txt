@@ -27,50 +27,51 @@ target_sources(
 	psycho PRIVATE
 	include/psycho/common/compiler_support.h
 	include/psycho/common/sched.h
+	include/psycho/debug/bios_trace.h
 	include/psycho/debug/disasm.h
 	include/psycho/debug/log.h
+	include/psycho/debug/str.h
+	include/psycho/devices/digital_ctrl.h
 	include/psycho/system/cpu/defs.h
 	include/psycho/system/cpu/interpreter.h
-	include/psycho/bios_trace.h
-	include/psycho/bus.h
-	include/psycho/cpu_ops.h
+	include/psycho/system/cpu/ops.h
+	include/psycho/system/bus.h
+	include/psycho/system/dmac.h
+	include/psycho/system/gpu.h
+	include/psycho/system/intctrl.h
+	include/psycho/system/sio0_dev.h
+	include/psycho/system/sio0.h
 	include/psycho/ctx.h
-	include/psycho/digital_ctrl.h
-	include/psycho/dma.h
-	include/psycho/gpu.h
-	include/psycho/intctrl.h
-	include/psycho/sio0_dev.h
-	include/psycho/sio0.h
-	include/psycho/str.h
 	src/common/sched.c
 	src/common/sched.h
+	src/common/util.h
+	src/debug/bios_trace.c
+	src/debug/bios_trace.h
 	src/debug/disasm.c
 	src/debug/disasm.h
 	src/debug/log.c
 	src/debug/log.h
+	src/debug/str.c
+	src/debug/str.h
+	src/devices/digital_ctrl.c
 	src/system/cpu/defs.c
 	src/system/cpu/defs.h
 	src/system/cpu/interpreter.c
 	src/system/cpu/interpreter.h
-	src/bios_trace.c
-	src/bios_trace.h
-	src/bus.c
-	src/bus.h
+	src/system/gpu/gpu.c
+	src/system/gpu/gpu.h
+	src/system/gpu/sw.c
+	src/system/gpu/sw.h
+	src/system/bus.c
+	src/system/bus.h
+	src/system/intctrl.c
+	src/system/intctrl.h
+	src/system/sio0_dev.c
+	src/system/sio0.c
+	src/system/sio0.h
 	src/ctx.c
-	src/digital_ctrl.c
 	src/exe_loader.c
 	src/exe_loader.h
-	src/gpu_sw.c
-	src/gpu_sw.h
-	src/gpu.c
-	src/gpu.h
-	src/intctrl.c
-	src/intctrl.h
-	src/sio0_dev.c
-	src/sio0.c
-	src/str.c
-	src/str.h
-	src/util.h
 )
 
 target_include_directories(psycho PUBLIC include)

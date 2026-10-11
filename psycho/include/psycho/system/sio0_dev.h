@@ -17,60 +17,28 @@
 
 #pragma once
 
-#include <stddef.h>
-#include "common/sched.h"
-
-#ifdef __cplusplus
-extern "C" {
-#endif // __cplusplus
-
-#define VRAM_HEIGHT (512)
-#define VRAM_WIDTH  (1024)
+#include <stdbool.h>
+#include "psycho/common/sched.h"
 
 struct p_ctx;
 
-typedef uint16_t p_gpu_vram[VRAM_HEIGHT][VRAM_WIDTH];
-
-struct p_gpu_vertex {
-	int16_t x;
-	int16_t y;
-	unsigned int color;
+enum p_sio0_dev_type {
+	P_SIO0_DEV_TYPE_CTRL,
+	P_SIO0_DEV_TYPE_MEMCARD,
 };
 
-struct p_gpu_render_ops {
-	void (*rect)(struct p_ctx *ctx, struct p_gpu_vertex *v0);
+struct p_sio0_dev {
+	struct p_ctx *ctx;
+	void *handle;
+
+	uint8_t (*transceive)(void *dev, uint8_t mosi);
+	void (*reset)(void *dev);
+
+	const char *name;
+	enum p_sio0_dev_type type;
+
+	struct p_sched_ev ack_pulse_begin_ev;
+	struct p_sched_ev ack_pulse_end_ev;
 };
 
-struct p_gpu {
-	struct {
-		void (*fn)(struct p_ctx *ctx);
-		size_t rem_params;
-		size_t params;
-		uint32_t data[64];
-	} init;
-
-	struct {
-		size_t x;
-		size_t y;
-		size_t x_orig;
-		size_t x_max;
-		unsigned int rem;
-	} copy;
-
-	struct p_gpu_vertex rect;
-
-	struct p_gpu_render_ops render_ops;
-
-	p_gpu_vram vram;
-
-	void (*cmd_fn)(struct p_ctx *ctx, uint32_t packet);
-
-	struct p_sched_ev ev_vblank;
-
-	uint32_t gpustat;
-	uint32_t gpuread;
-};
-
-#ifdef __cplusplus
-}
-#endif // __cplusplus
+void p_sio0_dev_ack(struct p_sio0_dev *dev, unsigned int delay_us, unsigned int pulse_us);

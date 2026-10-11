@@ -20,7 +20,7 @@
 #include <string.h>
 
 #include "bus.h"
-#include "gpu.h"
+#include "gpu/gpu.h"
 #include "intctrl.h"
 #include "debug/log.h"
 #include "sio0.h"

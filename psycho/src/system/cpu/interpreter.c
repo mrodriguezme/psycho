@@ -18,14 +18,14 @@
 #include <assert.h>
 #include <string.h>
 
-#include "bios_trace.h"
-#include "bus.h"
+#include "debug/bios_trace.h"
+#include "system/bus.h"
 #include "interpreter.h"
 #include "defs.h"
 #include "debug/disasm.h"
 #include "exe_loader.h"
 #include "debug/log.h"
-#include "util.h"
+#include "common/util.h"
 #include "common/sched.h"
 
 static bool tracing = false;

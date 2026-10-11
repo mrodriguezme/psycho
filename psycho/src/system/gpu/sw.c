@@ -15,30 +15,10 @@
 // COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR
 // OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
-#pragma once
+#include "sw.h"
+#include "gpu.h"
 
-#include <stdbool.h>
-#include "common/sched.h"
-
-struct p_ctx;
-
-enum p_sio0_dev_type {
-	P_SIO0_DEV_TYPE_CTRL,
-	P_SIO0_DEV_TYPE_MEMCARD,
-};
-
-struct p_sio0_dev {
-	struct p_ctx *ctx;
-	void *handle;
-
-	uint8_t (*transceive)(void *dev, uint8_t mosi);
-	void (*reset)(void *dev);
-
-	const char *name;
-	enum p_sio0_dev_type type;
-
-	struct p_sched_ev ack_pulse_begin_ev;
-	struct p_sched_ev ack_pulse_end_ev;
-};
-
-void p_sio0_dev_ack(struct p_sio0_dev *dev, unsigned int delay_us, unsigned int pulse_us);
+void p_gpu_sw_draw_rect(struct p_ctx *ctx, struct p_gpu_vertex *v0)
+{
+	vram_px_set(ctx, v0->x, v0->y, color_to_15bit(v0->color));
+}

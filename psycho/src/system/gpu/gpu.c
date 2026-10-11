@@ -18,9 +18,9 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "gpu_sw.h"
+#include "sw.h"
 #include "gpu.h"
-#include "intctrl.h"
+#include "system/intctrl.h"
 #include "debug/log.h"
 #include "common/sched.h"
 

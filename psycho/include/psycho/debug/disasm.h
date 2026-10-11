@@ -22,7 +22,7 @@
 
 #include "psycho/common/compiler_support.h"
 #include "psycho/system/cpu/defs.h"
-#include "psycho/str.h"
+#include "psycho/debug/str.h"
 
 #ifdef __cplusplus
 extern "C" {

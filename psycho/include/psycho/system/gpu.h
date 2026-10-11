@@ -15,24 +15,62 @@
 // COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR
 // OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
-#include "common/sched.h"
-#include "util.h"
-#include "sio0.h"
-#include "debug/log.h"
+#pragma once
 
-LOG_MOD(P_LOG_SIO0);
+#include <stddef.h>
+#include "psycho/common/sched.h"
 
-void p_sio0_dev_ack(struct p_sio0_dev *dev, unsigned int delay_us, unsigned int pulse_us)
-{
-	dev->ack_pulse_begin_ev.cb	 = p_sio0_dsr_assert;
-	dev->ack_pulse_begin_ev.ts	 = us_to_cycles(delay_us);
-	dev->ack_pulse_begin_ev.type	 = P_SCHED_EV_SIO0_DEV_ACK_PULSE_BEGIN;
-	dev->ack_pulse_begin_ev.userdata = dev;
+#ifdef __cplusplus
+extern "C" {
+#endif // __cplusplus
 
-	dev->ack_pulse_end_ev.cb   = p_sio0_dsr_deassert;
-	dev->ack_pulse_end_ev.ts   = us_to_cycles(delay_us + pulse_us);
-	dev->ack_pulse_end_ev.type = P_SCHED_EV_SIO0_DEV_ACK_PULSE_END;
+#define VRAM_HEIGHT (512)
+#define VRAM_WIDTH  (1024)
 
-	p_sched_add(dev->ctx, &dev->ack_pulse_begin_ev);
-	p_sched_add(dev->ctx, &dev->ack_pulse_end_ev);
+struct p_ctx;
+
+typedef uint16_t p_gpu_vram[VRAM_HEIGHT][VRAM_WIDTH];
+
+struct p_gpu_vertex {
+	int16_t x;
+	int16_t y;
+	unsigned int color;
+};
+
+struct p_gpu_render_ops {
+	void (*rect)(struct p_ctx *ctx, struct p_gpu_vertex *v0);
+};
+
+struct p_gpu {
+	struct {
+		void (*fn)(struct p_ctx *ctx);
+		size_t rem_params;
+		size_t params;
+		uint32_t data[64];
+	} init;
+
+	struct {
+		size_t x;
+		size_t y;
+		size_t x_orig;
+		size_t x_max;
+		unsigned int rem;
+	} copy;
+
+	struct p_gpu_vertex rect;
+
+	struct p_gpu_render_ops render_ops;
+
+	p_gpu_vram vram;
+
+	void (*cmd_fn)(struct p_ctx *ctx, uint32_t packet);
+
+	struct p_sched_ev ev_vblank;
+
+	uint32_t gpustat;
+	uint32_t gpuread;
+};
+
+#ifdef __cplusplus
 }
+#endif // __cplusplus

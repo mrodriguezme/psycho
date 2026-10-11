@@ -18,7 +18,7 @@
 #pragma once
 
 #include <stddef.h>
-#include "psycho/str.h"
+#include "str.h"
 
 #ifdef __cplusplus
 extern "C" {

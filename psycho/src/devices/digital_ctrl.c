@@ -17,7 +17,7 @@
 
 #include <stdio.h>
 
-#include "psycho/digital_ctrl.h"
+#include "psycho/devices/digital_ctrl.h"
 #include "debug/log.h"
 
 LOG_MOD(P_LOG_DIGITAL_CTRL);

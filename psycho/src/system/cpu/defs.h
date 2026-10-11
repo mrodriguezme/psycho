@@ -19,7 +19,7 @@
 
 #include <stdint.h>
 #include "psycho/common/compiler_support.h"
-#include "util.h"
+#include "common/util.h"
 
 #define DBG_VECTOR   (UINT32_C(0x80000040))
 #define EXC_VECTOR   (UINT32_C(0x80000080))

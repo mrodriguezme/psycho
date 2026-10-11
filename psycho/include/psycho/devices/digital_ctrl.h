@@ -17,22 +17,54 @@
 
 #pragma once
 
-#include <stdarg.h>
-#include <stdbool.h>
-
 #include "psycho/common/compiler_support.h"
-#include "psycho/str.h"
+#include "psycho/system/sio0_dev.h"
 
-void p_str_init_fixed(struct p_str *str, char *ptr, size_t cap) P_NONNULL;
+#ifdef __cplusplus
+extern "C" {
+#endif // __cplusplus
 
-void p_str_rst(struct p_str *str) P_NONNULL;
+enum p_digital_ctrl_state {
+	P_DIGITAL_CTRL_HI_Z,
+	P_DIGITAL_CTRL_ID_LO,
+	P_DIGITAL_CTRL_ID_HI,
+	P_DIGITAL_CTRL_SW_LO,
+	P_DIGITAL_CTRL_SW_HI
+};
 
-void p_str_append(struct p_str *str, bool *truncated, const char *fmt, ...)
-	__attribute__((format(printf, 3, 4), nonnull(1, 3)));
+enum p_digital_ctrl_btns {
+	// clang-format off
 
-void p_str_vappend(struct p_str *str, bool *truncated, const char *fmt,
-		   va_list args)
-	__attribute__((format(printf, 3, 0), nonnull(1, 3)));
+	P_DIGITAL_CTRL_SEL	= 1 << 0,
+	P_DIGITAL_CTRL_START	= 1 << 3,
+	P_DIGITAL_CTRL_UP	= 1 << 4,
+	P_DIGITAL_CTRL_RT	= 1 << 5,
+	P_DIGITAL_CTRL_DN	= 1 << 6,
+	P_DIGITAL_CTRL_LT	= 1 << 7,
+	P_DIGITAL_CTRL_L2	= 1 << 8,
+	P_DIGITAL_CTRL_R2	= 1 << 9,
+	P_DIGITAL_CTRL_L1	= 1 << 10,
+	P_DIGITAL_CTRL_R1	= 1 << 11,
+	P_DIGITAL_CTRL_TRI	= 1 << 12,
+	P_DIGITAL_CTRL_CIR	= 1 << 13,
+	P_DIGITAL_CTRL_CROSS	= 1 << 14,
+	P_DIGITAL_CTRL_SQR	= 1 << 15
 
-void p_str_pad(struct p_str *str, char c, size_t count, bool *truncated)
-	__attribute__((nonnull(1)));
+	// clang-format on
+};
+
+struct p_digital_ctrl {
+	struct p_sio0_dev dev;
+	enum p_digital_ctrl_state state;
+	uint16_t btns;
+};
+
+void p_digital_ctrl_init(struct p_ctx *ctx, struct p_digital_ctrl *ctrl) P_NONNULL;
+
+void p_digital_ctrl_btn_press(struct p_digital_ctrl *ctrl, enum p_digital_ctrl_btns btns) P_NONNULL;
+
+void p_digital_ctrl_btn_rel(struct p_digital_ctrl *ctrl, enum p_digital_ctrl_btns btns) P_NONNULL;
+
+#ifdef __cplusplus
+}
+#endif // __cplusplus

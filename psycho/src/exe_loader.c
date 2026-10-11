@@ -19,7 +19,7 @@
 
 #include "exe_loader.h"
 #include "debug/log.h"
-#include "util.h"
+#include "common/util.h"
 #include "system/cpu/defs.h"
 
 LOG_MOD(P_LOG_CTX);
