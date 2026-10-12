@@ -18,16 +18,25 @@
 #pragma once
 
 #include <stdbool.h>
+
+#include "psycho/common/compiler_support.h"
 #include "psycho/common/sched.h"
 
 struct p_ctx;
 
-enum p_sio0_dev_type {
-	P_SIO0_DEV_TYPE_CTRL,
-	P_SIO0_DEV_TYPE_MEMCARD,
+enum psycho_sio0_slot {
+	PSYCHO_SIO0_SLOT_1,
+	PSYCHO_SIO0_SLOT_2,
+	PSYCHO_SIO0_SLOT_COUNT
 };
 
-struct p_sio0_dev {
+enum psycho_sio0_device_type {
+	PSYCHO_SIO0_DEVICE_TYPE_PAD,
+	PSYCHO_SIO0_DEVICE_TYPE_MEMCARD,
+	PSYCHO_SIO0_DEVICE_TYPE_COUNT
+};
+
+struct psycho_sio0_device {
 	struct p_ctx *ctx;
 	void *handle;
 
@@ -35,10 +44,12 @@ struct p_sio0_dev {
 	void (*reset)(void *dev);
 
 	const char *name;
-	enum p_sio0_dev_type type;
+	enum psycho_sio0_device_type type;
 
 	struct p_sched_ev ack_pulse_begin_ev;
 	struct p_sched_ev ack_pulse_end_ev;
 };
 
-void p_sio0_dev_ack(struct p_sio0_dev *dev, unsigned int delay_us, unsigned int pulse_us);
+void psycho_sio0_device_init(struct psycho_sio0_device *dev);
+void psycho_sio0_device_attach(struct psycho_sio0_device *dev, enum psycho_sio0_slot slot) P_NONNULL;
+void psycho_sio0_device_ack(struct psycho_sio0_device *dev, unsigned int delay_us, unsigned int pulse_us);

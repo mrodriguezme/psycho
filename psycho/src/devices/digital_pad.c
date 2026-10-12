@@ -167,7 +167,7 @@ static uint8_t transceive(void *dev, uint8_t mosi)
 	}
 
 	if (ack)
-		p_sio0_dev_ack(&pad->dev, ACK_DELAY_US, ACK_PULSE_US);
+		psycho_sio0_device_ack(&pad->dev, ACK_DELAY_US, ACK_PULSE_US);
 
 	return miso;
 }
@@ -181,18 +181,16 @@ static void reset(void *dev)
 
 void psycho_digital_pad_init(struct p_ctx *ctx, struct psycho_digital_pad *pad)
 {
-	pad->dev.ctx	= ctx;
-	pad->dev.handle = pad;
-
+	pad->dev.ctx	    = ctx;
+	pad->dev.handle	    = pad;
 	pad->dev.transceive = transceive;
 	pad->dev.reset	    = reset;
-
-	pad->dev.name = "Digital Pad (SCPH-1010)";
-	pad->dev.type = P_SIO0_DEV_TYPE_CTRL;
+	pad->dev.name	    = "Digital Pad (SCPH-1010)";
+	pad->dev.type	    = PSYCHO_SIO0_DEVICE_TYPE_PAD;
 
 	pad->buttons = UINT16_MAX;
 
-	LOG_INFO(ctx, "spawned peripheral \"%s\"", pad->dev.name);
+	psycho_sio0_device_init(&pad->dev);
 }
 
 void psycho_digital_pad_buttons_press(struct psycho_digital_pad *pad, enum psycho_digital_pad_button buttons)

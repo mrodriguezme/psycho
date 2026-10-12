@@ -39,7 +39,7 @@ target_sources(
 	include/psycho/system/dmac.h
 	include/psycho/system/gpu.h
 	include/psycho/system/intc.h
-	include/psycho/system/sio0_dev.h
+	include/psycho/system/sio0_device.h
 	include/psycho/system/sio0.h
 	include/psycho/ctx.h
 	src/common/sched.c
@@ -66,7 +66,7 @@ target_sources(
 	src/system/bus.h
 	src/system/intc.c
 	src/system/intc.h
-	src/system/sio0_dev.c
+	src/system/sio0_device.c
 	src/system/sio0.c
 	src/system/sio0.h
 	src/ctx.c

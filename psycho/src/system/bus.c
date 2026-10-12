@@ -92,8 +92,8 @@ uint16_t p_load16(struct p_ctx *ctx, uint32_t paddr)
 		memcpy(&ret, &ctx->bus.spad[paddr & SPAD_MASK], sizeof(uint16_t));
 		return ret;
 
-	case SIO0_CTRL:
-		return ctx->sio0.ctrl;
+	case SIO0_CR:
+		return ctx->sio0.cr;
 
 	default:
 		LOG_WARN(ctx, "bad load16 0x%08X; returning 0xFFFF", paddr);
@@ -113,8 +113,8 @@ uint8_t p_load8(struct p_ctx *ctx, uint32_t paddr)
 	case BIOS_BEGIN ... BIOS_END:
 		return ctx->bus.bios[paddr & BIOS_MASK];
 
-	case SIO0_RX_DATA:
-		return p_sio0_rx_pop8(ctx);
+	case SIO0_DR:
+		return psycho_sio0_dr_read_byte(ctx);
 
 	default:
 		LOG_WARN(ctx, "bad load8 0x%08X; returning 0xFF", paddr);
@@ -167,16 +167,16 @@ void p_store16(struct p_ctx *ctx, uint32_t paddr, uint16_t data)
 		memcpy(&ctx->bus.spad[paddr & SPAD_MASK], &data, sizeof(uint16_t));
 		return;
 
-	case SIO0_MODE:
-		p_sio0_mode_set(ctx, data);
+	case SIO0_MR:
+		psycho_sio0_mr_write_halfword(ctx, data);
 		return;
 
-	case SIO0_CTRL:
-		p_sio0_ctrl_set(ctx, data);
+	case SIO0_CR:
+		psycho_sio0_cr_write_halfword(ctx, data);
 		return;
 
-	case SIO0_BAUD:
-		p_sio0_baud_set(ctx, data);
+	case SIO0_BR:
+		psycho_sio0_br_write_halfword(ctx, data);
 		return;
 
 	default:
@@ -197,8 +197,8 @@ void p_store8(struct p_ctx *ctx, uint32_t paddr, uint8_t data)
 		ctx->bus.spad[paddr & SPAD_MASK] = data;
 		return;
 
-	case SIO0_TX_DATA:
-		p_sio0_tx(ctx, data);
+	case SIO0_DR:
+		psycho_sio0_dr_write_byte(ctx, data);
 		return;
 
 	default:

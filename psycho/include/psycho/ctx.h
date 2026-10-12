@@ -56,7 +56,7 @@ struct p_ctx {
 	struct p_sched sched;
 	struct p_gpu gpu;
 	struct p_intc intc;
-	struct p_sio0 sio0;
+	struct psycho_sio0 sio0;
 
 	struct p_ctx_cfg cfg;
 

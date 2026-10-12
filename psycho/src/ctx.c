@@ -46,7 +46,7 @@ void p_rst(struct p_ctx *ctx)
 {
 	p_sched_rst(ctx);
 	p_gpu_rst(ctx);
-	p_sio0_rst(ctx);
+	psycho_sio0_reset(ctx);
 
 	ctx->cpu.ops.rst(ctx);
 	LOG_INFO(ctx, "reset");

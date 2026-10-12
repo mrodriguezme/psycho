@@ -17,22 +17,44 @@
 
 #include "common/sched.h"
 #include "common/util.h"
-#include "sio0.h"
+
 #include "debug/log.h"
+
+#include "sio0.h"
 
 DECLARE_LOG_MODULE(PSYCHO_LOG_MODULE_SIO0);
 
-void p_sio0_dev_ack(struct p_sio0_dev *dev, unsigned int delay_us, unsigned int pulse_us)
+void psycho_sio0_device_init(struct psycho_sio0_device *dev)
 {
-	dev->ack_pulse_begin_ev.cb	 = p_sio0_dsr_assert;
+	LOG_INFO(dev->ctx, "device \"%s\" initialized", dev->name);
+}
+
+void psycho_sio0_device_ack(struct psycho_sio0_device *dev, unsigned int delay_us, unsigned int pulse_us)
+{
+	dev->ack_pulse_begin_ev.cb	 = psycho_sio0_dsr_assert;
 	dev->ack_pulse_begin_ev.ts	 = us_to_cycles(delay_us);
 	dev->ack_pulse_begin_ev.type	 = P_SCHED_EV_SIO0_DEV_ACK_PULSE_BEGIN;
 	dev->ack_pulse_begin_ev.userdata = dev;
 
-	dev->ack_pulse_end_ev.cb   = p_sio0_dsr_deassert;
+	dev->ack_pulse_end_ev.cb   = psycho_sio0_dsr_deassert;
 	dev->ack_pulse_end_ev.ts   = us_to_cycles(delay_us + pulse_us);
 	dev->ack_pulse_end_ev.type = P_SCHED_EV_SIO0_DEV_ACK_PULSE_END;
 
 	p_sched_add(dev->ctx, &dev->ack_pulse_begin_ev);
 	p_sched_add(dev->ctx, &dev->ack_pulse_end_ev);
+}
+
+void psycho_sio0_device_attach(struct psycho_sio0_device *dev, enum psycho_sio0_slot slot)
+{
+	if (dev->ctx->sio0.devices[slot][dev->type]) {
+		LOG_WARN(dev->ctx, "attempting to attach device of same type to the same port");
+		return;
+	}
+
+	dev->ctx->sio0.devices[slot][dev->type] = dev;
+
+	slot++;
+	const char *type = (dev->type == PSYCHO_SIO0_DEVICE_TYPE_PAD) ? "pad" : "memcard";
+
+	LOG_INFO(dev->ctx, "connected device \"%s\" to slot %u (type = %s)", dev->name, slot, type);
 }

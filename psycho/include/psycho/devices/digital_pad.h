@@ -18,7 +18,7 @@
 #pragma once
 
 #include "psycho/common/compiler_support.h"
-#include "psycho/system/sio0_dev.h"
+#include "psycho/system/sio0_device.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -50,7 +50,7 @@ enum psycho_digital_pad_button {
 };
 
 struct psycho_digital_pad {
-	struct p_sio0_dev dev;
+	struct psycho_sio0_device dev;
 	enum psycho_digital_pad_state state;
 	uint16_t buttons;
 };

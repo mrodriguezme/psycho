@@ -19,24 +19,25 @@
 
 #include "psycho/ctx.h"
 
-#define SIO0_TX_DATA (0x1F801040)
-#define SIO0_RX_DATA (0x1F801040)
-#define SIO0_STAT    (0x1F801044)
-#define SIO0_MODE    (0x1F801048)
-#define SIO0_CTRL    (0x1F80104A)
-#define SIO0_BAUD    (0x1F80104E)
+enum {
+	SIO0_DR = 0x1F801040,
+	SIO0_SR = 0x1F801044,
+	SIO0_MR = 0x1F801048,
+	SIO0_CR = 0x1F80104A,
+	SIO0_BR = 0x1F80104E,
+};
 
-void p_sio0_rst(struct p_ctx *ctx) P_NONNULL;
+void psycho_sio0_reset(struct p_ctx *ctx) P_NONNULL;
 
-void p_sio0_tx(struct p_ctx *ctx, uint8_t byte) P_NONNULL;
+void psycho_sio0_dr_write_byte(struct p_ctx *ctx, uint8_t byte) P_NONNULL;
 
-P_NODISCARD uint8_t p_sio0_rx_pop8(struct p_ctx *ctx) P_NONNULL;
+void psycho_sio0_mr_write_halfword(struct p_ctx *ctx, uint16_t mr) P_NONNULL;
 
-void p_sio0_mode_set(struct p_ctx *ctx, uint16_t mode) P_NONNULL;
+void psycho_sio0_cr_write_halfword(struct p_ctx *ctx, uint16_t cr) P_NONNULL;
 
-void p_sio0_ctrl_set(struct p_ctx *ctx, uint16_t ctrl) P_NONNULL;
+void psycho_sio0_br_write_halfword(struct p_ctx *ctx, uint16_t baud) P_NONNULL;
 
-void p_sio0_baud_set(struct p_ctx *ctx, uint16_t baud) P_NONNULL;
+void psycho_sio0_dsr_assert(struct p_ctx *ctx, void *dev) P_NONNULL;
+void psycho_sio0_dsr_deassert(struct p_ctx *ctx, void *userdata) P_NONNULL;
 
-void p_sio0_dsr_assert(struct p_ctx *ctx, void *dev) P_NONNULL;
-void p_sio0_dsr_deassert(struct p_ctx *ctx, void *userdata) P_NONNULL;
+P_NODISCARD uint8_t psycho_sio0_dr_read_byte(struct p_ctx *ctx) P_NONNULL;

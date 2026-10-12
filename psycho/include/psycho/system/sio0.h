@@ -17,27 +17,11 @@
 
 #pragma once
 
-#include <stddef.h>
+#include "sio0_device.h"
 
-#include "psycho/common/compiler_support.h"
-#include "sio0_dev.h"
-#include "sched.h"
-
-enum sio0_slot {
-	SLOT_1,
-	SLOT_2,
-	NUM_SLOTS,
-};
-
-enum sio0_dev_type {
-	MEMCARD,
-	CTRL,
-	NUM_DEVS,
-};
-
-struct p_sio0 {
-	struct p_sio0_dev *dev[NUM_SLOTS][NUM_DEVS];
-	struct p_sio0_dev *curr_dev;
+struct psycho_sio0 {
+	struct psycho_sio0_device *devices[PSYCHO_SIO0_SLOT_COUNT][PSYCHO_SIO0_DEVICE_TYPE_COUNT];
+	struct psycho_sio0_device *addressed_device;
 
 	struct {
 		uint32_t entry;
@@ -53,14 +37,12 @@ struct p_sio0 {
 		};
 	} rxfifo;
 
-	uint32_t stat;
-	uint16_t mode;
-	uint16_t ctrl;
-	uint16_t baud;
+	uint32_t sr;
+	uint16_t mr;
+	uint16_t cr;
+	uint16_t br;
 
 	uint8_t last_rx;
 
-	struct p_sched_ev tx_ev;
+	struct p_sched_ev tx_event;
 };
-
-void p_attach_dev_to_sio0(struct p_ctx *ctx, struct p_sio0_dev *dev, enum sio0_slot slot) P_NONNULL;
