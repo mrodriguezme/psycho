@@ -15,18 +15,13 @@
 // COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR
 // OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
-#include <assert.h>
-#include <stddef.h>
-#include <string.h>
+#include "common/sched.h"
 
 #include "debug/bios_trace.h"
-#include "system/bus.h"
-#include "system/cpu/interpreter.h"
-#include "system/cpu/defs.h"
-#include "system/gpu/gpu.h"
 #include "debug/log.h"
-#include "common/sched.h"
-#include "common/util.h"
+
+#include "system/cpu/interpreter.h"
+#include "system/gpu/gpu.h"
 #include "system/sio0.h"
 
 DECLARE_LOG_MODULE(PSYCHO_LOG_MODULE_CTX);
@@ -53,7 +48,7 @@ void p_rst(struct p_ctx *ctx)
 	p_gpu_rst(ctx);
 	p_sio0_rst(ctx);
 
-	ctx->cpu.rst(ctx);
+	ctx->cpu.ops.rst(ctx);
 	LOG_INFO(ctx, "reset");
 }
 
@@ -64,5 +59,5 @@ void p_step(struct p_ctx *ctx)
 void p_run_until_ev(struct p_ctx *ctx)
 {
 	ctx->running = true;
-	ctx->cpu.run(ctx, UINT64_MAX, true);
+	ctx->cpu.ops.run(ctx, UINT64_MAX, true);
 }

@@ -64,7 +64,7 @@ void psycho_intc_mask_set(struct p_ctx *ctx, uint32_t mask)
 		irq_mask_log(ctx, mask);
 
 	ctx->intc.i_mask = mask;
-	ctx->cpu.irq_mux_set(ctx, ctx->intc.i_mask & ctx->intc.i_stat);
+	ctx->cpu.ops.irq_mux_set(ctx, ctx->intc.i_mask & ctx->intc.i_stat);
 }
 
 void psycho_intc_irqs_ack(struct p_ctx *ctx, uint32_t mask)
@@ -73,7 +73,7 @@ void psycho_intc_irqs_ack(struct p_ctx *ctx, uint32_t mask)
 		irq_ack_log(ctx, mask);
 
 	ctx->intc.i_stat &= mask;
-	ctx->cpu.irq_mux_set(ctx, ctx->intc.i_mask & ctx->intc.i_stat);
+	ctx->cpu.ops.irq_mux_set(ctx, ctx->intc.i_mask & ctx->intc.i_stat);
 }
 
 void psycho_intc_irqs_pending_set(struct p_ctx *ctx, uint32_t mask)
@@ -82,5 +82,5 @@ void psycho_intc_irqs_pending_set(struct p_ctx *ctx, uint32_t mask)
 		irq_pending_log(ctx, mask);
 
 	ctx->intc.i_stat |= mask;
-	ctx->cpu.irq_mux_set(ctx, ctx->intc.i_mask & ctx->intc.i_stat);
+	ctx->cpu.ops.irq_mux_set(ctx, ctx->intc.i_mask & ctx->intc.i_stat);
 }

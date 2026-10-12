@@ -18,7 +18,7 @@
 #pragma once
 
 #include <stdbool.h>
-#include "psycho/system/cpu/defs.h"
+#include "defs.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -26,7 +26,11 @@ extern "C" {
 
 struct p_ctx;
 
-struct p_cpu_ops {
+struct p_cpu_cfg {
+	void (*illegal_instr)(struct p_ctx *ctx, uint32_t instr);
+};
+
+struct psycho_cpu_ops {
 	void (*irq_mux_set)(struct p_ctx *ctx, bool state);
 
 	void (*gpr_set)(struct p_ctx *ctx, enum psycho_cpu_gpr gpr, uint32_t val);

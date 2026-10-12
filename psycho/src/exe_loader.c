@@ -88,14 +88,14 @@ void p_exe_inject(struct p_ctx *ctx)
 	LOG_INFO(ctx, "injecting exe (dst=0x%08X, size=%u)", exe->dst_ram,
 		 exe->file_size);
 
-	ctx->cpu.pc_set(ctx, exe->pc);
-	ctx->cpu.gpr_set(ctx, PSYCHO_CPU_GPR_GP, exe->gp);
+	ctx->cpu.ops.pc_set(ctx, exe->pc);
+	ctx->cpu.ops.gpr_set(ctx, PSYCHO_CPU_GPR_GP, exe->gp);
 
 	if (exe->sp_fp_base) {
 		const uint32_t val = exe->sp_fp_base + exe->sp_fp_offs;
 
-		ctx->cpu.gpr_set(ctx, PSYCHO_CPU_GPR_SP, val);
-		ctx->cpu.gpr_set(ctx, PSYCHO_CPU_GPR_FP, val);
+		ctx->cpu.ops.gpr_set(ctx, PSYCHO_CPU_GPR_SP, val);
+		ctx->cpu.ops.gpr_set(ctx, PSYCHO_CPU_GPR_FP, val);
 	}
 
 	const uint32_t paddr = vaddr_to_paddr(exe->dst_ram);

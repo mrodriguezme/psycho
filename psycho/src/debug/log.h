@@ -17,8 +17,6 @@
 
 #pragma once
 
-#pragma once
-
 #include "psycho/ctx.h"
 
 #define DECLARE_LOG_MODULE(mod) static const enum psycho_log_module m_log_module = (mod)

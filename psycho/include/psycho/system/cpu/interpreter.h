@@ -28,16 +28,12 @@ extern "C" {
 
 struct p_ctx;
 
-struct p_cpu_cfg {
-	void (*illegal_instr)(struct p_ctx *ctx, uint32_t instr);
-};
-
 struct p_cpu_dly_slot {
 	size_t dst;
 	uint32_t val;
 };
 
-struct p_cpu_int {
+struct psycho_cpu_interpreter {
 	uint32_t gpr[PSYCHO_CPU_GPR_COUNT];
 	uint32_t cop0[PSYCHO_CPU_COP0_CPR_COUNT];
 
