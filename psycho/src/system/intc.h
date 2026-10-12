@@ -25,18 +25,18 @@ enum {
 };
 
 enum {
-	IRQ_VBLANK = 1 << 0,
-	IRQ_GPU	   = 1 << 1,
-	IRQ_CDROM  = 1 << 2,
-	IRQ_DMA	   = 1 << 3,
-	IRQ_TMR0   = 1 << 4,
-	IRQ_TMR1   = 1 << 5,
-	IRQ_TMR2   = 1 << 6,
-	IRQ_SIO0   = 1 << 7,
-	IRQ_SIO1   = 1 << 8,
-	IRQ_SPU	   = 1 << 9,
-	IRQ_PAD	   = 1 << 10,
-	IRQ_COUNT  = 11
+	IRQ_VBLANK   = 1 << 0,
+	IRQ_GPU	     = 1 << 1,
+	IRQ_CDROM    = 1 << 2,
+	IRQ_DMAC     = 1 << 3,
+	IRQ_TMR0     = 1 << 4,
+	IRQ_TMR1     = 1 << 5,
+	IRQ_TMR2     = 1 << 6,
+	IRQ_SIO0     = 1 << 7,
+	IRQ_SIO1     = 1 << 8,
+	IRQ_SPU	     = 1 << 9,
+	IRQ_LIGHTPEN = 1 << 10,
+	IRQ_COUNT    = 11
 };
 
 void psycho_intc_mask_set(struct p_ctx *ctx, uint32_t mask) P_NONNULL;

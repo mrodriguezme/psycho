@@ -20,9 +20,23 @@
 
 DECLARE_LOG_MODULE(PSYCHO_LOG_MODULE_INTC);
 
-static const char *irq_names[IRQ_COUNT] = { [0] = "vblank", [1] = "gpu",  [2] = "cdrom",    [3] = "dma",
-					    [4] = "tmr0",   [5] = "tmr1", [6] = "tmr2",	    [7] = "sio0",
-					    [8] = "sio1",   [9] = "spu",  [10] = "lightpen" };
+static const char *irq_names[IRQ_COUNT] = {
+	// clang-format off
+
+	[0]	= "vblank",
+	[1]	= "gpu",
+	[2]	= "cdrom",
+	[3]	= "dmac",
+	[4]	= "tmr0",
+	[5]	= "tmr1",
+	[6]	= "tmr2",
+	[7]	= "sio0",
+	[8]	= "sio1",
+	[9]	= "spu",
+	[10]	= "lightpen"
+
+	// clang-format on
+};
 
 static void irq_mask_log(struct p_ctx *ctx, uint32_t mask)
 {
