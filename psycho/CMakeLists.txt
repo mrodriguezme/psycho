@@ -38,7 +38,7 @@ target_sources(
 	include/psycho/system/bus.h
 	include/psycho/system/dmac.h
 	include/psycho/system/gpu.h
-	include/psycho/system/intctrl.h
+	include/psycho/system/intc.h
 	include/psycho/system/sio0_dev.h
 	include/psycho/system/sio0.h
 	include/psycho/ctx.h
@@ -64,8 +64,8 @@ target_sources(
 	src/system/gpu/sw.h
 	src/system/bus.c
 	src/system/bus.h
-	src/system/intctrl.c
-	src/system/intctrl.h
+	src/system/intc.c
+	src/system/intc.h
 	src/system/sio0_dev.c
 	src/system/sio0.c
 	src/system/sio0.h

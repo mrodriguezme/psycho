@@ -23,7 +23,7 @@
 #include "debug/log.h"
 #include "util.h"
 
-LOG_MOD(P_LOG_SCHED);
+DECLARE_LOG_MODULE(PSYCHO_LOG_MODULE_SCHED);
 
 static const char *ev_names[P_SCHED_EV_COUNT] = {
 	[P_SCHED_EV_VBLANK]		      = "vblank",

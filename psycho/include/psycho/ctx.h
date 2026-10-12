@@ -27,7 +27,7 @@ extern "C" {
 #include "system/cpu/ops.h"
 #include "debug/disasm.h"
 #include "system/gpu.h"
-#include "system/intctrl.h"
+#include "system/intc.h"
 #include "debug/log.h"
 #include "common/sched.h"
 #include "system/sio0.h"
@@ -49,7 +49,7 @@ struct p_ctx {
 	struct p_disasm disasm;
 	struct p_sched sched;
 	struct p_gpu gpu;
-	struct p_intctrl intctrl;
+	struct p_intc intc;
 	struct p_sio0 sio0;
 
 	struct p_ctx_cfg cfg;

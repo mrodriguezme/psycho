@@ -19,24 +19,28 @@
 
 #include "psycho/ctx.h"
 
-#define I_STAT	   (0x1F801070)
-#define I_MASK	   (0x1F801074)
+enum {
+	I_STAT = 0x1F801070,
+	I_MASK = 0x1F801074,
+};
 
-#define IRQ_VBLANK (1 << 0)
-#define IRQ_GPU	   (1 << 1)
-#define IRQ_CDROM  (1 << 2)
-#define IRQ_DMA	   (1 << 3)
-#define IRQ_TMR0   (1 << 4)
-#define IRQ_TMR1   (1 << 5)
-#define IRQ_TMR2   (1 << 6)
-#define IRQ_SIO0   (1 << 7)
-#define IRQ_SIO1   (1 << 8)
-#define IRQ_SPU	   (1 << 9)
-#define IRQ_CTRL   (1 << 10)
-#define IRQ_COUNT  (11)
+enum {
+	IRQ_VBLANK = 1 << 0,
+	IRQ_GPU	   = 1 << 1,
+	IRQ_CDROM  = 1 << 2,
+	IRQ_DMA	   = 1 << 3,
+	IRQ_TMR0   = 1 << 4,
+	IRQ_TMR1   = 1 << 5,
+	IRQ_TMR2   = 1 << 6,
+	IRQ_SIO0   = 1 << 7,
+	IRQ_SIO1   = 1 << 8,
+	IRQ_SPU	   = 1 << 9,
+	IRQ_PAD	   = 1 << 10,
+	IRQ_COUNT  = 11
+};
 
-void p_irq_mask_set(struct p_ctx *ctx, uint32_t mask) P_NONNULL;
+void psycho_intc_mask_set(struct p_ctx *ctx, uint32_t mask) P_NONNULL;
 
-void p_irq_ack(struct p_ctx *ctx, uint32_t mask) P_NONNULL;
+void psycho_intc_irqs_ack(struct p_ctx *ctx, uint32_t mask) P_NONNULL;
 
-void p_irq_pend(struct p_ctx *ctx, uint32_t mask) P_NONNULL;
+void psycho_intc_irqs_pending_set(struct p_ctx *ctx, uint32_t mask) P_NONNULL;

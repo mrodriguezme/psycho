@@ -21,9 +21,9 @@
 #include "debug/log.h"
 #include "common/util.h"
 #include "common/sched.h"
-#include "intctrl.h"
+#include "intc.h"
 
-LOG_MOD(P_LOG_SIO0);
+DECLARE_LOG_MODULE(PSYCHO_LOG_MODULE_SIO0);
 
 #define STAT_TX_FIFO_NOT_FULL	      (1 << 0)
 #define STAT_RX_FIFO_NOT_EMPTY	      (1 << 1)
@@ -54,9 +54,7 @@ LOG_MOD(P_LOG_SIO0);
 #define MODE_PAR_TYPE		      (1 << 5)
 #define MODE_CPOL		      (1 << 8)
 
-#define MODE_BITS                                                          \
-	(MODE_BAUD_RELOAD_FACTOR_MASK | MODE_CHAR_LEN_MASK | MODE_PAR_EN | \
-	 MODE_PAR_TYPE | MODE_CPOL)
+#define MODE_BITS	 (MODE_BAUD_RELOAD_FACTOR_MASK | MODE_CHAR_LEN_MASK | MODE_PAR_EN | MODE_PAR_TYPE | MODE_CPOL)
 
 // All controllers and memory cards expect the following settings:
 //
@@ -65,13 +63,13 @@ LOG_MOD(P_LOG_SIO0);
 // * parity should be disabled
 //
 // Any settings other than these WILL NOT WORK on all known official hardware.
-#define MODE_EXPECTED		    (MODE_CHAR_LEN_8BIT << MODE_CHAR_LEN_SHIFT)
+#define MODE_EXPECTED	 (MODE_CHAR_LEN_8BIT << MODE_CHAR_LEN_SHIFT)
 
-#define CTRL_TXEN		    (1 << 0)
-#define CTRL_DTR_OUT_LVL	    (1 << 1)
-#define CTRL_RXEN		    (1 << 2)
-#define CTRL_ACK		    (1 << 4)
-#define CTRL_RESET		    (1 << 6)
+#define CTRL_TXEN	 (1 << 0)
+#define CTRL_DTR_OUT_LVL (1 << 1)
+#define CTRL_RXEN	 (1 << 2)
+#define CTRL_ACK	 (1 << 4)
+#define CTRL_RESET	 (1 << 6)
 
 #define CTRL_RX_INT_MODE_MASK	    (0b0000001100000000)
 #define CTRL_RX_INT_MODE_SHIFT	    (8)
@@ -93,7 +91,7 @@ P_NONNULL static void raise_irq(struct p_ctx *ctx)
 	LOG_TRACE(ctx, "IRQ asserted");
 
 	ctx->sio0.stat |= STAT_IRQ;
-	p_irq_pend(ctx, IRQ_SIO0);
+	psycho_intc_irqs_pending_set(ctx, IRQ_SIO0);
 }
 
 P_NODISCARD P_NONNULL static enum sio0_slot selected_slot(struct p_ctx *ctx)
@@ -115,27 +113,22 @@ P_NONNULL static void reset_peripherals(struct p_ctx *ctx)
 		p_sched_del(ctx, &dev->ack_pulse_begin_ev);
 		p_sched_del(ctx, &dev->ack_pulse_end_ev);
 
-		LOG_DBG(ctx, "peripheral %zu (\"%s\") reset in slot %u", i + 1,
-			dev->name, slot + 1);
+		LOG_DEBUG(ctx, "peripheral %zu (\"%s\") reset in slot %u", i + 1, dev->name, slot + 1);
 	}
 }
 
 P_NODISCARD P_NONNULL static unsigned int baud_fact_get(struct p_ctx *ctx)
 {
-	static const unsigned int mul[] = {
-		[MODE_BAUD_RELOAD_MUL1_0... MODE_BAUD_RELOAD_MUL1_1] = 1,
-		[MODE_BAUD_RELOAD_MUL16]			     = 16,
-		[MODE_BAUD_RELOAD_MUL64]			     = 64
-	};
+	static const unsigned int mul[] = { [MODE_BAUD_RELOAD_MUL1_0... MODE_BAUD_RELOAD_MUL1_1] = 1,
+					    [MODE_BAUD_RELOAD_MUL16]				 = 16,
+					    [MODE_BAUD_RELOAD_MUL64]				 = 64 };
 
-	return mul[(ctx->sio0.mode & MODE_BAUD_RELOAD_FACTOR_MASK) >>
-		   MODE_BAUD_RELOAD_FACTOR_SHIFT];
+	return mul[(ctx->sio0.mode & MODE_BAUD_RELOAD_FACTOR_MASK) >> MODE_BAUD_RELOAD_FACTOR_SHIFT];
 }
 
 P_NODISCARD P_NONNULL static unsigned int word_len_get(struct p_ctx *ctx)
 {
-	return 5 +
-	       ((ctx->sio0.mode & MODE_CHAR_LEN_MASK) >> MODE_CHAR_LEN_SHIFT);
+	return 5 + ((ctx->sio0.mode & MODE_CHAR_LEN_MASK) >> MODE_CHAR_LEN_SHIFT);
 }
 
 P_NODISCARD P_NONNULL static unsigned int rxfifo_intr_lvl_get(struct p_ctx *ctx)
@@ -151,8 +144,7 @@ P_NODISCARD P_NONNULL static unsigned int rxfifo_intr_lvl_get(struct p_ctx *ctx)
 		// clang-format on
 	};
 
-	return tbl[(ctx->sio0.ctrl & CTRL_RX_INT_MODE_MASK) >>
-		   CTRL_RX_INT_MODE_SHIFT];
+	return tbl[(ctx->sio0.ctrl & CTRL_RX_INT_MODE_MASK) >> CTRL_RX_INT_MODE_SHIFT];
 }
 
 P_NODISCARD P_NONNULL static unsigned int calc_baud(struct p_ctx *ctx, uint16_t baud)
@@ -179,7 +171,7 @@ P_NONNULL static void rx_push(struct p_ctx *ctx, uint8_t byte)
 		// FIFO entry will by overwritten by the new byte.
 		cnt--;
 
-		uint8_t old			      = ctx->sio0.rxfifo.entries[cnt];
+		uint8_t old		      = ctx->sio0.rxfifo.entries[cnt];
 		ctx->sio0.rxfifo.entries[cnt] = byte;
 
 		LOG_WARN(ctx,
@@ -250,8 +242,7 @@ void p_sio0_dsr_assert(struct p_ctx *ctx, void *dev)
 	if (!ctx->sio0.curr_dev) {
 		ctx->sio0.curr_dev = dev;
 
-		LOG_TRACE(ctx, "Peripheral \"%s\" in slot %u addressed",
-			  ctx->sio0.curr_dev->name, slot + 1);
+		LOG_TRACE(ctx, "Peripheral \"%s\" in slot %u addressed", ctx->sio0.curr_dev->name, slot + 1);
 	}
 
 	LOG_TRACE(ctx,
@@ -324,9 +315,7 @@ uint8_t p_sio0_rx_pop8(struct p_ctx *ctx)
 	if (unlikely(!ctx->sio0.rxfifo.num_entries)) {
 		// Reading from Empty RX FIFO returns either the most recently
 		// received byte or zero.
-		LOG_WARN(ctx,
-			 "RX FIFO underflow; returning last RX byte 0x%02X",
-			 ctx->sio0.last_rx);
+		LOG_WARN(ctx, "RX FIFO underflow; returning last RX byte 0x%02X", ctx->sio0.last_rx);
 
 		return ctx->sio0.last_rx;
 	}
@@ -350,11 +339,9 @@ void p_sio0_mode_set(struct p_ctx *ctx, uint16_t mode)
 {
 	mode &= MODE_BITS;
 
-	static const char *mul_to_str[] = {
-		[MODE_BAUD_RELOAD_MUL1_0... MODE_BAUD_RELOAD_MUL1_1] = "MUL1",
-		[MODE_BAUD_RELOAD_MUL16]			     = "MUL16",
-		[MODE_BAUD_RELOAD_MUL64]			     = "MUL64"
-	};
+	static const char *mul_to_str[] = { [MODE_BAUD_RELOAD_MUL1_0... MODE_BAUD_RELOAD_MUL1_1] = "MUL1",
+					    [MODE_BAUD_RELOAD_MUL16]				 = "MUL16",
+					    [MODE_BAUD_RELOAD_MUL64]				 = "MUL64" };
 
 	static const char *char_len_to_str[] = {
 		// clang-format off
@@ -367,28 +354,23 @@ void p_sio0_mode_set(struct p_ctx *ctx, uint16_t mode)
 		// clang-format on
 	};
 
-	const char *mul = mul_to_str[(mode & MODE_BAUD_RELOAD_FACTOR_MASK) >>
-				     MODE_BAUD_RELOAD_FACTOR_SHIFT];
+	const char *mul = mul_to_str[(mode & MODE_BAUD_RELOAD_FACTOR_MASK) >> MODE_BAUD_RELOAD_FACTOR_SHIFT];
 
-	const char *char_len = char_len_to_str[(mode & MODE_CHAR_LEN_MASK) >>
-					       MODE_CHAR_LEN_SHIFT];
+	const char *char_len = char_len_to_str[(mode & MODE_CHAR_LEN_MASK) >> MODE_CHAR_LEN_SHIFT];
 
 	const char *par	     = (mode & MODE_PAR_EN) ? "enabled" : "disabled";
 	const char *par_type = (mode & MODE_PAR_TYPE) ? "odd" : "even";
-	const char *cpol     = (mode & MODE_CPOL) ? "low when idle" :
-						    "high when idle";
+	const char *cpol     = (mode & MODE_CPOL) ? "low when idle" : "high when idle";
 
-	LOG_DBG(ctx,
-		"mode set to 0x%04X (baudrate reload factor = %s, charlen = "
-		"%s bits, parity = %s, parity type = %s, clock polarity = %s)",
-		mode, mul, char_len, par, par_type, cpol);
+	LOG_DEBUG(ctx,
+		  "mode set to 0x%04X (baudrate reload factor = %s, charlen = "
+		  "%s bits, parity = %s, parity type = %s, clock polarity = %s)",
+		  mode, mul, char_len, par, par_type, cpol);
 
-	if (unlikely((mode & (MODE_CHAR_LEN_MASK | MODE_CPOL | MODE_PAR_EN)) !=
-		     MODE_EXPECTED))
-		LOG_WARN(ctx,
-			 "mode has been set to settings that are incompatible "
-			 "with all known official peripherals; this would not "
-			 "work on a real system");
+	if (unlikely((mode & (MODE_CHAR_LEN_MASK | MODE_CPOL | MODE_PAR_EN)) != MODE_EXPECTED))
+		LOG_WARN(ctx, "mode has been set to settings that are incompatible "
+			      "with all known official peripherals; this would not "
+			      "work on a real system");
 
 	ctx->sio0.mode = mode;
 }
@@ -398,52 +380,45 @@ void p_sio0_ctrl_set(struct p_ctx *ctx, uint16_t ctrl)
 	if (ctrl & CTRL_ACK) {
 		ctx->sio0.stat &= ~(STAT_RX_PAR_ERR | STAT_IRQ);
 
-		LOG_DBG(ctx,
-			"IRQ acknowledged; STAT_RX_PAR_ERR and STAT_IRQ reset");
+		LOG_DEBUG(ctx, "IRQ acknowledged; STAT_RX_PAR_ERR and STAT_IRQ reset");
 	}
 
 	if (ctrl & CTRL_RESET) {
 		p_sio0_rst(ctx);
-		LOG_DBG(ctx, "reset by CTRL_RESET bit; behavior questionable");
+		LOG_DEBUG(ctx, "reset by CTRL_RESET bit; behavior questionable");
 
 		ctrl &= ~CTRL_RESET;
 	}
 
 	const char *txen = (ctrl & CTRL_TXEN) ? "enabled" : "disabled";
 	const char *dtr	 = (ctrl & CTRL_DTR_OUT_LVL) ? "enabled" : "disabled";
-	const char *rxen = (ctrl & CTRL_RXEN) ?
-				   "enabled (forcibly receiving byte)" :
-				   "disabled (receiving only when /CS low)";
+	const char *rxen = (ctrl & CTRL_RXEN) ? "enabled (forcibly receiving byte)" :
+						"disabled (receiving only when /CS low)";
 
-	static const char *rx_intr_mode_str[] = {
-		[CTRL_RX_INT_IRQ_ONE_BYTE]    = "1 byte",
-		[CTRL_RX_INT_IRQ_TWO_BYTES]   = "2 bytes",
-		[CTRL_RX_INT_IRQ_FOUR_BYTES]  = "4 bytes",
-		[CTRL_RX_INT_IRQ_EIGHT_BYTES] = "8 bytes"
-	};
+	static const char *rx_intr_mode_str[] = { [CTRL_RX_INT_IRQ_ONE_BYTE]	= "1 byte",
+						  [CTRL_RX_INT_IRQ_TWO_BYTES]	= "2 bytes",
+						  [CTRL_RX_INT_IRQ_FOUR_BYTES]	= "4 bytes",
+						  [CTRL_RX_INT_IRQ_EIGHT_BYTES] = "8 bytes" };
 
-	unsigned int rx_intr_mode = (ctrl & CTRL_RX_INT_MODE_MASK) >>
-			    CTRL_RX_INT_MODE_SHIFT;
+	unsigned int rx_intr_mode = (ctrl & CTRL_RX_INT_MODE_MASK) >> CTRL_RX_INT_MODE_SHIFT;
 
 	const char *tx_intr  = (ctrl & CTRL_TX_INT_EN) ? "enabled" : "disabled";
 	const char *rx_intr  = (ctrl & CTRL_RX_INT_EN) ? "enabled" : "disabled";
-	const char *dsr_intr = (ctrl & CTRL_DSR_INT_EN) ? "enabled" :
-							  "disabled";
+	const char *dsr_intr = (ctrl & CTRL_DSR_INT_EN) ? "enabled" : "disabled";
 	const char *port_sel = (ctrl & CTRL_PORT_SEL) ? "port 2" : "port 1";
 
-	LOG_DBG(ctx,
-		"ctrl set to 0x%04X (txen = %s, dtr output level = %s, rxen = "
-		"%s, rx interrupt mode = %s, tx interrupt enable = %s, rx "
-		"interrupt enable = %s, dsr interrupt enable = %s, port select "
-		"= %s)",
-		ctrl, txen, dtr, rxen, rx_intr_mode_str[rx_intr_mode], tx_intr,
-		rx_intr, dsr_intr, port_sel);
+	LOG_DEBUG(ctx,
+		  "ctrl set to 0x%04X (txen = %s, dtr output level = %s, rxen = "
+		  "%s, rx interrupt mode = %s, tx interrupt enable = %s, rx "
+		  "interrupt enable = %s, dsr interrupt enable = %s, port select "
+		  "= %s)",
+		  ctrl, txen, dtr, rxen, rx_intr_mode_str[rx_intr_mode], tx_intr, rx_intr, dsr_intr, port_sel);
 
 	if (bits_became_set(ctx->sio0.ctrl, ctrl, CTRL_DTR_OUT_LVL)) {
-		LOG_DBG(ctx, "DTR output level set high; CS has gone low");
+		LOG_DEBUG(ctx, "DTR output level set high; CS has gone low");
 		reset_peripherals(ctx);
 	} else if (bits_became_clr(ctx->sio0.ctrl, ctrl, CTRL_DTR_OUT_LVL)) {
-		LOG_DBG(ctx, "DTR output level set low; CS has gone high");
+		LOG_DEBUG(ctx, "DTR output level set low; CS has gone high");
 		ctx->sio0.curr_dev = NULL;
 	}
 
@@ -454,25 +429,21 @@ void p_sio0_baud_set(struct p_ctx *ctx, uint16_t baud)
 {
 	unsigned int bps = calc_baud(ctx, baud);
 
-	LOG_INFO(ctx, "baud reload value set to %d (new baud rate = %u bps)",
-		 baud, bps);
+	LOG_INFO(ctx, "baud reload value set to %d (new baud rate = %u bps)", baud, bps);
 
 	ctx->sio0.baud = baud;
 }
 
-void p_attach_dev_to_sio0(struct p_ctx *ctx, struct p_sio0_dev *dev,
-			  enum sio0_slot slot)
+void p_attach_dev_to_sio0(struct p_ctx *ctx, struct p_sio0_dev *dev, enum sio0_slot slot)
 {
 	if (ctx->sio0.dev[slot][dev->type]) {
-		LOG_WARN(ctx,
-			 "attempting to attach device of same type to the same "
-			 "port");
+		LOG_WARN(ctx, "attempting to attach device of same type to the same "
+			      "port");
 		return;
 	}
 
 	ctx->sio0.dev[slot][dev->type] = dev;
 
-	LOG_INFO(ctx, "connected peripheral \"%s\" to slot %u (type = %s)",
-		 dev->name, slot + 1,
+	LOG_INFO(ctx, "connected peripheral \"%s\" to slot %u (type = %s)", dev->name, slot + 1,
 		 dev->type == P_SIO0_DEV_TYPE_CTRL ? "controller" : "memcard");
 }

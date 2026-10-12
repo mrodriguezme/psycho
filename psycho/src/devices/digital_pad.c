@@ -20,7 +20,7 @@
 #include "psycho/devices/digital_pad.h"
 #include "debug/log.h"
 
-LOG_MOD(P_LOG_DIGITAL_CTRL);
+DECLARE_LOG_MODULE(PSYCHO_LOG_MODULE_DIGITAL_PAD);
 
 #define HI_Z	     (UINT8_MAX)
 
@@ -119,7 +119,7 @@ static uint8_t transceive(void *dev, uint8_t mosi)
 	switch (pad->state) {
 	case PSYCHO_DIGITAL_PAD_STATE_HI_Z:
 		if (mosi != 0x01) {
-			LOG_DBG(pad->dev.ctx, "not addressed");
+			LOG_DEBUG(pad->dev.ctx, "not addressed");
 			break;
 		}
 

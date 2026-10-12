@@ -24,40 +24,58 @@
 extern "C" {
 #endif // __cplusplus
 
+#define PSYCHO_LOG_LEVEL_LIST(X) \
+	X(OFF, "off")            \
+	X(ERROR, "err")          \
+	X(WARN, "warn")          \
+	X(INFO, "info")          \
+	X(DEBUG, "debug")        \
+	X(TRACE, "trace")
+
+#define PSYCHO_LOG_MODULE_LIST(X)               \
+	X(CTX, "ctx")                           \
+	X(CPU, "cpu")                           \
+	X(BUS, "bus")                           \
+	X(BIOS_CALL_TRACER, "bios call tracer") \
+	X(SCHED, "sched")                       \
+	X(GPU, "gpu")                           \
+	X(INTC, "intc")                         \
+	X(SIO0, "sio0")                         \
+	X(DIGITAL_PAD, "digital pad")
+
 struct p_ctx;
 
-enum p_log_lvl {
-	P_LOG_OFF,
-	P_LOG_INFO,
-	P_LOG_WARN,
-	P_LOG_ERR,
-	P_LOG_DBG,
-	P_LOG_TRACE,
-	P_LOG_COUNT,
+enum psycho_log_level {
+// clang-format off
+
+#define X(id, name) PSYCHO_LOG_LEVEL_##id,
+	PSYCHO_LOG_LEVEL_LIST(X)
+#undef X
+	PSYCHO_LOG_LEVEL_COUNT
+
+	// clang-format on
 };
 
-enum p_log_mod {
-	P_LOG_CTX,
-	P_LOG_CPU,
-	P_LOG_BUS,
-	P_LOG_BIOS,
-	P_LOG_SCHED,
-	P_LOG_GPU,
-	P_LOG_INTCTRL,
-	P_LOG_SIO0,
-	P_LOG_DIGITAL_CTRL,
-	P_LOG_MOD_COUNT,
+enum psycho_log_module {
+// clang-format off
+
+#define X(id, name) PSYCHO_LOG_MODULE_##id,
+	PSYCHO_LOG_MODULE_LIST(X)
+#undef X
+	PSYCHO_LOG_MODULE_COUNT
+
+	// clang-format on
 };
 
 struct p_log_msg {
 	struct p_str str;
-	enum p_log_mod mod;
-	enum p_log_lvl lvl;
+	enum psycho_log_module module;
+	enum psycho_log_level level;
 };
 
 struct p_log_cfg {
 	void (*log_cb)(struct p_ctx *ctx, struct p_log_msg *msg);
-	enum p_log_lvl mod[P_LOG_MOD_COUNT];
+	enum psycho_log_level modules[PSYCHO_LOG_MODULE_COUNT];
 };
 
 #ifdef __cplusplus

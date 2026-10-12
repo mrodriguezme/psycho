@@ -25,7 +25,7 @@ extern "C" {
 
 struct p_ctx;
 
-struct p_intctrl {
+struct p_intc {
 	uint32_t i_stat;
 	uint32_t i_mask;
 };

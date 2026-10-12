@@ -22,7 +22,7 @@
 #include "common/util.h"
 #include "system/cpu/defs.h"
 
-LOG_MOD(P_LOG_CTX);
+DECLARE_LOG_MODULE(PSYCHO_LOG_MODULE_CTX);
 
 struct exe_hdr {
 	const char id[0x008 - 0x000];

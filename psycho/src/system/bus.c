@@ -21,11 +21,11 @@
 
 #include "bus.h"
 #include "gpu/gpu.h"
-#include "intctrl.h"
+#include "intc.h"
 #include "debug/log.h"
 #include "sio0.h"
 
-LOG_MOD(P_LOG_BUS);
+DECLARE_LOG_MODULE(PSYCHO_LOG_MODULE_BUS);
 
 #define BIOS_BEGIN (0x1FC00000)
 #define BIOS_END   (0x1FC7FFFF)
@@ -58,10 +58,10 @@ uint32_t p_load32(struct p_ctx *ctx, uint32_t paddr)
 		return ret;
 
 	case I_STAT:
-		return ctx->intctrl.i_stat;
+		return ctx->intc.i_stat;
 
 	case I_MASK:
-		return ctx->intctrl.i_mask;
+		return ctx->intc.i_mask;
 
 	case GPU_GPUSTAT:
 		return ctx->gpu.gpustat;
@@ -134,11 +134,11 @@ void p_store32(struct p_ctx *ctx, uint32_t paddr, uint32_t data)
 		return;
 
 	case I_STAT:
-		p_irq_ack(ctx, data);
+		psycho_intc_irqs_ack(ctx, data);
 		return;
 
 	case I_MASK:
-		p_irq_mask_set(ctx, data);
+		psycho_intc_mask_set(ctx, data);
 		return;
 
 	case GPU_GP0:

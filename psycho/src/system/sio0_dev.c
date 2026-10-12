@@ -20,7 +20,7 @@
 #include "sio0.h"
 #include "debug/log.h"
 
-LOG_MOD(P_LOG_SIO0);
+DECLARE_LOG_MODULE(PSYCHO_LOG_MODULE_SIO0);
 
 void p_sio0_dev_ack(struct p_sio0_dev *dev, unsigned int delay_us, unsigned int pulse_us)
 {

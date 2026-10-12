@@ -30,7 +30,7 @@
 
 static bool tracing = false;
 
-LOG_MOD(P_LOG_CPU);
+DECLARE_LOG_MODULE(PSYCHO_LOG_MODULE_CPU);
 
 #define gte_clamp(ctx, val, min, max, flag)      \
 	({                                       \
@@ -49,10 +49,10 @@ P_NONNULL static void irq_mux_set(struct p_ctx *ctx, bool set)
 {
 	if (set) {
 		ctx->cpu_int.cop0[PSYCHO_CPU_COP0_CPR_SR] |= SR_IM2;
-		LOG_DBG(ctx, "irq mux line asserted");
+		LOG_DEBUG(ctx, "irq mux line asserted");
 	} else {
 		ctx->cpu_int.cop0[PSYCHO_CPU_COP0_CPR_SR] &= ~SR_IM2;
-		LOG_DBG(ctx, "irq mux line not asserted");
+		LOG_DEBUG(ctx, "irq mux line not asserted");
 	}
 }
 
@@ -982,7 +982,7 @@ P_NONNULL static void dly_slot_process(struct p_ctx *ctx)
 P_NONNULL static void load_dly(struct p_ctx *ctx, size_t dst, uint32_t val)
 {
 	if (unlikely(!dst)) {
-		LOG_DBG(ctx, "Load delay rejected - dest was $zero");
+		LOG_DEBUG(ctx, "Load delay rejected - dest was $zero");
 		return;
 	}
 

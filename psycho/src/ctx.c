@@ -29,7 +29,7 @@
 #include "common/util.h"
 #include "system/sio0.h"
 
-LOG_MOD(P_LOG_CTX);
+DECLARE_LOG_MODULE(PSYCHO_LOG_MODULE_CTX);
 
 struct p_ctx_cfg *p_cfg_get(struct p_ctx *ctx)
 {

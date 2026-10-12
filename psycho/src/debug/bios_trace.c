@@ -27,7 +27,7 @@
 #include "debug/log.h"
 #include "str.h"
 
-LOG_MOD(P_LOG_BIOS);
+DECLARE_LOG_MODULE(PSYCHO_LOG_MODULE_BIOS_CALL_TRACER);
 
 static void on_putchar(struct p_ctx *ctx, struct p_bios_frame *frame);
 
@@ -343,22 +343,22 @@ void p_bios_trace_end(struct p_ctx *const ctx, uint32_t v0)
 
 	switch (frame->fn->ret) {
 	case P_BIOS_FN_RET_CHAR:
-		LOG_DBG(ctx, "bios call: %s -> '%c'", frame->str.ptr, (char)v0);
+		LOG_DEBUG(ctx, "bios call: %s -> '%c'", frame->str.ptr, (char)v0);
 		return;
 
 	case P_BIOS_FN_RET_VOID_PTR:
-		LOG_DBG(ctx, "bios call: %s -> 0x%08X", frame->str.ptr, v0);
+		LOG_DEBUG(ctx, "bios call: %s -> 0x%08X", frame->str.ptr, v0);
 		return;
 
 	case P_BIOS_FN_RET_INT:
-		LOG_DBG(ctx, "bios call: %s -> %u", frame->str.ptr, v0);
+		LOG_DEBUG(ctx, "bios call: %s -> %u", frame->str.ptr, v0);
 		return;
 
 	case P_BIOS_FN_RET_VOID:
-		LOG_DBG(ctx, "bios call: %s", frame->str.ptr);
+		LOG_DEBUG(ctx, "bios call: %s", frame->str.ptr);
 		return;
 
 	default:
-		__builtin_unreachable();
+		P_UNREACHABLE;
 	}
 }

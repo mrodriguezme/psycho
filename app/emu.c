@@ -68,7 +68,7 @@ static void emu_poll_ctrl(struct emu_runner *emu)
 	if (keys[SDL_SCANCODE_SPACE])
 		mask |= PSYCHO_DIGITAL_PAD_BUTTON_SELECT;
 
-	enum psycho_digital_pad_button pressed  = mask & ~buttons_prev;
+	enum psycho_digital_pad_button pressed	= mask & ~buttons_prev;
 	enum psycho_digital_pad_button released = buttons_prev & ~mask;
 
 	if (pressed)
@@ -104,15 +104,21 @@ static void log_cb(struct p_ctx *ctx, struct p_log_msg *msg)
 	assert(ctx != NULL);
 	assert(msg != NULL);
 
-	static const char *color_str[P_LOG_COUNT] = { [P_LOG_INFO]  = BHWHT "%s\n" CRESET,
-						      [P_LOG_WARN]  = BHYEL "%s\n" CRESET,
-						      [P_LOG_ERR]   = BHRED "%s\n" CRESET,
-						      [P_LOG_DBG]   = BHCYN "%s\n" CRESET,
-						      [P_LOG_TRACE] = BHMAG "%s\n" CRESET };
+	static const char *color_str[PSYCHO_LOG_LEVEL_COUNT] = {
+		// clang-format off
+
+		[PSYCHO_LOG_LEVEL_INFO]		= BHWHT "%s\n" CRESET,
+		[PSYCHO_LOG_LEVEL_WARN]		= BHYEL "%s\n" CRESET,
+		[PSYCHO_LOG_LEVEL_ERROR]	= BHRED "%s\n" CRESET,
+		[PSYCHO_LOG_LEVEL_DEBUG]	= BHCYN "%s\n" CRESET,
+		[PSYCHO_LOG_LEVEL_TRACE]	= BHMAG "%s\n" CRESET
+
+		// clang-format on
+	};
 
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wformat-nonliteral"
-	printf(color_str[msg->lvl], msg->str.ptr);
+	printf(color_str[msg->level], msg->str.ptr);
 #pragma GCC diagnostic pop
 }
 
@@ -130,14 +136,9 @@ void emu_init(struct emu_runner *emu, uint8_t *bios_data, uint8_t *exe_data, siz
 
 	cfg->cpu.illegal_instr = illegal_instr_cb;
 
+	//cfg->log.log_cb = log_cb;
 
-	cfg->log.log_cb = log_cb;
-
-	//cfg->log.mod[P_LOG_CTX]		 = P_LOG_TRACE;
-	//cfg->log.mod[P_LOG_BIOS]	 = P_LOG_INFO;
-	cfg->log.mod[P_LOG_DIGITAL_CTRL] = P_LOG_TRACE;
-	//cfg->log.mod[P_LOG_SIO0]	 = P_LOG_TRACE;
-	//cfg->log.mod[P_LOG_SCHED]	 = P_LOG_TRACE;
+	cfg->log.modules[PSYCHO_LOG_MODULE_DIGITAL_PAD] = PSYCHO_LOG_LEVEL_TRACE;
 
 	cfg->bios_trace.stdout_line = on_stdout_line;
 	cfg->bios_trace.deref_ptrs  = true;

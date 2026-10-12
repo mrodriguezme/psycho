@@ -20,11 +20,11 @@
 
 #include "sw.h"
 #include "gpu.h"
-#include "system/intctrl.h"
+#include "system/intc.h"
 #include "debug/log.h"
 #include "common/sched.h"
 
-LOG_MOD(P_LOG_GPU);
+DECLARE_LOG_MODULE(PSYCHO_LOG_MODULE_GPU);
 
 #define GPUSTAT_RDY_CMD_WORD_BIT    (1 << 26)
 #define GPUSTAT_FIFO_DATA_AVAIL_BIT (1 << 27)
@@ -68,7 +68,7 @@ P_NONNULL static void on_vblank(struct p_ctx *ctx, void *userdata)
 	if (ctx->cfg.on_vblank)
 		ctx->cfg.on_vblank(ctx);
 
-	p_irq_pend(ctx, IRQ_VBLANK);
+	psycho_intc_irqs_pending_set(ctx, IRQ_VBLANK);
 }
 
 P_NONNULL static void copy_adv(struct p_ctx *ctx)

@@ -23,37 +23,29 @@
 #include "log.h"
 #include "str.h"
 
-void p_log_msg(struct p_ctx *ctx, enum p_log_mod mod, enum p_log_lvl lvl,
-	       const char *fmt, ...)
+static const char *const level_names[PSYCHO_LOG_LEVEL_COUNT] = {
+#define X(id, name) [PSYCHO_LOG_LEVEL_##id] = name,
+	PSYCHO_LOG_LEVEL_LIST(X)
+#undef X
+};
+
+static const char *const module_names[PSYCHO_LOG_MODULE_COUNT] = {
+#define X(id, name) [PSYCHO_LOG_MODULE_##id] = name,
+	PSYCHO_LOG_MODULE_LIST(X)
+#undef X
+};
+
+void psycho_log_msg(struct p_ctx *ctx, enum psycho_log_module module, enum psycho_log_level level, const char *fmt, ...)
 {
 	assert(ctx->cfg.log.log_cb != NULL);
-
-	assert(mod < P_LOG_MOD_COUNT);
-	assert((lvl > P_LOG_OFF) && (lvl < P_LOG_COUNT));
-
-	static const char *lvl_str[P_LOG_COUNT] = { [P_LOG_INFO]  = "info",
-						    [P_LOG_WARN]  = "warn",
-						    [P_LOG_ERR]	  = "err",
-						    [P_LOG_DBG]	  = "dbg",
-						    [P_LOG_TRACE] = "trace" };
-
-	static const char *mod_str[P_LOG_MOD_COUNT] = {
-		[P_LOG_CTX]	     = "ctx",
-		[P_LOG_CPU]	     = "cpu",
-		[P_LOG_BUS]	     = "bus",
-		[P_LOG_BIOS]	     = "bios",
-		[P_LOG_SCHED]	     = "sched",
-		[P_LOG_GPU]	     = "gpu",
-		[P_LOG_INTCTRL]	     = "intctrl",
-		[P_LOG_DIGITAL_CTRL] = "digital controller",
-		[P_LOG_SIO0]	     = "sio0"
-	};
+	assert(module < PSYCHO_LOG_MODULE_COUNT);
+	assert((level > PSYCHO_LOG_LEVEL_OFF) && (level < PSYCHO_LOG_LEVEL_COUNT));
 
 	char buf[512];
 	struct p_str str;
-	p_str_init_fixed(&str, buf, sizeof(buf));
 
-	p_str_append(&str, NULL, "[%s/%s] ", lvl_str[lvl], mod_str[mod]);
+	p_str_init_fixed(&str, buf, sizeof(buf));
+	p_str_append(&str, NULL, "[%s/%s] ", level_names[level], module_names[module]);
 
 	va_list args;
 	va_start(args, fmt);
@@ -61,9 +53,10 @@ void p_log_msg(struct p_ctx *ctx, enum p_log_mod mod, enum p_log_lvl lvl,
 	va_end(args);
 
 	struct p_log_msg msg = {
-		.str = str,
-		.mod = mod,
-		.lvl = lvl,
+		.str	= str,
+		.module = module,
+		.level	= level,
 	};
+
 	ctx->cfg.log.log_cb(ctx, &msg);
 }
