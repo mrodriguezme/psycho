@@ -25,11 +25,11 @@
 #include <SDL3/SDL.h>
 
 #include "psycho/ctx.h"
-#include "psycho/devices/digital_ctrl.h"
+#include "psycho/devices/digital_pad.h"
 
 struct emu_runner {
 	struct p_ctx ctx;
-	struct p_digital_ctrl ctrl;
+	struct psycho_digital_pad pad;
 
 	p_gpu_vram fbufs[2];
 	SDL_AtomicInt write_idx;

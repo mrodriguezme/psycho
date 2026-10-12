@@ -24,46 +24,43 @@
 extern "C" {
 #endif // __cplusplus
 
-enum p_digital_ctrl_state {
-	P_DIGITAL_CTRL_HI_Z,
-	P_DIGITAL_CTRL_ID_LO,
-	P_DIGITAL_CTRL_ID_HI,
-	P_DIGITAL_CTRL_SW_LO,
-	P_DIGITAL_CTRL_SW_HI
+enum psycho_digital_pad_state {
+	PSYCHO_DIGITAL_PAD_STATE_HI_Z,
+	PSYCHO_DIGITAL_PAD_STATE_ID_LO,
+	PSYCHO_DIGITAL_PAD_STATE_ID_HI,
+	PSYCHO_DIGITAL_PAD_STATE_SW_LO,
+	PSYCHO_DIGITAL_PAD_STATE_SW_HI
 };
 
-enum p_digital_ctrl_btns {
-	// clang-format off
-
-	P_DIGITAL_CTRL_SEL	= 1 << 0,
-	P_DIGITAL_CTRL_START	= 1 << 3,
-	P_DIGITAL_CTRL_UP	= 1 << 4,
-	P_DIGITAL_CTRL_RT	= 1 << 5,
-	P_DIGITAL_CTRL_DN	= 1 << 6,
-	P_DIGITAL_CTRL_LT	= 1 << 7,
-	P_DIGITAL_CTRL_L2	= 1 << 8,
-	P_DIGITAL_CTRL_R2	= 1 << 9,
-	P_DIGITAL_CTRL_L1	= 1 << 10,
-	P_DIGITAL_CTRL_R1	= 1 << 11,
-	P_DIGITAL_CTRL_TRI	= 1 << 12,
-	P_DIGITAL_CTRL_CIR	= 1 << 13,
-	P_DIGITAL_CTRL_CROSS	= 1 << 14,
-	P_DIGITAL_CTRL_SQR	= 1 << 15
-
-	// clang-format on
+enum psycho_digital_pad_button {
+	PSYCHO_DIGITAL_PAD_BUTTON_SELECT   = 1 << 0,
+	PSYCHO_DIGITAL_PAD_BUTTON_START	   = 1 << 3,
+	PSYCHO_DIGITAL_PAD_BUTTON_UP	   = 1 << 4,
+	PSYCHO_DIGITAL_PAD_BUTTON_RIGHT	   = 1 << 5,
+	PSYCHO_DIGITAL_PAD_BUTTON_DOWN	   = 1 << 6,
+	PSYCHO_DIGITAL_PAD_BUTTON_LEFT	   = 1 << 7,
+	PSYCHO_DIGITAL_PAD_BUTTON_L2	   = 1 << 8,
+	PSYCHO_DIGITAL_PAD_BUTTON_R2	   = 1 << 9,
+	PSYCHO_DIGITAL_PAD_BUTTON_L1	   = 1 << 10,
+	PSYCHO_DIGITAL_PAD_BUTTON_R1	   = 1 << 11,
+	PSYCHO_DIGITAL_PAD_BUTTON_TRIANGLE = 1 << 12,
+	PSYCHO_DIGITAL_PAD_BUTTON_CIRCLE   = 1 << 13,
+	PSYCHO_DIGITAL_PAD_BUTTON_CROSS	   = 1 << 14,
+	PSYCHO_DIGITAL_PAD_BUTTON_SQUARE   = 1 << 15
 };
 
-struct p_digital_ctrl {
+struct psycho_digital_pad {
 	struct p_sio0_dev dev;
-	enum p_digital_ctrl_state state;
-	uint16_t btns;
+	enum psycho_digital_pad_state state;
+	uint16_t buttons;
 };
 
-void p_digital_ctrl_init(struct p_ctx *ctx, struct p_digital_ctrl *ctrl) P_NONNULL;
+void psycho_digital_pad_init(struct p_ctx *ctx, struct psycho_digital_pad *pad) P_NONNULL;
 
-void p_digital_ctrl_btn_press(struct p_digital_ctrl *ctrl, enum p_digital_ctrl_btns btns) P_NONNULL;
+void psycho_digital_pad_buttons_press(struct psycho_digital_pad *pad, enum psycho_digital_pad_button buttons) P_NONNULL;
 
-void p_digital_ctrl_btn_rel(struct p_digital_ctrl *ctrl, enum p_digital_ctrl_btns btns) P_NONNULL;
+void psycho_digital_pad_buttons_release(struct psycho_digital_pad *pad,
+					enum psycho_digital_pad_button buttons) P_NONNULL;
 
 #ifdef __cplusplus
 }

@@ -31,7 +31,7 @@ target_sources(
 	include/psycho/debug/disasm.h
 	include/psycho/debug/log.h
 	include/psycho/debug/str.h
-	include/psycho/devices/digital_ctrl.h
+	include/psycho/devices/digital_pad.h
 	include/psycho/system/cpu/defs.h
 	include/psycho/system/cpu/interpreter.h
 	include/psycho/system/cpu/ops.h
@@ -53,7 +53,7 @@ target_sources(
 	src/debug/log.h
 	src/debug/str.c
 	src/debug/str.h
-	src/devices/digital_ctrl.c
+	src/devices/digital_pad.c
 	src/system/cpu/defs.c
 	src/system/cpu/defs.h
 	src/system/cpu/interpreter.c

@@ -30,53 +30,54 @@
 #include "ansi-color-codes.h"
 
 static struct emu_runner *m_emu;
-uint16_t btns_prev = 0;
+uint16_t buttons_prev = 0;
 
 static void emu_poll_ctrl(struct emu_runner *emu)
 {
-	const bool *keys	      = SDL_GetKeyboardState(NULL);
-	enum p_digital_ctrl_btns mask = 0;
+	const bool *keys = SDL_GetKeyboardState(NULL);
+
+	enum psycho_digital_pad_button mask = 0;
 
 	if (keys[SDL_SCANCODE_DOWN])
-		mask |= P_DIGITAL_CTRL_DN;
+		mask |= PSYCHO_DIGITAL_PAD_BUTTON_DOWN;
 
 	if (keys[SDL_SCANCODE_UP])
-		mask |= P_DIGITAL_CTRL_UP;
+		mask |= PSYCHO_DIGITAL_PAD_BUTTON_UP;
 
 	if (keys[SDL_SCANCODE_LEFT])
-		mask |= P_DIGITAL_CTRL_LT;
+		mask |= PSYCHO_DIGITAL_PAD_BUTTON_LEFT;
 
 	if (keys[SDL_SCANCODE_RIGHT])
-		mask |= P_DIGITAL_CTRL_RT;
+		mask |= PSYCHO_DIGITAL_PAD_BUTTON_RIGHT;
 
 	if (keys[SDL_SCANCODE_X])
-		mask |= P_DIGITAL_CTRL_CROSS;
+		mask |= PSYCHO_DIGITAL_PAD_BUTTON_CROSS;
 
 	if (keys[SDL_SCANCODE_O])
-		mask |= P_DIGITAL_CTRL_CIR;
+		mask |= PSYCHO_DIGITAL_PAD_BUTTON_CIRCLE;
 
 	if (keys[SDL_SCANCODE_S])
-		mask |= P_DIGITAL_CTRL_SQR;
+		mask |= PSYCHO_DIGITAL_PAD_BUTTON_SQUARE;
 
 	if (keys[SDL_SCANCODE_T])
-		mask |= P_DIGITAL_CTRL_TRI;
+		mask |= PSYCHO_DIGITAL_PAD_BUTTON_TRIANGLE;
 
 	if (keys[SDL_SCANCODE_RETURN])
-		mask |= P_DIGITAL_CTRL_START;
+		mask |= PSYCHO_DIGITAL_PAD_BUTTON_START;
 
 	if (keys[SDL_SCANCODE_SPACE])
-		mask |= P_DIGITAL_CTRL_SEL;
+		mask |= PSYCHO_DIGITAL_PAD_BUTTON_SELECT;
 
-	enum p_digital_ctrl_btns pressed  = mask & ~btns_prev;
-	enum p_digital_ctrl_btns released = btns_prev & ~mask;
+	enum psycho_digital_pad_button pressed  = mask & ~buttons_prev;
+	enum psycho_digital_pad_button released = buttons_prev & ~mask;
 
 	if (pressed)
-		p_digital_ctrl_btn_press(&emu->ctrl, pressed);
+		psycho_digital_pad_buttons_press(&emu->pad, pressed);
 
 	if (released)
-		p_digital_ctrl_btn_rel(&emu->ctrl, released);
+		psycho_digital_pad_buttons_release(&emu->pad, released);
 
-	btns_prev = mask;
+	buttons_prev = mask;
 }
 
 static void on_vblank(struct p_ctx *ctx)
@@ -103,13 +104,11 @@ static void log_cb(struct p_ctx *ctx, struct p_log_msg *msg)
 	assert(ctx != NULL);
 	assert(msg != NULL);
 
-	static const char *color_str[P_LOG_COUNT] = {
-		[P_LOG_INFO]  = BHWHT "%s\n" CRESET,
-		[P_LOG_WARN]  = BHYEL "%s\n" CRESET,
-		[P_LOG_ERR]   = BHRED "%s\n" CRESET,
-		[P_LOG_DBG]   = BHCYN "%s\n" CRESET,
-		[P_LOG_TRACE] = BHMAG "%s\n" CRESET
-	};
+	static const char *color_str[P_LOG_COUNT] = { [P_LOG_INFO]  = BHWHT "%s\n" CRESET,
+						      [P_LOG_WARN]  = BHYEL "%s\n" CRESET,
+						      [P_LOG_ERR]   = BHRED "%s\n" CRESET,
+						      [P_LOG_DBG]   = BHCYN "%s\n" CRESET,
+						      [P_LOG_TRACE] = BHMAG "%s\n" CRESET };
 
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wformat-nonliteral"
@@ -123,8 +122,7 @@ static void on_stdout_line(struct p_ctx *ctx, struct p_str *str)
 	(void)str;
 }
 
-void emu_init(struct emu_runner *emu, uint8_t *bios_data, uint8_t *exe_data,
-	      size_t exe_size)
+void emu_init(struct emu_runner *emu, uint8_t *bios_data, uint8_t *exe_data, size_t exe_size)
 {
 	m_emu = emu;
 
@@ -132,15 +130,14 @@ void emu_init(struct emu_runner *emu, uint8_t *bios_data, uint8_t *exe_data,
 
 	cfg->cpu.illegal_instr = illegal_instr_cb;
 
-#if 0
+
 	cfg->log.log_cb = log_cb;
 
-	cfg->log.mod[P_LOG_CTX]		 = P_LOG_TRACE;
-	cfg->log.mod[P_LOG_BIOS]	 = P_LOG_INFO;
+	//cfg->log.mod[P_LOG_CTX]		 = P_LOG_TRACE;
+	//cfg->log.mod[P_LOG_BIOS]	 = P_LOG_INFO;
 	cfg->log.mod[P_LOG_DIGITAL_CTRL] = P_LOG_TRACE;
-	cfg->log.mod[P_LOG_SIO0]	 = P_LOG_TRACE;
-	cfg->log.mod[P_LOG_SCHED]	 = P_LOG_TRACE;
-#endif
+	//cfg->log.mod[P_LOG_SIO0]	 = P_LOG_TRACE;
+	//cfg->log.mod[P_LOG_SCHED]	 = P_LOG_TRACE;
 
 	cfg->bios_trace.stdout_line = on_stdout_line;
 	cfg->bios_trace.deref_ptrs  = true;
@@ -153,8 +150,8 @@ void emu_init(struct emu_runner *emu, uint8_t *bios_data, uint8_t *exe_data,
 
 	p_init(&emu->ctx);
 
-	p_digital_ctrl_init(&emu->ctx, &emu->ctrl);
-	p_attach_dev_to_sio0(&emu->ctx, &emu->ctrl.dev, 0);
+	psycho_digital_pad_init(&emu->ctx, &emu->pad);
+	p_attach_dev_to_sio0(&emu->ctx, &emu->pad.dev, 0);
 
 	if (!p_run_exe(&emu->ctx, exe_data, exe_size)) {
 		fprintf(stderr, "exe not valid\n");
@@ -195,8 +192,7 @@ void emu_run(struct emu_runner *emu)
 	emu->thread = SDL_CreateThread(emu_thread_func, "Emulator", emu);
 
 	if (!emu->thread) {
-		SDL_LogError(SDL_LOG_CATEGORY_APPLICATION,
-			     "SDL_CreateThread() failed: %s", SDL_GetError());
+		SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "SDL_CreateThread() failed: %s", SDL_GetError());
 		abort();
 	}
 }
