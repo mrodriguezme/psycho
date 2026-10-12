@@ -33,8 +33,14 @@ DECLARE_LOG_MODULE(PSYCHO_LOG_MODULE_SIO0);
 #define SR_PERROR	     (1 << 3)
 #define SR_DSR		     (1 << 7)
 #define SR_IRQ		     (1 << 9)
+
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wunused-macros"
+
 #define SR_BAUDTMR_MASK	     (0xFFFFF800)
 #define SR_BAUDTMR_SHIFT     (11)
+
+#pragma GCC diagnostic pop
 
 #define MR_BR_MASK	     (0x3)
 #define MR_BR_SHIFT	     (0)
@@ -89,7 +95,7 @@ enum {
 
 P_NONNULL static void irq_assert(struct p_ctx *ctx)
 {
-	if (ctx->sio0.sr & SR_IRQ)
+	if (unlikely(ctx->sio0.sr & SR_IRQ))
 		return;
 
 	ctx->sio0.sr |= SR_IRQ;
@@ -388,7 +394,7 @@ void psycho_sio0_cr_write_halfword(struct p_ctx *ctx, uint16_t cr)
 
 	if (cr & CR_INTRST) {
 		psycho_sio0_reset(ctx);
-		LOG_DEBUG(ctx, "reset by CTRL_RESET bit; behavior questionable");
+		LOG_DEBUG(ctx, "reset by CR_INTRST bit; behavior questionable");
 
 		cr &= ~CR_INTRST;
 	}

@@ -45,17 +45,18 @@ struct p_ctx_cfg {
 
 struct p_ctx {
 	struct p_bus bus;
+	struct p_gpu gpu;
+
+	struct p_bios_trace bios_trace;
+
+	struct p_disasm disasm;
 
 	struct {
 		struct psycho_cpu_interpreter interpreter;
 		struct psycho_cpu_ops ops;
 	} cpu;
 
-	struct p_bios_trace bios_trace;
-	struct p_disasm disasm;
 	struct p_sched sched;
-	struct p_gpu gpu;
-	struct p_intc intc;
 	struct psycho_sio0 sio0;
 
 	struct p_ctx_cfg cfg;
@@ -64,6 +65,8 @@ struct p_ctx {
 		const uint8_t *data;
 		size_t size;
 	} exe;
+
+	struct p_intc intc;
 
 	bool running;
 };

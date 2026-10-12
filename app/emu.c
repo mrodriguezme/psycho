@@ -132,12 +132,13 @@ void emu_init(struct emu_runner *emu, uint8_t *bios_data, uint8_t *exe_data, siz
 {
 	m_emu = emu;
 
-	struct p_ctx_cfg *const cfg = p_cfg_get(&emu->ctx);
+	struct p_ctx_cfg *cfg = p_cfg_get(&emu->ctx);
 
 	cfg->cpu.illegal_instr = illegal_instr_cb;
 
-	//cfg->log.log_cb = log_cb;
+	cfg->log.log_cb = log_cb;
 
+	cfg->log.modules[PSYCHO_LOG_MODULE_SIO0] = PSYCHO_LOG_LEVEL_TRACE;
 	cfg->log.modules[PSYCHO_LOG_MODULE_DIGITAL_PAD] = PSYCHO_LOG_LEVEL_TRACE;
 
 	cfg->bios_trace.stdout_line = on_stdout_line;
@@ -152,7 +153,7 @@ void emu_init(struct emu_runner *emu, uint8_t *bios_data, uint8_t *exe_data, siz
 	p_init(&emu->ctx);
 
 	psycho_digital_pad_init(&emu->ctx, &emu->pad);
-	p_attach_dev_to_sio0(&emu->ctx, &emu->pad.dev, 0);
+	psycho_sio0_device_attach(&emu->pad.dev, PSYCHO_SIO0_SLOT_1);
 
 	if (!p_run_exe(&emu->ctx, exe_data, exe_size)) {
 		fprintf(stderr, "exe not valid\n");
