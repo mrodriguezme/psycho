@@ -25,7 +25,7 @@
 #include <SDL3/SDL.h>
 
 #include "psycho/ctx.h"
-#include "psycho/digital_ctrl.h"
+#include "psycho/devices/digital_ctrl.h"
 
 struct emu_runner {
 	struct p_ctx ctx;

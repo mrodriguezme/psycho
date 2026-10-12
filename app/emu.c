@@ -132,7 +132,7 @@ void emu_init(struct emu_runner *emu, uint8_t *bios_data, uint8_t *exe_data,
 
 	cfg->cpu.illegal_instr = illegal_instr_cb;
 
-	#if 0
+#if 0
 	cfg->log.log_cb = log_cb;
 
 	cfg->log.mod[P_LOG_CTX]		 = P_LOG_TRACE;
@@ -141,6 +141,7 @@ void emu_init(struct emu_runner *emu, uint8_t *bios_data, uint8_t *exe_data,
 	cfg->log.mod[P_LOG_SIO0]	 = P_LOG_TRACE;
 	cfg->log.mod[P_LOG_SCHED]	 = P_LOG_TRACE;
 #endif
+
 	cfg->bios_trace.stdout_line = on_stdout_line;
 	cfg->bios_trace.deref_ptrs  = true;
 
