@@ -132,13 +132,13 @@ P_NONNULL static void frame_init(struct p_ctx *ctx, struct p_bios_frame *frame, 
 	frame->fn      = fn;
 	frame->arg_pos = 0;
 
-	frame->a0 = ctx->cpu.ops.gpr_get(ctx, PSYCHO_CPU_GPR_A0);
-	frame->a1 = ctx->cpu.ops.gpr_get(ctx, PSYCHO_CPU_GPR_A1);
-	frame->a2 = ctx->cpu.ops.gpr_get(ctx, PSYCHO_CPU_GPR_A2);
-	frame->a3 = ctx->cpu.ops.gpr_get(ctx, PSYCHO_CPU_GPR_A3);
+	frame->a0 = ctx->cpu.gpr_get(ctx, PSYCHO_CPU_GPR_A0);
+	frame->a1 = ctx->cpu.gpr_get(ctx, PSYCHO_CPU_GPR_A1);
+	frame->a2 = ctx->cpu.gpr_get(ctx, PSYCHO_CPU_GPR_A2);
+	frame->a3 = ctx->cpu.gpr_get(ctx, PSYCHO_CPU_GPR_A3);
 
-	frame->sp = ctx->cpu.ops.gpr_get(ctx, PSYCHO_CPU_GPR_SP);
-	frame->ra = ctx->cpu.ops.gpr_get(ctx, PSYCHO_CPU_GPR_RA);
+	frame->sp = ctx->cpu.gpr_get(ctx, PSYCHO_CPU_GPR_SP);
+	frame->ra = ctx->cpu.gpr_get(ctx, PSYCHO_CPU_GPR_RA);
 
 	p_str_init_fixed(&frame->str, frame->str_buf, sizeof(frame->str_buf));
 }

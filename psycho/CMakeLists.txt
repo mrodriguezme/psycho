@@ -76,3 +76,8 @@ target_sources(
 
 target_include_directories(psycho PUBLIC include)
 target_include_directories(psycho PRIVATE src)
+
+set_source_files_properties(
+	src/cpu/interpreter.c PROPERTIES
+	COMPILE_OPTIONS "-fno-gcse;-fno-crossjumping"
+)

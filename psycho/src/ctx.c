@@ -48,7 +48,7 @@ void p_rst(struct p_ctx *ctx)
 	p_gpu_rst(ctx);
 	psycho_sio0_reset(ctx);
 
-	ctx->cpu.ops.rst(ctx);
+	ctx->cpu.reset(ctx);
 	LOG_INFO(ctx, "reset");
 }
 
@@ -56,8 +56,8 @@ void p_step(struct p_ctx *ctx)
 {
 }
 
-void p_run_until_ev(struct p_ctx *ctx)
+void psycho_ctx_run_until_event(struct p_ctx *ctx)
 {
 	ctx->running = true;
-	ctx->cpu.ops.run(ctx, UINT64_MAX, true);
+	ctx->cpu.run(ctx, UINT64_MAX, true);
 }

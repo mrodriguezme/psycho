@@ -29,13 +29,13 @@ extern "C" {
 struct p_ctx;
 
 struct p_cpu_dly_slot {
-	size_t dst;
+	uint32_t dst;
 	uint32_t val;
 };
 
 struct psycho_cpu_interpreter {
 	uint32_t gpr[PSYCHO_CPU_GPR_COUNT];
-	uint32_t cop0[PSYCHO_CPU_COP0_CPR_COUNT];
+	uint32_t cop0_cpr[PSYCHO_CPU_COP0_CPR_COUNT];
 
 	struct {
 		struct psycho_cpu_cop2_cpr_layout cpr;
@@ -54,6 +54,7 @@ struct psycho_cpu_interpreter {
 
 	bool in_bd;
 	bool next_in_bd;
+	bool slow;
 };
 
 #ifdef __cplusplus

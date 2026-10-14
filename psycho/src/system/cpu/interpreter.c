@@ -18,17 +18,17 @@
 #include <assert.h>
 #include <string.h>
 
-#include "debug/bios_trace.h"
-#include "system/bus.h"
-#include "interpreter.h"
-#include "defs.h"
-#include "debug/disasm.h"
-#include "exe_loader.h"
-#include "debug/log.h"
 #include "common/util.h"
 #include "common/sched.h"
 
-static bool tracing = false;
+#include "debug/bios_trace.h"
+#include "debug/log.h"
+
+#include "system/bus.h"
+
+#include "defs.h"
+#include "exe_loader.h"
+#include "interpreter.h"
 
 DECLARE_LOG_MODULE(PSYCHO_LOG_MODULE_CPU);
 
@@ -45,73 +45,75 @@ DECLARE_LOG_MODULE(PSYCHO_LOG_MODULE_CPU);
 		(val);                           \
 	})
 
-P_NONNULL static void irq_mux_set(struct p_ctx *ctx, bool set)
+P_NONNULL static void irq_mux_assert(struct p_ctx *ctx, bool set)
 {
 	if (set) {
-		ctx->cpu.interpreter.cop0[PSYCHO_CPU_COP0_CPR_SR] |= SR_IM2;
+		ctx->cpu_interpreter.cop0_cpr[PSYCHO_CPU_COP0_CPR_SR] |= SR_IM2;
 		LOG_DEBUG(ctx, "irq mux line asserted");
 	} else {
-		ctx->cpu.interpreter.cop0[PSYCHO_CPU_COP0_CPR_SR] &= ~SR_IM2;
+		ctx->cpu_interpreter.cop0_cpr[PSYCHO_CPU_COP0_CPR_SR] &= ~SR_IM2;
 		LOG_DEBUG(ctx, "irq mux line not asserted");
 	}
 }
 
 P_NONNULL static void pc_set(struct p_ctx *ctx, uint32_t pc)
 {
-	ctx->cpu.interpreter.dly_pc = pc;
-	ctx->cpu.interpreter.pc	    = pc;
-	ctx->cpu.interpreter.npc    = pc + sizeof(ctx->cpu.interpreter.instr);
+	ctx->cpu_interpreter.dly_pc = pc;
+	ctx->cpu_interpreter.pc	    = pc;
+	ctx->cpu_interpreter.npc    = pc + sizeof(ctx->cpu_interpreter.instr);
 }
 
 P_NONNULL static uint32_t pc_get(struct p_ctx *ctx)
 {
-	return ctx->cpu.interpreter.pc;
+	return ctx->cpu_interpreter.pc;
 }
 
 P_NONNULL static uint32_t instr_get(struct p_ctx *ctx)
 {
-	return ctx->cpu.interpreter.instr;
+	return ctx->cpu_interpreter.instr;
 }
 
 P_NONNULL static void gpr_write_direct(struct p_ctx *ctx, enum psycho_cpu_gpr gpr, uint32_t val)
 {
 	assert(gpr < PSYCHO_CPU_GPR_COUNT);
-	ctx->cpu.interpreter.gpr[gpr] = val;
+	ctx->cpu_interpreter.gpr[gpr] = val;
 }
 
 P_NONNULL static uint32_t gpr_read(struct p_ctx *ctx, enum psycho_cpu_gpr gpr)
 {
 	assert(gpr < PSYCHO_CPU_GPR_COUNT);
-	return ctx->cpu.interpreter.gpr[gpr];
+	return ctx->cpu_interpreter.gpr[gpr];
 }
 
 P_NONNULL static uint32_t lo_get(struct p_ctx *ctx)
 {
-	return ctx->cpu.interpreter.lo;
+	return ctx->cpu_interpreter.lo;
 }
 
 P_NONNULL static uint32_t hi_get(struct p_ctx *ctx)
 {
-	return ctx->cpu.interpreter.hi;
+	return ctx->cpu_interpreter.hi;
 }
 
-P_NONNULL static void rst(struct p_ctx *ctx)
+P_NONNULL static void reset(struct p_ctx *ctx)
 {
-	memset(ctx->cpu.interpreter.gpr, 0, sizeof(ctx->cpu.interpreter.gpr));
+	memset(ctx->cpu_interpreter.gpr, 0, sizeof(ctx->cpu_interpreter.gpr));
 	pc_set(ctx, RST_VECTOR);
 
-	memset(&ctx->cpu.interpreter.ld_pend, 0, sizeof(ctx->cpu.interpreter.ld_pend));
-	memset(&ctx->cpu.interpreter.ld_next, 0, sizeof(ctx->cpu.interpreter.ld_next));
-	memset(&ctx->cpu.interpreter.cop2, 0, sizeof(ctx->cpu.interpreter.cop2));
+	memset(&ctx->cpu_interpreter.ld_pend, 0, sizeof(ctx->cpu_interpreter.ld_pend));
+	memset(&ctx->cpu_interpreter.ld_next, 0, sizeof(ctx->cpu_interpreter.ld_next));
+	memset(&ctx->cpu_interpreter.cop2, 0, sizeof(ctx->cpu_interpreter.cop2));
 
+	ctx->cpu_interpreter.slow = false;
 	LOG_INFO(ctx, "reset");
 }
 
 P_NONNULL static void illegal_instr(struct p_ctx *ctx)
 {
-	LOG_ERR(ctx, "illegal instruction trapped (pc=0x%08X, instr=0x%08X)", ctx->cpu.interpreter.pc, ctx->cpu.interpreter.instr);
+	LOG_ERR(ctx, "illegal instruction trapped (pc=0x%08X, instr=0x%08X)", ctx->cpu_interpreter.pc,
+		ctx->cpu_interpreter.instr);
 
-	ctx->cfg.cpu.illegal_instr(ctx, ctx->cpu.interpreter.instr);
+	ctx->cfg.cpu.illegal_instr(ctx, ctx->cpu_interpreter.instr);
 }
 
 P_NODISCARD P_NONNULL static uint32_t load32(struct p_ctx *ctx, uint32_t vaddr)
@@ -140,7 +142,7 @@ P_NODISCARD P_NONNULL static uint8_t load8(struct p_ctx *ctx, uint32_t vaddr)
 
 P_NONNULL static void store32(struct p_ctx *ctx, uint32_t vaddr, uint32_t data)
 {
-#define SR (ctx->cpu.interpreter.cop0[PSYCHO_CPU_COP0_CPR_SR])
+#define SR (ctx->cpu_interpreter.cop0_cpr[PSYCHO_CPU_COP0_CPR_SR])
 
 	p_sched_adv_ts(ctx, 1);
 
@@ -155,7 +157,7 @@ P_NONNULL static void store32(struct p_ctx *ctx, uint32_t vaddr, uint32_t data)
 
 P_NONNULL static void store16(struct p_ctx *ctx, uint32_t vaddr, uint16_t data)
 {
-#define SR (ctx->cpu.interpreter.cop0[PSYCHO_CPU_COP0_CPR_SR])
+#define SR (ctx->cpu_interpreter.cop0_cpr[PSYCHO_CPU_COP0_CPR_SR])
 
 	if (SR & SR_ISC)
 		return;
@@ -170,7 +172,7 @@ P_NONNULL static void store16(struct p_ctx *ctx, uint32_t vaddr, uint16_t data)
 
 P_NONNULL static void store8(struct p_ctx *ctx, uint32_t vaddr, uint8_t data)
 {
-#define SR (ctx->cpu.interpreter.cop0[PSYCHO_CPU_COP0_CPR_SR])
+#define SR (ctx->cpu_interpreter.cop0_cpr[PSYCHO_CPU_COP0_CPR_SR])
 
 	if (SR & SR_ISC)
 		return;
@@ -185,52 +187,53 @@ P_NONNULL static void store8(struct p_ctx *ctx, uint32_t vaddr, uint8_t data)
 
 P_NONNULL static void gpr_set(struct p_ctx *ctx, size_t reg, uint32_t val)
 {
-	// If the instruction following a load writes to the same destination
-	// register, the load’s delay slot is canceled.
-	if (unlikely(ctx->cpu.interpreter.ld_next.dst == reg))
-		memset(&ctx->cpu.interpreter.ld_next, 0, sizeof(ctx->cpu.interpreter.ld_next));
+	// If the instruction following a load writes to the same destination register, the load’s delay slot is
+	// canceled.
+	if (unlikely(ctx->cpu_interpreter.ld_next.dst == reg))
+		memset(&ctx->cpu_interpreter.ld_next, 0, sizeof(ctx->cpu_interpreter.ld_next));
 
-	// Don't bother putting a check for a write to gpr[0] here; it's already
-	// bad enough that we have a branch. gpr[0] is unconditionally set to 0
-	// at the end of every step.
-	ctx->cpu.interpreter.gpr[reg] = val;
+	// Don't bother putting a check for a write to gpr[0] here; it's already bad enough that we have a branch.
+	// gpr[0] is unconditionally set to 0 at the end of every step.
+	ctx->cpu_interpreter.gpr[reg] = val;
 }
 
 P_NONNULL static void branch(struct p_ctx *ctx, uint32_t addr)
 {
-	ctx->cpu.interpreter.next_in_bd = true;
-	ctx->cpu.interpreter.npc	= addr;
+	ctx->cpu_interpreter.next_in_bd = true;
+	ctx->cpu_interpreter.npc	= addr;
 }
 
-P_NONNULL static void branch_if(struct p_ctx *ctx, bool cond)
+P_NONNULL static void branch_if(struct p_ctx *ctx, uint32_t instr, bool cond)
 {
-	ctx->cpu.interpreter.next_in_bd = true;
+	ctx->cpu_interpreter.next_in_bd = true;
 
-	if (cond) {
-		uint32_t pc = unlikely(ctx->cpu.interpreter.in_bd) ? ctx->cpu.interpreter.dly_pc - sizeof(uint32_t) : ctx->cpu.interpreter.pc;
+	uint32_t bd_mask = -ctx->cpu_interpreter.in_bd;
 
-		ctx->cpu.interpreter.npc = branch_addr(pc, ctx->cpu.interpreter.instr);
-	}
+	uint32_t base = ((ctx->cpu_interpreter.dly_pc - sizeof(uint32_t)) & bd_mask) |
+			(ctx->cpu_interpreter.pc & ~bd_mask);
+
+	uint32_t target = branch_addr(base, instr);
+	uint32_t mask	= -cond;
+
+	ctx->cpu_interpreter.npc = (target & mask) | (ctx->cpu_interpreter.npc & ~mask);
 }
 
 P_NONNULL static void exc_base(struct p_ctx *ctx, enum cpu_exc exc, uint32_t vec)
 {
-#define CAUSE (ctx->cpu.interpreter.cop0[PSYCHO_CPU_COP0_CPR_CAUSE])
-#define EPC   (ctx->cpu.interpreter.cop0[PSYCHO_CPU_COP0_CPR_EPC])
-#define SR    (ctx->cpu.interpreter.cop0[PSYCHO_CPU_COP0_CPR_SR])
+#define CAUSE (ctx->cpu_interpreter.cop0_cpr[PSYCHO_CPU_COP0_CPR_CAUSE])
+#define EPC   (ctx->cpu_interpreter.cop0_cpr[PSYCHO_CPU_COP0_CPR_EPC])
+#define SR    (ctx->cpu_interpreter.cop0_cpr[PSYCHO_CPU_COP0_CPR_SR])
 
 	// So, on an exception, the CPU:
 
 	// 1) sets up EPC to point to the restart location.
-	EPC = ctx->cpu.interpreter.pc;
+	EPC = ctx->cpu_interpreter.pc;
 
-	// 2) the pre-existing user-mode and interrupt-enable flags in SR are
-	//    saved by pushing the 3-entry stack inside SR, and changing to
-	//    kernel mode with interrupts disabled.
+	// 2) the pre-existing user-mode and interrupt-enable flags in SR are saved by pushing the 3-entry stack inside
+	//    SR, and changing to kernel mode with interrupts disabled.
 	SR = (SR & ~0x3F) | ((SR << 2) & 0x3F);
 
-	// 3) Cause is setup so that software can see the reason for the
-	//    exception.
+	// 3) Cause is setup so that software can see the reason for the exception.
 	//
 	//    Clear everything except the IP bits.
 	CAUSE = (CAUSE & 0x0000FF00) | (exc << 2);
@@ -255,9 +258,9 @@ P_NONNULL static void exc_dbg(struct p_ctx *ctx)
 
 P_NONNULL static void dbg_bp_write(struct p_ctx *ctx, uint32_t vaddr)
 {
-#define BDA  (ctx->cpu.interpreter.cop0[PSYCHO_CPU_COP0_CPR_BDA])
-#define BDAM (ctx->cpu.interpreter.cop0[PSYCHO_CPU_COP0_CPR_BDAM])
-#define DCIC (ctx->cpu.interpreter.cop0[PSYCHO_CPU_COP0_CPR_DCIC])
+#define BDA  (ctx->cpu_interpreter.cop0_cpr[PSYCHO_CPU_COP0_CPR_BDA])
+#define BDAM (ctx->cpu_interpreter.cop0_cpr[PSYCHO_CPU_COP0_CPR_BDAM])
+#define DCIC (ctx->cpu_interpreter.cop0_cpr[PSYCHO_CPU_COP0_CPR_DCIC])
 
 	if (unlikely((DCIC & DCIC_BP_WRITE_EN_MASK) && !((vaddr ^ BDA) & BDAM))) {
 		DCIC |= (DCIC_DB | DCIC_W);
@@ -271,8 +274,8 @@ P_NONNULL static void dbg_bp_write(struct p_ctx *ctx, uint32_t vaddr)
 
 P_NONNULL static void do_div(struct p_ctx *ctx, int32_t dividend, int32_t divisor)
 {
-#define LO (ctx->cpu.interpreter.lo)
-#define HI (ctx->cpu.interpreter.hi)
+#define LO (ctx->cpu_interpreter.lo)
+#define HI (ctx->cpu_interpreter.hi)
 
 	if (unlikely(!divisor)) {
 		// That is, if the dividend is negative, the quotient is 1
@@ -296,13 +299,12 @@ P_NONNULL static void do_div(struct p_ctx *ctx, int32_t dividend, int32_t diviso
 
 P_NONNULL static void do_divu(struct p_ctx *ctx, uint32_t dividend, uint32_t divisor)
 {
-#define LO (ctx->cpu.interpreter.lo)
-#define HI (ctx->cpu.interpreter.hi)
+#define LO (ctx->cpu_interpreter.lo)
+#define HI (ctx->cpu_interpreter.hi)
 
 	if (unlikely(!divisor)) {
-		// In the case of unsigned division, the dividend can't be
-		// negative and thus the quotient is always -1 (0xFFFFFFFF) and
-		// the remainder equals the dividend.
+		// In the case of unsigned division, the dividend can't be negative and thus the quotient is always -1
+		// (0xFFFFFFFF) and the remainder equals the dividend.
 		LO = UINT32_MAX;
 		HI = dividend;
 	} else {
@@ -334,21 +336,9 @@ P_NONNULL static void do_sub(struct p_ctx *ctx, size_t dst, uint32_t minuend, ui
 		gpr_set(ctx, dst, diff);
 }
 
-P_NONNULL static void do_cop0_instr(struct p_ctx *ctx, unsigned int funct)
-{
-#define SR (ctx->cpu.interpreter.cop0[PSYCHO_CPU_COP0_CPR_SR])
-
-	if (unlikely(funct != RFE))
-		illegal_instr(ctx);
-	else
-		SR = (SR & ~0x0F) | ((SR >> 2) & 0x0F);
-
-#undef SR
-}
-
 P_NONNULL static void update_flag(struct p_ctx *ctx)
 {
-#define FLAG (ctx->cpu.interpreter.cop2.ccr.flag)
+#define FLAG (ctx->cpu_interpreter.cop2.ccr.flag)
 
 	if (FLAG & FLAG_ERR_MASK)
 		FLAG |= FLAG_ERR;
@@ -360,7 +350,7 @@ P_NONNULL static void update_flag(struct p_ctx *ctx)
 
 P_NONNULL static void flag_set(struct p_ctx *ctx, uint32_t flags)
 {
-#define FLAG (ctx->cpu.interpreter.cop2.ccr.flag)
+#define FLAG (ctx->cpu_interpreter.cop2.ccr.flag)
 
 	FLAG |= flags;
 
@@ -433,7 +423,7 @@ P_NONNULL static int16_t ir123_sat(struct p_ctx *ctx, unsigned int ir, int32_t v
 
 P_NONNULL static void sx_push(struct p_ctx *ctx, int64_t val)
 {
-#define SXY (ctx->cpu.interpreter.cop2.cpr.sxy)
+#define SXY (ctx->cpu_interpreter.cop2.cpr.sxy)
 
 	for (size_t i = 0; i < ARRAY_SIZE(SXY) - 1; ++i)
 		SXY[i].x = SXY[i + 1].x;
@@ -445,7 +435,7 @@ P_NONNULL static void sx_push(struct p_ctx *ctx, int64_t val)
 
 P_NONNULL static void sy_push(struct p_ctx *ctx, int64_t val)
 {
-#define SXY (ctx->cpu.interpreter.cop2.cpr.sxy)
+#define SXY (ctx->cpu_interpreter.cop2.cpr.sxy)
 
 	for (size_t i = 0; i < ARRAY_SIZE(SXY) - 1; ++i)
 		SXY[i].y = SXY[i + 1].y;
@@ -457,7 +447,7 @@ P_NONNULL static void sy_push(struct p_ctx *ctx, int64_t val)
 
 P_NONNULL static void sz_push(struct p_ctx *ctx, int64_t val)
 {
-#define SZ (ctx->cpu.interpreter.cop2.cpr.sz)
+#define SZ (ctx->cpu_interpreter.cop2.cpr.sz)
 
 	for (size_t i = 0; i < ARRAY_SIZE(SZ) - 1; ++i)
 		SZ[i].val = SZ[i + 1].val;
@@ -491,8 +481,8 @@ P_NONNULL static uint32_t rgb_set(struct p_ctx *ctx, unsigned int color, int32_t
 
 P_NONNULL P_NODISCARD static int64_t gte_div(struct p_ctx *ctx)
 {
-#define H   (ctx->cpu.interpreter.cop2.ccr.h)
-#define SZ3 (ctx->cpu.interpreter.cop2.cpr.sz[3].val)
+#define H   (ctx->cpu_interpreter.cop2.ccr.h)
+#define SZ3 (ctx->cpu_interpreter.cop2.cpr.sz[3].val)
 
 	int64_t n;
 
@@ -516,9 +506,9 @@ P_NONNULL P_NODISCARD static int64_t gte_div(struct p_ctx *ctx)
 
 P_NONNULL static void color_fifo_push(struct p_ctx *ctx)
 {
-#define MAC  (ctx->cpu.interpreter.cop2.cpr.mac)
-#define RGB  (ctx->cpu.interpreter.cop2.cpr.rgb)
-#define RGBC (ctx->cpu.interpreter.cop2.cpr.rgbc)
+#define MAC  (ctx->cpu_interpreter.cop2.cpr.mac)
+#define RGB  (ctx->cpu_interpreter.cop2.cpr.rgb)
+#define RGBC (ctx->cpu_interpreter.cop2.cpr.rgbc)
 
 	uint32_t r = rgb_set(ctx, 0, (uint32_t)(MAC[1] >> 4)) << 0;
 	uint32_t g = rgb_set(ctx, 1, (uint32_t)(MAC[2] >> 4)) << 8;
@@ -536,17 +526,17 @@ P_NONNULL static void color_fifo_push(struct p_ctx *ctx)
 
 P_NONNULL static void rtp(struct p_ctx *ctx, struct psycho_gte_vector *vec, bool dq)
 {
-#define DQA (ctx->cpu.interpreter.cop2.ccr.dqa)
-#define DQB (ctx->cpu.interpreter.cop2.ccr.dqb)
-#define IR  (ctx->cpu.interpreter.cop2.cpr.ir)
-#define MAC (ctx->cpu.interpreter.cop2.cpr.mac)
-#define OFX (ctx->cpu.interpreter.cop2.ccr.ofx)
-#define OFY (ctx->cpu.interpreter.cop2.ccr.ofy)
-#define RT  (ctx->cpu.interpreter.cop2.ccr.r)
-#define TR  (ctx->cpu.interpreter.cop2.ccr.tr)
+#define DQA (ctx->cpu_interpreter.cop2.ccr.dqa)
+#define DQB (ctx->cpu_interpreter.cop2.ccr.dqb)
+#define IR  (ctx->cpu_interpreter.cop2.cpr.ir)
+#define MAC (ctx->cpu_interpreter.cop2.cpr.mac)
+#define OFX (ctx->cpu_interpreter.cop2.ccr.ofx)
+#define OFY (ctx->cpu_interpreter.cop2.ccr.ofy)
+#define RT  (ctx->cpu_interpreter.cop2.ccr.r)
+#define TR  (ctx->cpu_interpreter.cop2.ccr.tr)
 
-	const unsigned int sf = shift_frac(ctx->cpu.interpreter.instr);
-	const bool lm	      = ir123_lm(ctx->cpu.interpreter.instr);
+	unsigned int sf = shift_frac(ctx->cpu_interpreter.instr);
+	bool lm		= ir123_lm(ctx->cpu_interpreter.instr);
 
 	int64_t sum;
 
@@ -557,8 +547,8 @@ P_NONNULL static void rtp(struct p_ctx *ctx, struct psycho_gte_vector *vec, bool
 		sum = mac123_add(ctx, i, sum, RT[j][1] * vec->y);
 		sum = mac123_add(ctx, i, sum, RT[j][2] * vec->z);
 
-		// The last iteration of this loop will give us the 44-bit MAC3;
-		// we'll need it to handle the special IR3 case
+		// The last iteration of this loop will give us the 44-bit MAC3; we'll need it to handle the special IR3
+		// case
 		MAC[i] = sum >> sf;
 	}
 
@@ -598,12 +588,12 @@ P_NONNULL static void rtp(struct p_ctx *ctx, struct psycho_gte_vector *vec, bool
 
 P_NONNULL static void intpl_llm_vec(struct p_ctx *ctx, struct psycho_gte_vector *vec)
 {
-#define IR  (ctx->cpu.interpreter.cop2.cpr.ir)
-#define LLM (ctx->cpu.interpreter.cop2.ccr.llm)
-#define MAC (ctx->cpu.interpreter.cop2.cpr.mac)
+#define IR  (ctx->cpu_interpreter.cop2.cpr.ir)
+#define LLM (ctx->cpu_interpreter.cop2.ccr.llm)
+#define MAC (ctx->cpu_interpreter.cop2.cpr.mac)
 
-	const unsigned int sf = shift_frac(ctx->cpu.interpreter.instr);
-	const bool lm	      = ir123_lm(ctx->cpu.interpreter.instr);
+	unsigned int sf = shift_frac(ctx->cpu_interpreter.instr);
+	bool lm		= ir123_lm(ctx->cpu_interpreter.instr);
 
 	for (size_t i = 1, j = 0; i < ARRAY_SIZE(MAC); ++i, ++j) {
 		int64_t sum = 0;
@@ -622,13 +612,13 @@ P_NONNULL static void intpl_llm_vec(struct p_ctx *ctx, struct psycho_gte_vector 
 
 P_NONNULL static void intpl_bk_lcm(struct p_ctx *ctx)
 {
-#define BK  (ctx->cpu.interpreter.cop2.ccr.bk)
-#define IR  (ctx->cpu.interpreter.cop2.cpr.ir)
-#define LCM (ctx->cpu.interpreter.cop2.ccr.lcm)
-#define MAC (ctx->cpu.interpreter.cop2.cpr.mac)
+#define BK  (ctx->cpu_interpreter.cop2.ccr.bk)
+#define IR  (ctx->cpu_interpreter.cop2.cpr.ir)
+#define LCM (ctx->cpu_interpreter.cop2.ccr.lcm)
+#define MAC (ctx->cpu_interpreter.cop2.cpr.mac)
 
-	const unsigned int sf = shift_frac(ctx->cpu.interpreter.instr);
-	const bool lm	      = ir123_lm(ctx->cpu.interpreter.instr);
+	unsigned int sf = shift_frac(ctx->cpu_interpreter.instr);
+	bool lm		= ir123_lm(ctx->cpu_interpreter.instr);
 
 	for (size_t i = 1, j = 0; i < ARRAY_SIZE(MAC); ++i, ++j) {
 		int64_t sum = 0;
@@ -651,12 +641,12 @@ P_NONNULL static void intpl_bk_lcm(struct p_ctx *ctx)
 
 P_NONNULL static void intpl_rgb(struct p_ctx *ctx)
 {
-#define IR   (ctx->cpu.interpreter.cop2.cpr.ir)
-#define MAC  (ctx->cpu.interpreter.cop2.cpr.mac)
-#define RGBC (ctx->cpu.interpreter.cop2.cpr.rgbc.array)
+#define IR   (ctx->cpu_interpreter.cop2.cpr.ir)
+#define MAC  (ctx->cpu_interpreter.cop2.cpr.mac)
+#define RGBC (ctx->cpu_interpreter.cop2.cpr.rgbc.array)
 
-	const unsigned int sf = shift_frac(ctx->cpu.interpreter.instr);
-	const bool lm	      = ir123_lm(ctx->cpu.interpreter.instr);
+	unsigned int sf = shift_frac(ctx->cpu_interpreter.instr);
+	bool lm		= ir123_lm(ctx->cpu_interpreter.instr);
 
 	for (size_t i = 1, j = 0; i < ARRAY_SIZE(MAC); ++i, ++j) {
 		MAC[i] = (((uint64_t)(RGBC[j] * IR[i])) << 4) >> sf;
@@ -670,16 +660,17 @@ P_NONNULL static void intpl_rgb(struct p_ctx *ctx)
 
 P_NONNULL static void intpl_fc(struct p_ctx *ctx, int64_t *sums)
 {
-#define FC  (ctx->cpu.interpreter.cop2.ccr.fc)
-#define IR  (ctx->cpu.interpreter.cop2.cpr.ir)
-#define MAC (ctx->cpu.interpreter.cop2.cpr.mac)
+#define FC  (ctx->cpu_interpreter.cop2.ccr.fc)
+#define IR  (ctx->cpu_interpreter.cop2.cpr.ir)
+#define MAC (ctx->cpu_interpreter.cop2.cpr.mac)
 
-	const unsigned int sf = shift_frac(ctx->cpu.interpreter.instr);
-	const bool lm	      = ir123_lm(ctx->cpu.interpreter.instr);
+	unsigned int sf = shift_frac(ctx->cpu_interpreter.instr);
+	bool lm		= ir123_lm(ctx->cpu_interpreter.instr);
 
 	for (size_t i = 1, j = 0; i < ARRAY_SIZE(MAC); ++i, ++j) {
 		int64_t sum = 0;
-		sum	    = mac123_add(ctx, i, sum, ((uint64_t)FC[j] << 12) - sums[j]);
+
+		sum = mac123_add(ctx, i, 0, ((uint64_t)FC[j] << 12) - sums[j]);
 
 		MAC[i] = sum >> sf;
 		IR[i]  = ir123_sat(ctx, i, MAC[i], false);
@@ -725,8 +716,8 @@ P_NONNULL static void ncc(struct p_ctx *ctx, struct psycho_gte_vector *vec)
 
 P_NONNULL static void ncd(struct p_ctx *ctx, struct psycho_gte_vector *vec)
 {
-#define IR   (ctx->cpu.interpreter.cop2.cpr.ir)
-#define RGBC (ctx->cpu.interpreter.cop2.cpr.rgbc.array)
+#define IR   (ctx->cpu_interpreter.cop2.cpr.ir)
+#define RGBC (ctx->cpu_interpreter.cop2.cpr.rgbc.array)
 
 	intpl_llm_vec(ctx, vec);
 	intpl_bk_lcm(ctx);
@@ -745,10 +736,10 @@ P_NONNULL static void ncd(struct p_ctx *ctx, struct psycho_gte_vector *vec)
 
 P_NONNULL static void avsz(struct p_ctx *ctx, int16_t scale, size_t sz_off)
 {
-#define FLAG (ctx->cpu.interpreter.cop2.ccr.flag)
-#define MAC0 (ctx->cpu.interpreter.cop2.cpr.mac[0])
-#define OTZ  (ctx->cpu.interpreter.cop2.cpr.otz)
-#define SZ   (ctx->cpu.interpreter.cop2.cpr.sz)
+#define FLAG (ctx->cpu_interpreter.cop2.ccr.flag)
+#define MAC0 (ctx->cpu_interpreter.cop2.cpr.mac[0])
+#define OTZ  (ctx->cpu_interpreter.cop2.cpr.otz)
+#define SZ   (ctx->cpu_interpreter.cop2.cpr.sz)
 
 	FLAG = 0;
 
@@ -772,8 +763,8 @@ P_NONNULL static void avsz(struct p_ctx *ctx, int16_t scale, size_t sz_off)
 
 P_NONNULL static void do_cop2_mfc(struct p_ctx *ctx, size_t rt, size_t rd)
 {
-#define IR   (ctx->cpu.interpreter.cop2.cpr.ir)
-#define SXY2 (ctx->cpu.interpreter.cop2.cpr.sxy[2].val)
+#define IR   (ctx->cpu_interpreter.cop2.cpr.ir)
+#define SXY2 (ctx->cpu_interpreter.cop2.cpr.sxy[2].val)
 
 	switch (rd) {
 	case PSYCHO_CPU_COP2_CPR_SXYP:
@@ -791,7 +782,7 @@ P_NONNULL static void do_cop2_mfc(struct p_ctx *ctx, size_t rt, size_t rd)
 	}
 
 	default:
-		gpr_set(ctx, rt, ctx->cpu.interpreter.cop2.cpr.array[rd]);
+		gpr_set(ctx, rt, ctx->cpu_interpreter.cop2.cpr.array[rd]);
 		break;
 	}
 
@@ -801,22 +792,22 @@ P_NONNULL static void do_cop2_mfc(struct p_ctx *ctx, size_t rt, size_t rd)
 
 P_NONNULL static void do_cop2_cfc(struct p_ctx *ctx, size_t rt, size_t rd)
 {
-#define H (ctx->cpu.interpreter.cop2.ccr.h)
+#define H (ctx->cpu_interpreter.cop2.ccr.h)
 
 	if (rd == PSYCHO_CPU_COP2_CCR_H)
 		gpr_set(ctx, rt, sext_16_32(H));
 	else
-		gpr_set(ctx, rt, ctx->cpu.interpreter.cop2.ccr.array[rd]);
+		gpr_set(ctx, rt, ctx->cpu_interpreter.cop2.ccr.array[rd]);
 #undef H
 }
 
 P_NONNULL static void do_cop2_mtc(struct p_ctx *ctx, size_t rd, size_t rt)
 {
-#define gpr  (ctx->cpu.interpreter.gpr)
-#define IR   (ctx->cpu.interpreter.cop2.cpr.ir)
-#define LZCR (ctx->cpu.interpreter.cop2.cpr.lzcr)
-#define LZCS (ctx->cpu.interpreter.cop2.cpr.lzcs)
-#define SXY  (ctx->cpu.interpreter.cop2.cpr.sxy)
+#define gpr  (ctx->cpu_interpreter.gpr)
+#define IR   (ctx->cpu_interpreter.cop2.cpr.ir)
+#define LZCR (ctx->cpu_interpreter.cop2.cpr.lzcr)
+#define LZCS (ctx->cpu_interpreter.cop2.cpr.lzcs)
+#define SXY  (ctx->cpu_interpreter.cop2.cpr.sxy)
 
 	switch (rd) {
 	case PSYCHO_CPU_COP2_CPR_OTZ:
@@ -824,7 +815,7 @@ P_NONNULL static void do_cop2_mtc(struct p_ctx *ctx, size_t rd, size_t rt)
 	case PSYCHO_CPU_COP2_CPR_SZ1:
 	case PSYCHO_CPU_COP2_CPR_SZ2:
 	case PSYCHO_CPU_COP2_CPR_SZ3:
-		ctx->cpu.interpreter.cop2.cpr.array[rd] = zext_16_32(gpr[rt]);
+		ctx->cpu_interpreter.cop2.cpr.array[rd] = zext_16_32(gpr[rt]);
 		break;
 
 	case PSYCHO_CPU_COP2_CPR_VZ0:
@@ -834,7 +825,7 @@ P_NONNULL static void do_cop2_mtc(struct p_ctx *ctx, size_t rd, size_t rt)
 	case PSYCHO_CPU_COP2_CPR_IR1:
 	case PSYCHO_CPU_COP2_CPR_IR2:
 	case PSYCHO_CPU_COP2_CPR_IR3:
-		ctx->cpu.interpreter.cop2.cpr.array[rd] = sext_16_32(gpr[rt]);
+		ctx->cpu_interpreter.cop2.cpr.array[rd] = sext_16_32(gpr[rt]);
 		break;
 
 	case PSYCHO_CPU_COP2_CPR_IRGB:
@@ -873,7 +864,7 @@ P_NONNULL static void do_cop2_mtc(struct p_ctx *ctx, size_t rd, size_t rt)
 		break;
 
 	default:
-		ctx->cpu.interpreter.cop2.cpr.array[rd] = gpr[rt];
+		ctx->cpu_interpreter.cop2.cpr.array[rd] = gpr[rt];
 		break;
 	}
 
@@ -886,8 +877,8 @@ P_NONNULL static void do_cop2_mtc(struct p_ctx *ctx, size_t rd, size_t rt)
 
 P_NONNULL static void do_cop2_ctc(struct p_ctx *ctx, size_t rd, size_t rt)
 {
-#define gpr  (ctx->cpu.interpreter.gpr)
-#define FLAG (ctx->cpu.interpreter.cop2.ccr.flag)
+#define gpr  (ctx->cpu_interpreter.gpr)
+#define FLAG (ctx->cpu_interpreter.cop2.ccr.flag)
 
 	switch (rd) {
 	case PSYCHO_CPU_COP2_CCR_R33:
@@ -896,7 +887,7 @@ P_NONNULL static void do_cop2_ctc(struct p_ctx *ctx, size_t rd, size_t rt)
 	case PSYCHO_CPU_COP2_CCR_LB3:
 	case PSYCHO_CPU_COP2_CCR_ZSF3:
 	case PSYCHO_CPU_COP2_CCR_ZSF4:
-		ctx->cpu.interpreter.cop2.ccr.array[rd] = sext_16_32(gpr[rt]);
+		ctx->cpu_interpreter.cop2.ccr.array[rd] = sext_16_32(gpr[rt]);
 		break;
 
 	case PSYCHO_CPU_COP2_CCR_FLAG:
@@ -906,7 +897,7 @@ P_NONNULL static void do_cop2_ctc(struct p_ctx *ctx, size_t rd, size_t rt)
 		break;
 
 	default:
-		ctx->cpu.interpreter.cop2.ccr.array[rd] = gpr[rt];
+		ctx->cpu_interpreter.cop2.ccr.array[rd] = gpr[rt];
 		break;
 	}
 
@@ -916,11 +907,11 @@ P_NONNULL static void do_cop2_ctc(struct p_ctx *ctx, size_t rd, size_t rt)
 
 static void mvmva(struct p_ctx *ctx, int16_t (*Mx)[3], int16_t *Vx, int32_t *Tx)
 {
-#define IR  (ctx->cpu.interpreter.cop2.cpr.ir)
-#define MAC (ctx->cpu.interpreter.cop2.cpr.mac)
+#define IR  (ctx->cpu_interpreter.cop2.cpr.ir)
+#define MAC (ctx->cpu_interpreter.cop2.cpr.mac)
 
-	const unsigned int sf = shift_frac(ctx->cpu.interpreter.instr);
-	const bool lm	      = ir123_lm(ctx->cpu.interpreter.instr);
+	unsigned int sf = shift_frac(ctx->cpu_interpreter.instr);
+	bool lm		= ir123_lm(ctx->cpu_interpreter.instr);
 
 	for (size_t i = 1, j = 0; i < ARRAY_SIZE(MAC); ++i, ++j) {
 		int64_t sum = 0;
@@ -939,12 +930,12 @@ static void mvmva(struct p_ctx *ctx, int16_t (*Mx)[3], int16_t *Vx, int32_t *Tx)
 
 static void mvmva_bugged(struct p_ctx *ctx, int16_t (*Mx)[3], int16_t *Vx)
 {
-#define FC  (ctx->cpu.interpreter.cop2.ccr.fc)
-#define IR  (ctx->cpu.interpreter.cop2.cpr.ir)
-#define MAC (ctx->cpu.interpreter.cop2.cpr.mac)
+#define FC  (ctx->cpu_interpreter.cop2.ccr.fc)
+#define IR  (ctx->cpu_interpreter.cop2.cpr.ir)
+#define MAC (ctx->cpu_interpreter.cop2.cpr.mac)
 
-	const unsigned int sf = shift_frac(ctx->cpu.interpreter.instr);
-	const bool lm	      = ir123_lm(ctx->cpu.interpreter.instr);
+	unsigned int sf = shift_frac(ctx->cpu_interpreter.instr);
+	bool lm		= ir123_lm(ctx->cpu_interpreter.instr);
 
 	for (size_t i = 1, j = 0; i < ARRAY_SIZE(MAC); ++i, ++j) {
 		int64_t sum = 0;
@@ -969,14 +960,17 @@ static void mvmva_bugged(struct p_ctx *ctx, int16_t (*Mx)[3], int16_t *Vx)
 
 P_NONNULL static void dly_slot_process(struct p_ctx *ctx)
 {
-	ctx->cpu.interpreter.gpr[ctx->cpu.interpreter.ld_next.dst] = ctx->cpu.interpreter.ld_next.val;
+	if (likely(!ctx->cpu_interpreter.ld_next.dst && !ctx->cpu_interpreter.ld_pend.dst))
+		return;
 
-	if (ctx->cpu.interpreter.ld_next.dst)
-		LOG_TRACE(ctx, "load delay eviction: %zu <- 0x%08X", ctx->cpu.interpreter.ld_next.dst,
-			  ctx->cpu.interpreter.ld_next.val);
+	ctx->cpu_interpreter.gpr[ctx->cpu_interpreter.ld_next.dst] = ctx->cpu_interpreter.ld_next.val;
 
-	memset(&ctx->cpu.interpreter.ld_next, 0, sizeof(ctx->cpu.interpreter.ld_next));
-	swap(&ctx->cpu.interpreter.ld_pend, &ctx->cpu.interpreter.ld_next);
+	if (ctx->cpu_interpreter.ld_next.dst)
+		LOG_TRACE(ctx, "load delay eviction: %u <- 0x%08X", ctx->cpu_interpreter.ld_next.dst,
+			  ctx->cpu_interpreter.ld_next.val);
+
+	ctx->cpu_interpreter.ld_next = ctx->cpu_interpreter.ld_pend;
+	memset(&ctx->cpu_interpreter.ld_pend, 0, sizeof(ctx->cpu_interpreter.ld_pend));
 }
 
 P_NONNULL static void load_dly(struct p_ctx *ctx, size_t dst, uint32_t val)
@@ -986,25 +980,29 @@ P_NONNULL static void load_dly(struct p_ctx *ctx, size_t dst, uint32_t val)
 		return;
 	}
 
-	ctx->cpu.interpreter.ld_pend.dst = dst;
-	ctx->cpu.interpreter.ld_pend.val = val;
+	// One 8-byte store, so the 8-byte copy in dly_slot_process() can forward from it.
+	uint64_t packed = (uint64_t)dst | ((uint64_t)val << 32);
+	memcpy(&ctx->cpu_interpreter.ld_pend, &packed, sizeof(packed));
 
 	LOG_TRACE(ctx, "load delay pending: dst=%zu, val=0x%08X", dst, val);
 
-	if (unlikely(ctx->cpu.interpreter.ld_next.dst == dst))
-		memset(&ctx->cpu.interpreter.ld_next, 0, sizeof(ctx->cpu.interpreter.ld_next));
+	if (unlikely(ctx->cpu_interpreter.ld_next.dst == dst))
+		memset(&ctx->cpu_interpreter.ld_next, 0, sizeof(ctx->cpu_interpreter.ld_next));
 }
 
 P_NONNULL static void do_jalr(struct p_ctx *ctx, size_t rs, size_t rd)
 {
-#define gpr   (ctx->cpu.interpreter.gpr)
-#define instr (ctx->cpu.interpreter.instr)
-#define pc    (ctx->cpu.interpreter.pc)
+#define gpr   (ctx->cpu_interpreter.gpr)
+#define instr (ctx->cpu_interpreter.instr)
+#define pc    (ctx->cpu_interpreter.pc)
 
 	uint32_t addr = gpr[rs];
 
 	gpr_set(ctx, rd, pc + (sizeof(instr) * 2));
 	branch(ctx, addr);
+
+	if (unlikely(ctx->cpu_interpreter.npc & 3))
+		ctx->cpu_interpreter.slow = true;
 
 #undef gpr
 #undef instr
@@ -1013,9 +1011,9 @@ P_NONNULL static void do_jalr(struct p_ctx *ctx, size_t rs, size_t rd)
 
 P_NONNULL static void do_mult(struct p_ctx *ctx, size_t rs, size_t rt)
 {
-#define gpr (ctx->cpu.interpreter.gpr)
-#define hi  (ctx->cpu.interpreter.hi)
-#define lo  (ctx->cpu.interpreter.lo)
+#define gpr (ctx->cpu_interpreter.gpr)
+#define hi  (ctx->cpu_interpreter.hi)
+#define lo  (ctx->cpu_interpreter.lo)
 
 	uint64_t prod = sext_32_64(gpr[rs]) * sext_32_64(gpr[rt]);
 
@@ -1029,9 +1027,9 @@ P_NONNULL static void do_mult(struct p_ctx *ctx, size_t rs, size_t rt)
 
 P_NONNULL static void do_multu(struct p_ctx *ctx, size_t rs, size_t rt)
 {
-#define gpr (ctx->cpu.interpreter.gpr)
-#define hi  (ctx->cpu.interpreter.hi)
-#define lo  (ctx->cpu.interpreter.lo)
+#define gpr (ctx->cpu_interpreter.gpr)
+#define hi  (ctx->cpu_interpreter.hi)
+#define lo  (ctx->cpu_interpreter.lo)
 
 	uint64_t prod = zext_32_64(gpr[rs]) * zext_32_64(gpr[rt]);
 
@@ -1045,9 +1043,9 @@ P_NONNULL static void do_multu(struct p_ctx *ctx, size_t rs, size_t rt)
 
 P_NONNULL static void regimm(struct p_ctx *ctx, size_t rs, size_t rt)
 {
-#define gpr   (ctx->cpu.interpreter.gpr)
-#define pc    (ctx->cpu.interpreter.pc)
-#define instr (ctx->cpu.interpreter.instr)
+#define gpr   (ctx->cpu_interpreter.gpr)
+#define pc    (ctx->cpu_interpreter.pc)
+#define instr (ctx->cpu_interpreter.instr)
 
 	bool link   = (rt & 0x1E) == 0x10;
 	bool branch = (int32_t)(gpr[rs] ^ (rt << 31)) < 0;
@@ -1055,7 +1053,7 @@ P_NONNULL static void regimm(struct p_ctx *ctx, size_t rs, size_t rt)
 	if (link)
 		gpr_set(ctx, PSYCHO_CPU_GPR_RA, pc + (sizeof(instr) * 2));
 
-	branch_if(ctx, branch);
+	branch_if(ctx, instr, branch);
 
 #undef gpr
 #undef pc
@@ -1064,8 +1062,8 @@ P_NONNULL static void regimm(struct p_ctx *ctx, size_t rs, size_t rt)
 
 P_NONNULL static void do_addi(struct p_ctx *ctx, size_t rs, size_t rt)
 {
-#define gpr	(ctx->cpu.interpreter.gpr)
-#define sextimm (sext_16_32(instr_imm(ctx->cpu.interpreter.instr)))
+#define gpr	(ctx->cpu_interpreter.gpr)
+#define sextimm (sext_16_32(instr_imm(ctx->cpu_interpreter.instr)))
 
 	int sum;
 
@@ -1080,14 +1078,14 @@ P_NONNULL static void do_addi(struct p_ctx *ctx, size_t rs, size_t rt)
 
 P_NONNULL static void do_op(struct p_ctx *ctx)
 {
-#define D1  (ctx->cpu.interpreter.cop2.ccr.r[0][0])
-#define D2  (ctx->cpu.interpreter.cop2.ccr.r[1][1])
-#define D3  (ctx->cpu.interpreter.cop2.ccr.r[2][2])
-#define IR  (ctx->cpu.interpreter.cop2.cpr.ir)
-#define MAC (ctx->cpu.interpreter.cop2.cpr.mac)
+#define D1  (ctx->cpu_interpreter.cop2.ccr.r[0][0])
+#define D2  (ctx->cpu_interpreter.cop2.ccr.r[1][1])
+#define D3  (ctx->cpu_interpreter.cop2.ccr.r[2][2])
+#define IR  (ctx->cpu_interpreter.cop2.cpr.ir)
+#define MAC (ctx->cpu_interpreter.cop2.cpr.mac)
 
-	const unsigned int sf = shift_frac(ctx->cpu.interpreter.instr);
-	const bool lm	      = ir123_lm(ctx->cpu.interpreter.instr);
+	unsigned int sf = shift_frac(ctx->cpu_interpreter.instr);
+	bool lm		= ir123_lm(ctx->cpu_interpreter.instr);
 
 	int64_t res[3] = {
 		// clang-format off
@@ -1116,7 +1114,7 @@ P_NONNULL static void do_op(struct p_ctx *ctx)
 
 P_NONNULL static void do_intpl(struct p_ctx *ctx)
 {
-#define IR (ctx->cpu.interpreter.cop2.cpr.ir)
+#define IR (ctx->cpu_interpreter.cop2.cpr.ir)
 
 	int64_t sums[3];
 
@@ -1131,15 +1129,15 @@ P_NONNULL static void do_intpl(struct p_ctx *ctx)
 
 P_NONNULL static void do_mvmva(struct p_ctx *ctx)
 {
-#define BK   (ctx->cpu.interpreter.cop2.ccr.bk)
-#define FC   (ctx->cpu.interpreter.cop2.ccr.fc)
-#define IR   (ctx->cpu.interpreter.cop2.cpr.ir)
-#define LCM  (ctx->cpu.interpreter.cop2.ccr.lcm)
-#define LLM  (ctx->cpu.interpreter.cop2.ccr.llm)
-#define RGBC (ctx->cpu.interpreter.cop2.cpr.rgbc.array)
-#define RT   (ctx->cpu.interpreter.cop2.ccr.r)
-#define TR   (ctx->cpu.interpreter.cop2.ccr.tr)
-#define V    (ctx->cpu.interpreter.cop2.cpr.vector)
+#define BK   (ctx->cpu_interpreter.cop2.ccr.bk)
+#define FC   (ctx->cpu_interpreter.cop2.ccr.fc)
+#define IR   (ctx->cpu_interpreter.cop2.cpr.ir)
+#define LCM  (ctx->cpu_interpreter.cop2.ccr.lcm)
+#define LLM  (ctx->cpu_interpreter.cop2.ccr.llm)
+#define RGBC (ctx->cpu_interpreter.cop2.cpr.rgbc.array)
+#define RT   (ctx->cpu_interpreter.cop2.ccr.r)
+#define TR   (ctx->cpu_interpreter.cop2.ccr.tr)
+#define V    (ctx->cpu_interpreter.cop2.cpr.vector)
 
 	int16_t (*mx_lut[3])[3] = {
 		// clang-format off
@@ -1162,7 +1160,7 @@ P_NONNULL static void do_mvmva(struct p_ctx *ctx)
 		// clang-format on
 	};
 
-	unsigned int mx_sel = mvmva_mx(ctx->cpu.interpreter.instr);
+	unsigned int mx_sel = mvmva_mx(ctx->cpu_interpreter.instr);
 
 	int16_t (*mx)[3];
 	int16_t mx_bugged[3][3];
@@ -1183,10 +1181,10 @@ P_NONNULL static void do_mvmva(struct p_ctx *ctx)
 		mx = mx_bugged;
 	}
 
-	unsigned int tx_sel = mvmva_tx(ctx->cpu.interpreter.instr);
+	unsigned int tx_sel = mvmva_tx(ctx->cpu_interpreter.instr);
 	int32_t *tx	    = tx_lut[tx_sel];
 
-	unsigned int vx_sel = mvmva_vx(ctx->cpu.interpreter.instr);
+	unsigned int vx_sel = mvmva_vx(ctx->cpu_interpreter.instr);
 
 	int16_t vx_tmp[3];
 	int16_t *vx;
@@ -1220,8 +1218,8 @@ P_NONNULL static void do_mvmva(struct p_ctx *ctx)
 
 P_NONNULL static void do_cdp(struct p_ctx *ctx)
 {
-#define IR   (ctx->cpu.interpreter.cop2.cpr.ir)
-#define RGBC (ctx->cpu.interpreter.cop2.cpr.rgbc.array)
+#define IR   (ctx->cpu_interpreter.cop2.cpr.ir)
+#define RGBC (ctx->cpu_interpreter.cop2.cpr.rgbc.array)
 
 	intpl_bk_lcm(ctx);
 
@@ -1239,11 +1237,11 @@ P_NONNULL static void do_cdp(struct p_ctx *ctx)
 
 P_NONNULL static void do_sqr(struct p_ctx *ctx)
 {
-#define IR  (ctx->cpu.interpreter.cop2.cpr.ir)
-#define MAC (ctx->cpu.interpreter.cop2.cpr.mac)
+#define IR  (ctx->cpu_interpreter.cop2.cpr.ir)
+#define MAC (ctx->cpu_interpreter.cop2.cpr.mac)
 
-	const unsigned int sf = shift_frac(ctx->cpu.interpreter.instr);
-	const bool lm	      = ir123_lm(ctx->cpu.interpreter.instr);
+	unsigned int sf = shift_frac(ctx->cpu_interpreter.instr);
+	bool lm		= ir123_lm(ctx->cpu_interpreter.instr);
 
 	for (size_t i = 1; i < ARRAY_SIZE(IR); ++i) {
 		MAC[i] = ((int64_t)IR[i] * (int64_t)IR[i]) >> sf;
@@ -1256,8 +1254,8 @@ P_NONNULL static void do_sqr(struct p_ctx *ctx)
 
 P_NONNULL static void do_dpcl(struct p_ctx *ctx)
 {
-#define IR   (ctx->cpu.interpreter.cop2.cpr.ir)
-#define RGBC (ctx->cpu.interpreter.cop2.cpr.rgbc.array)
+#define IR   (ctx->cpu_interpreter.cop2.cpr.ir)
+#define RGBC (ctx->cpu_interpreter.cop2.cpr.rgbc.array)
 
 	int64_t sums[3];
 
@@ -1273,11 +1271,11 @@ P_NONNULL static void do_dpcl(struct p_ctx *ctx)
 
 P_NONNULL static void do_gpl(struct p_ctx *ctx)
 {
-#define IR  (ctx->cpu.interpreter.cop2.cpr.ir)
-#define MAC (ctx->cpu.interpreter.cop2.cpr.mac)
+#define IR  (ctx->cpu_interpreter.cop2.cpr.ir)
+#define MAC (ctx->cpu_interpreter.cop2.cpr.mac)
 
-	const unsigned int sf = shift_frac(ctx->cpu.interpreter.instr);
-	const bool lm	      = ir123_lm(ctx->cpu.interpreter.instr);
+	unsigned int sf = shift_frac(ctx->cpu_interpreter.instr);
+	bool lm		= ir123_lm(ctx->cpu_interpreter.instr);
 
 	for (size_t i = 1; i < ARRAY_SIZE(MAC); ++i) {
 		int64_t sum = 0;
@@ -1297,7 +1295,7 @@ P_NONNULL static void do_gpl(struct p_ctx *ctx)
 
 P_NONNULL static void do_lh(struct p_ctx *ctx, size_t base, size_t offset, size_t rt)
 {
-#define gpr (ctx->cpu.interpreter.gpr)
+#define gpr (ctx->cpu_interpreter.gpr)
 
 	uint32_t vaddr = gpr[base] + offset;
 
@@ -1312,7 +1310,7 @@ P_NONNULL static void do_lh(struct p_ctx *ctx, size_t base, size_t offset, size_
 
 P_NONNULL static void do_lwl(struct p_ctx *ctx, size_t base, size_t offset, size_t rt)
 {
-#define gpr (ctx->cpu.interpreter.gpr)
+#define gpr (ctx->cpu_interpreter.gpr)
 
 	uint32_t vaddr	       = gpr[base] + offset;
 	uint32_t aligned_vaddr = vaddr & ~3;
@@ -1322,7 +1320,7 @@ P_NONNULL static void do_lwl(struct p_ctx *ctx, size_t base, size_t offset, size
 	unsigned int shift = (vaddr & 3) * 8;
 	unsigned int mask  = 0x00FFFFFF >> shift;
 
-	uint32_t val = (ctx->cpu.interpreter.ld_next.dst == rt) ? ctx->cpu.interpreter.ld_next.val : gpr[rt];
+	uint32_t val = (ctx->cpu_interpreter.ld_next.dst == rt) ? ctx->cpu_interpreter.ld_next.val : gpr[rt];
 
 	val = (val & mask) | (word << (24 - shift));
 	load_dly(ctx, rt, val);
@@ -1332,7 +1330,7 @@ P_NONNULL static void do_lwl(struct p_ctx *ctx, size_t base, size_t offset, size
 
 P_NONNULL static void do_lw(struct p_ctx *ctx, size_t base, size_t offset, size_t rt)
 {
-#define gpr (ctx->cpu.interpreter.gpr)
+#define gpr (ctx->cpu_interpreter.gpr)
 
 	uint32_t vaddr = gpr[base] + offset;
 
@@ -1347,7 +1345,7 @@ P_NONNULL static void do_lw(struct p_ctx *ctx, size_t base, size_t offset, size_
 
 P_NONNULL static void do_lhu(struct p_ctx *ctx, size_t base, size_t offset, size_t rt)
 {
-#define gpr (ctx->cpu.interpreter.gpr)
+#define gpr (ctx->cpu_interpreter.gpr)
 
 	uint32_t vaddr = gpr[base] + offset;
 
@@ -1363,7 +1361,7 @@ P_NONNULL static void do_lhu(struct p_ctx *ctx, size_t base, size_t offset, size
 
 P_NONNULL static void do_lwr(struct p_ctx *ctx, size_t base, size_t offset, size_t rt)
 {
-#define gpr (ctx->cpu.interpreter.gpr)
+#define gpr (ctx->cpu_interpreter.gpr)
 
 	uint32_t vaddr	       = gpr[base] + offset;
 	uint32_t aligned_vaddr = vaddr & ~3;
@@ -1373,7 +1371,7 @@ P_NONNULL static void do_lwr(struct p_ctx *ctx, size_t base, size_t offset, size
 	unsigned int shift = (vaddr & 3) * 8;
 	unsigned int mask  = 0xFFFFFF00 << (24 - shift);
 
-	uint32_t val = (ctx->cpu.interpreter.ld_next.dst == rt) ? ctx->cpu.interpreter.ld_next.val : gpr[rt];
+	uint32_t val = (ctx->cpu_interpreter.ld_next.dst == rt) ? ctx->cpu_interpreter.ld_next.val : gpr[rt];
 
 	val = (val & mask) | (word >> shift);
 
@@ -1384,7 +1382,7 @@ P_NONNULL static void do_lwr(struct p_ctx *ctx, size_t base, size_t offset, size
 
 P_NONNULL static void do_sh(struct p_ctx *ctx, size_t base, size_t offset, size_t rt)
 {
-#define gpr (ctx->cpu.interpreter.gpr)
+#define gpr (ctx->cpu_interpreter.gpr)
 
 	uint32_t vaddr = gpr[base] + offset;
 
@@ -1400,7 +1398,7 @@ P_NONNULL static void do_sh(struct p_ctx *ctx, size_t base, size_t offset, size_
 
 P_NONNULL static void do_swl(struct p_ctx *ctx, size_t base, size_t offset, size_t rt)
 {
-#define gpr (ctx->cpu.interpreter.gpr)
+#define gpr (ctx->cpu_interpreter.gpr)
 
 	uint32_t vaddr	       = gpr[base] + offset;
 	uint32_t aligned_vaddr = vaddr & ~3;
@@ -1417,7 +1415,7 @@ P_NONNULL static void do_swl(struct p_ctx *ctx, size_t base, size_t offset, size
 
 P_NONNULL static void do_sw(struct p_ctx *ctx, size_t base, size_t offset, size_t rt)
 {
-#define gpr (ctx->cpu.interpreter.gpr)
+#define gpr (ctx->cpu_interpreter.gpr)
 
 	uint32_t vaddr = gpr[base] + offset;
 
@@ -1435,7 +1433,7 @@ P_NONNULL static void do_sw(struct p_ctx *ctx, size_t base, size_t offset, size_
 
 P_NONNULL static void do_swr(struct p_ctx *ctx, size_t base, size_t offset, size_t rt)
 {
-#define gpr (ctx->cpu.interpreter.gpr)
+#define gpr (ctx->cpu_interpreter.gpr)
 
 	uint32_t vaddr	       = gpr[base] + offset;
 	uint32_t aligned_vaddr = vaddr & ~3;
@@ -1450,461 +1448,490 @@ P_NONNULL static void do_swr(struct p_ctx *ctx, size_t base, size_t offset, size
 #undef gpr
 }
 
-P_NONNULL static void run(struct p_ctx *ctx, uint64_t instr_limit, bool stop_on_ev)
+P_NONNULL static void run(struct p_ctx *ctx, uint64_t instr_limit, bool stop_on_event)
 {
-#define gpr	(ctx->cpu.interpreter.gpr)
-#define pc	(ctx->cpu.interpreter.pc)
-#define npc	(ctx->cpu.interpreter.npc)
-#define hi	(ctx->cpu.interpreter.hi)
-#define lo	(ctx->cpu.interpreter.lo)
-#define instr	(ctx->cpu.interpreter.instr)
+#define gpr	  (ctx->cpu_interpreter.gpr)
+#define pc	  (ctx->cpu_interpreter.pc)
+#define npc	  (ctx->cpu_interpreter.npc)
+#define hi	  (ctx->cpu_interpreter.hi)
+#define lo	  (ctx->cpu_interpreter.lo)
 
-#define op	(instr_op(instr))
-#define rt	(instr_rt(instr))
-#define rs	(instr_rs(instr))
-#define rd	(instr_rd(instr))
-#define shamt	(instr_shamt(instr))
-#define funct	(instr_funct(instr))
-#define base	(rs)
-#define zextimm (zext_16_32(instr_imm(instr)))
-#define sextimm (sext_16_32(instr_imm(instr)))
-#define offset	(sextimm)
+#define op	  (instr_op(instr))
+#define rt	  (instr_rt(instr))
+#define rs	  (instr_rs(instr))
+#define rd	  (instr_rd(instr))
+#define shamt	  (instr_shamt(instr))
+#define funct	  (instr_funct(instr))
+#define base	  (rs)
+#define zextimm	  (zext_16_32(instr_imm(instr)))
+#define sextimm	  (sext_16_32(instr_imm(instr)))
+#define offset	  (sextimm)
 
-#define SR	(ctx->cpu.interpreter.cop0[PSYCHO_CPU_COP0_CPR_SR])
+#define SR	  (ctx->cpu_interpreter.cop0_cpr[PSYCHO_CPU_COP0_CPR_SR])
 
-#define FLAG	(ctx->cpu.interpreter.cop2.ccr.flag)
-#define MAC	(ctx->cpu.interpreter.cop2.cpr.mac)
-#define V	(ctx->cpu.interpreter.cop2.cpr.vector)
-#define SX0	(ctx->cpu.interpreter.cop2.cpr.sxy[0].x)
-#define SX1	(ctx->cpu.interpreter.cop2.cpr.sxy[1].x)
-#define SX2	(ctx->cpu.interpreter.cop2.cpr.sxy[2].x)
-#define SY0	(ctx->cpu.interpreter.cop2.cpr.sxy[0].y)
-#define SY1	(ctx->cpu.interpreter.cop2.cpr.sxy[1].y)
-#define SY2	(ctx->cpu.interpreter.cop2.cpr.sxy[2].y)
-#define RGB0	(ctx->cpu.interpreter.cop2.cpr.rgb[0].array)
-#define RGBC	(ctx->cpu.interpreter.cop2.cpr.rgbc.array)
-#define ZSF3	(ctx->cpu.interpreter.cop2.ccr.zsf3)
-#define ZSF4	(ctx->cpu.interpreter.cop2.ccr.zsf4)
+#define FLAG	  (ctx->cpu_interpreter.cop2.ccr.flag)
+#define MAC	  (ctx->cpu_interpreter.cop2.cpr.mac)
+#define V	  (ctx->cpu_interpreter.cop2.cpr.vector)
+#define SX0	  (ctx->cpu_interpreter.cop2.cpr.sxy[0].x)
+#define SX1	  (ctx->cpu_interpreter.cop2.cpr.sxy[1].x)
+#define SX2	  (ctx->cpu_interpreter.cop2.cpr.sxy[2].x)
+#define SY0	  (ctx->cpu_interpreter.cop2.cpr.sxy[0].y)
+#define SY1	  (ctx->cpu_interpreter.cop2.cpr.sxy[1].y)
+#define SY2	  (ctx->cpu_interpreter.cop2.cpr.sxy[2].y)
+#define RGB0	  (ctx->cpu_interpreter.cop2.cpr.rgb[0].array)
+#define RGBC	  (ctx->cpu_interpreter.cop2.cpr.rgbc.array)
+#define ZSF3	  (ctx->cpu_interpreter.cop2.ccr.zsf3)
+#define ZSF4	  (ctx->cpu_interpreter.cop2.ccr.zsf4)
 
-	static const int32_t op_tbl[] = {
+#define OP(x)	  [64 + (x)]
+#define OPR(a, b) [64 + (a)... 64 + (b)]
+
+#define BIOS_TRACE_ON() (false)
+
+#define FETCH()                                                                            \
+	do {                                                                               \
+		ctx->cpu_interpreter.in_bd	= ctx->cpu_interpreter.next_in_bd;         \
+		ctx->cpu_interpreter.next_in_bd = false;                                   \
+                                                                                           \
+		pc    = ctx->cpu_interpreter.dly_pc;                                       \
+		instr = load32(ctx, pc);                                                   \
+                                                                                           \
+		ctx->cpu_interpreter.instr  = instr;                                       \
+		ctx->cpu_interpreter.dly_pc = npc;                                         \
+		npc			    = ctx->cpu_interpreter.dly_pc + sizeof(instr); \
+                                                                                           \
+		dly_slot_process(ctx);                                                     \
+	} while (0)
+
+#define DISPATCH()                                                                            \
+	do {                                                                                  \
+		gpr[PSYCHO_CPU_GPR_ZERO] = 0;                                                 \
+                                                                                              \
+		if (unlikely((!instr_limit) || (ctx->sched.ts_now >= ctx->sched.ev[0]->ts) || \
+			     (ctx->cpu_interpreter.slow)))                                    \
+			goto slow;                                                            \
+                                                                                              \
+		instr_limit--;                                                                \
+		FETCH();                                                                      \
+		goto *dispatch_tbl[op ? (64 + op) : funct];                                   \
+	} while (0)
+
+	static void *const dispatch_tbl[128] = {
 		// clang-format off
 
-		[GRP_SPECIAL]	= &&grp_special	- &&grp_special,
-		[GRP_REGIMM]	= &&grp_regimm	- &&grp_special,
-		[J]		= &&op_j	- &&grp_special,
-		[JAL]		= &&op_jal	- &&grp_special,
-		[BEQ]		= &&op_beq	- &&grp_special,
-		[BNE]		= &&op_bne	- &&grp_special,
-		[BLEZ]		= &&op_blez	- &&grp_special,
-		[BGTZ]		= &&op_bgtz	- &&grp_special,
-		[ADDI]		= &&op_addi	- &&grp_special,
-		[ADDIU]		= &&op_addiu	- &&grp_special,
-		[SLTI]		= &&op_slti	- &&grp_special,
-		[SLTIU]		= &&op_sltiu	- &&grp_special,
-		[ANDI]		= &&op_andi	- &&grp_special,
-		[ORI]		= &&op_ori	- &&grp_special,
-		[XORI]		= &&op_xori	- &&grp_special,
-		[LUI]		= &&op_lui	- &&grp_special,
-		[GRP_COP0]	= &&grp_cop0	- &&grp_special,
-		[0x11]		= &&illegal	- &&grp_special,
-		[GRP_COP2]	= &&grp_cop2	- &&grp_special,
-		[0x13 ... 0x1F]	= &&illegal	- &&grp_special,
-		[LB]		= &&op_lb	- &&grp_special,
-		[LH]		= &&op_lh	- &&grp_special,
-		[LWL]		= &&op_lwl	- &&grp_special,
-		[LW]		= &&op_lw	- &&grp_special,
-		[LBU]		= &&op_lbu	- &&grp_special,
-		[LHU]		= &&op_lhu	- &&grp_special,
-		[LWR]		= &&op_lwr	- &&grp_special,
-		[0x27]		= &&illegal	- &&grp_special,
-		[SB]		= &&op_sb	- &&grp_special,
-		[SH]		= &&op_sh	- &&grp_special,
-		[SWL]		= &&op_swl	- &&grp_special,
-		[SW]		= &&op_sw	- &&grp_special,
-		[SWR]		= &&op_swr	- &&grp_special,
-		[0x2F ... 0x3F]	= &&illegal	- &&grp_special
+		[SLL]		= &&op_sll,
+		[0x01]		= &&illegal,
+		[SRL]		= &&op_srl,
+		[SRA]		= &&op_sra,
+		[SLLV]		= &&op_sllv,
+		[0x05]		= &&illegal,
+		[SRLV]		= &&op_srlv,
+		[SRAV]		= &&op_srav,
+		[JR]		= &&op_jr,
+		[JALR]		= &&op_jalr,
+		[0x0A ... 0x0B]	= &&illegal,
+		[SYSCALL]	= &&op_syscall,
+		[BREAK]		= &&op_break,
+		[0x0E ... 0x0F]	= &&illegal,
+		[MFHI]		= &&op_mfhi,
+		[MTHI]		= &&op_mthi,
+		[MFLO]		= &&op_mflo,
+		[MTLO]		= &&op_mtlo,
+		[0x14 ... 0x17]	= &&illegal,
+		[MULT]		= &&op_mult,
+		[MULTU]		= &&op_multu,
+		[DIV]		= &&op_div,
+		[DIVU]		= &&op_divu,
+		[0x1C ... 0x1F]	= &&illegal,
+		[ADD]		= &&op_add,
+		[ADDU]		= &&op_addu,
+		[SUB]		= &&op_sub,
+		[SUBU]		= &&op_subu,
+		[AND]		= &&op_and,
+		[OR]		= &&op_or,
+		[XOR]		= &&op_xor,
+		[NOR]		= &&op_nor,
+		[0x28 ... 0x29]	= &&illegal,
+		[SLT]		= &&op_slt,
+		[SLTU]		= &&op_sltu,
+		[0x2C ... 0x3F]	= &&illegal,
+		[64]		= &&illegal,
+		OP(GRP_REGIMM)	= &&grp_regimm,
+		OP(J)		= &&op_j,
+		OP(JAL)		= &&op_jal,
+		OP(BEQ)		= &&op_beq,
+		OP(BNE)		= &&op_bne,
+		OP(BLEZ)	= &&op_blez,
+		OP(BGTZ)	= &&op_bgtz,
+		OP(ADDI)	= &&op_addi,
+		OP(ADDIU)	= &&op_addiu,
+		OP(SLTI)	= &&op_slti,
+		OP(SLTIU)	= &&op_sltiu,
+		OP(ANDI)	= &&op_andi,
+		OP(ORI)		= &&op_ori,
+		OP(XORI)	= &&op_xori,
+		OP(LUI)		= &&op_lui,
+		OP(GRP_COP0)	= &&grp_cop0,
+		OP(0x11)	= &&illegal,
+		OP(GRP_COP2)	= &&grp_cop2,
+		OPR(0x13, 0x1F)	= &&illegal,
+		OP(LB)		= &&op_lb,
+		OP(LH)		= &&op_lh,
+		OP(LWL)		= &&op_lwl,
+		OP(LW)		= &&op_lw,
+		OP(LBU)		= &&op_lbu,
+		OP(LHU)		= &&op_lhu,
+		OP(LWR)		= &&op_lwr,
+		OP(0x27)	= &&illegal,
+		OP(SB)		= &&op_sb,
+		OP(SH)		= &&op_sh,
+		OP(SWL)		= &&op_swl,
+		OP(SW)		= &&op_sw,
+		OP(SWR)		= &&op_swr,
+		OPR(0x2F, 0x3F)	= &&illegal
 
 		// clang-format on
 	};
 
-	static const int32_t special_tbl[] = {
+#undef OP
+#undef OPR
+
+	static void *const cop0_tbl[] = {
 		// clang-format off
 
-		[SLL]		= &&op_sll	- &&op_sll,
-		[0x01]		= &&illegal	- &&op_sll,
-		[SRL]		= &&op_srl	- &&op_sll,
-		[SRA]		= &&op_sra	- &&op_sll,
-		[SLLV]		= &&op_sllv	- &&op_sll,
-		[0x05]		= &&illegal	- &&op_sll,
-		[SRLV]		= &&op_srlv	- &&op_sll,
-		[SRAV]		= &&op_srav	- &&op_sll,
-		[JR]		= &&op_jr	- &&op_sll,
-		[JALR]		= &&op_jalr	- &&op_sll,
-		[0x0A ... 0x0B]	= &&illegal	- &&op_sll,
-		[SYSCALL]	= &&op_syscall	- &&op_sll,
-		[BREAK]		= &&op_break	- &&op_sll,
-		[0x0E ... 0x0F]	= &&illegal	- &&op_sll,
-		[MFHI]		= &&op_mfhi	- &&op_sll,
-		[MTHI]		= &&op_mthi	- &&op_sll,
-		[MFLO]		= &&op_mflo	- &&op_sll,
-		[MTLO]		= &&op_mtlo	- &&op_sll,
-		[0x14 ... 0x17]	= &&illegal	- &&op_sll,
-		[MULT]		= &&op_mult	- &&op_sll,
-		[MULTU]		= &&op_multu	- &&op_sll,
-		[DIV]		= &&op_div	- &&op_sll,
-		[DIVU]		= &&op_divu	- &&op_sll,
-		[0x1C ... 0x1F]	= &&illegal	- &&op_sll,
-		[ADD]		= &&op_add	- &&op_sll,
-		[ADDU]		= &&op_addu	- &&op_sll,
-		[SUB]		= &&op_sub	- &&op_sll,
-		[SUBU]		= &&op_subu	- &&op_sll,
-		[AND]		= &&op_and	- &&op_sll,
-		[OR]		= &&op_or	- &&op_sll,
-		[XOR]		= &&op_xor	- &&op_sll,
-		[NOR]		= &&op_nor	- &&op_sll,
-		[0x28 ... 0x29]	= &&illegal	- &&op_sll,
-		[SLT]		= &&op_slt	- &&op_sll,
-		[SLTU]		= &&op_sltu	- &&op_sll,
-		[0x2C ... 0x3F]	= &&illegal	- &&op_sll
+		[MFC]		= &&cop0_mfc,
+		[0x01 ... 0x03]	= &&cop0_instr,
+		[MTC]		= &&cop0_mtc,
+		[0x05 ... CTC]	= &&cop0_instr,
+		[0x07 ... 0x1F]	= &&cop0_instr
 
 		// clang-format on
 	};
 
-	static const int32_t cop0_tbl[] = {
+	static void *const cop0_instr_tbl[] = {
 		// clang-format off
 
-		[MFC]		= &&cop0_mfc	- &&cop0_mfc,
-		[0x01 ... 0x03]	= &&cop0_instr	- &&cop0_mfc,
-		[MTC]		= &&cop0_mtc	- &&cop0_mfc,
-		[0x05 ... CTC]	= &&cop0_instr	- &&cop0_mfc,
-		[0x07 ... 0x1F]	= &&cop0_instr	- &&cop0_mfc
+		[0x00 ... 0x0F]	= &&illegal,
+		[RFE]		= &&op_rfe,
+		[0x11 ... 0x3F]	= &&illegal
 
 		// clang-format on
 	};
 
-	static const int32_t cop0_instr_tbl[] = {
+	static void *const cop2_tbl[] = {
 		// clang-format off
 
-		[0x00 ... 0x0F]	= &&illegal	- &&illegal,
-		[RFE]		= &&op_rfe	- &&illegal,
-		[0x11 ... 0x3F]	= &&illegal	- &&illegal
+		[MFC]		= &&cop2_mfc,
+		[0x01]		= &&cop2_instr,
+		[CFC]		= &&cop2_cfc,
+		[0x03]		= &&cop2_instr,
+		[MTC]		= &&cop2_mtc,
+		[0x05]		= &&cop2_instr,
+		[CTC]		= &&cop2_ctc,
+		[0x07 ... 0x1F]	= &&cop2_instr
 
 		// clang-format on
 	};
 
-	static const int32_t cop2_tbl[] = {
+	static void *const cop2_instr_tbl[] = {
 		// clang-format off
 
-		[MFC]		= &&cop2_mfc	- &&cop2_mfc,
-		[0x01]		= &&cop2_instr	- &&cop2_mfc,
-		[CFC]		= &&cop2_cfc	- &&cop2_mfc,
-		[0x03]		= &&cop2_instr	- &&cop2_mfc,
-		[MTC]		= &&cop2_mtc	- &&cop2_mfc,
-		[0x05]		= &&cop2_instr	- &&cop2_mfc,
-		[CTC]		= &&cop2_ctc	- &&cop2_mfc,
-		[0x07 ... 0x1F]	= &&cop2_instr	- &&cop2_mfc
+		[0x00]		= &&illegal,
+		[RTPS]		= &&op_rtps,
+		[0x02 ... 0x05]	= &&illegal,
+		[NCLIP]		= &&op_nclip,
+		[0x07 ... 0x0B]	= &&illegal,
+		[OP]		= &&op_op,
+		[0x0D ... 0x0F]	= &&illegal,
+		[DPCS]		= &&op_dpcs,
+		[INTPL]		= &&op_intpl,
+		[MVMVA]		= &&op_mvmva,
+		[NCDS]		= &&op_ncds,
+		[CDP]		= &&op_cdp,
+		[0x15]		= &&illegal,
+		[NCDT]		= &&op_ncdt,
+		[0x17 ... 0x1A]	= &&illegal,
+		[NCCS]		= &&op_nccs,
+		[CC]		= &&op_cc,
+		[0x1D]		= &&illegal,
+		[NCS]		= &&op_ncs,
+		[0x1F]		= &&illegal,
+		[NCT]		= &&op_nct,
+		[0x21 ... 0x27]	= &&illegal,
+		[SQR]		= &&op_sqr,
+		[DPCL]		= &&op_dpcl,
+		[DPCT]		= &&op_dpct,
+		[0x2B ... 0x2C]	= &&illegal,
+		[AVSZ3]		= &&op_avsz3,
+		[AVSZ4]		= &&op_avsz4,
+		[0x2F]		= &&illegal,
+		[RTPT]		= &&op_rtpt,
+		[0x31 ... 0x3C]	= &&illegal,
+		[GPF]		= &&op_gpf,
+		[GPL]		= &&op_gpl,
+		[NCCT]		= &&op_ncct
 
 		// clang-format on
 	};
 
-	static const int32_t cop2_instr_tbl[] = {
-		// clang-format off
+	uint32_t instr = 0;
 
-		[0x00]		= &&illegal	- &&illegal,
-		[RTPS]		= &&op_rtps	- &&illegal,
-		[0x02 ... 0x05]	= &&illegal	- &&illegal,
-		[NCLIP]		= &&op_nclip	- &&illegal,
-		[0x07 ... 0x0B]	= &&illegal	- &&illegal,
-		[OP]		= &&op_op	- &&illegal,
-		[0x0D ... 0x0F]	= &&illegal	- &&illegal,
-		[DPCS]		= &&op_dpcs	- &&illegal,
-		[INTPL]		= &&op_intpl	- &&illegal,
-		[MVMVA]		= &&op_mvmva	- &&illegal,
-		[NCDS]		= &&op_ncds	- &&illegal,
-		[CDP]		= &&op_cdp	- &&illegal,
-		[0x15]		= &&illegal	- &&illegal,
-		[NCDT]		= &&op_ncdt	- &&illegal,
-		[0x17 ... 0x1A]	= &&illegal	- &&illegal,
-		[NCCS]		= &&op_nccs	- &&illegal,
-		[CC]		= &&op_cc	- &&illegal,
-		[0x1D]		= &&illegal	- &&illegal,
-		[NCS]		= &&op_ncs	- &&illegal,
-		[0x1F]		= &&illegal	- &&illegal,
-		[NCT]		= &&op_nct	- &&illegal,
-		[0x21 ... 0x27]	= &&illegal	- &&illegal,
-		[SQR]		= &&op_sqr	- &&illegal,
-		[DPCL]		= &&op_dpcl	- &&illegal,
-		[DPCT]		= &&op_dpct	- &&illegal,
-		[0x2B ... 0x2C]	= &&illegal	- &&illegal,
-		[AVSZ3]		= &&op_avsz3	- &&illegal,
-		[AVSZ4]		= &&op_avsz4	- &&illegal,
-		[0x2F]		= &&illegal	- &&illegal,
-		[RTPT]		= &&op_rtpt	- &&illegal,
-		[0x31 ... 0x3C]	= &&illegal	- &&illegal,
-		[GPF]		= &&op_gpf	- &&illegal,
-		[GPL]		= &&op_gpl	- &&illegal,
-		[NCCT]		= &&op_ncct	- &&illegal
+	goto loop;
 
-		// clang-format on
-	};
+slow:
+	if (unlikely(p_bios_trace_end_of_call(ctx, instr)))
+		p_bios_trace_end(ctx, gpr[PSYCHO_CPU_GPR_V0]);
 
 loop:
-	if (unlikely(!ctx->running))
-		goto done;
-
 	while (unlikely(ctx->sched.ts_now >= ctx->sched.ev[0]->ts)) {
 		p_sched_run(ctx);
 
-		if (unlikely(stop_on_ev))
+		if (unlikely(stop_on_event)) {
+			ctx->running = false;
 			goto done;
+		}
 	}
 
-	if (unlikely(!instr_limit))
+	// Must come AFTER the events run: an event callback can clear `running`, and the `slow` recompute below would
+	// otherwise erase that stop request.
+	if (unlikely((!ctx->running) || (!instr_limit)))
 		goto done;
-
-	instr_limit--;
 
 	if (unlikely((ctx->exe.data) && (pc == KERNEL_INIT_PC)))
 		p_exe_inject(ctx);
 
-	if (unlikely(ctx->cpu.interpreter.dly_pc & 3))
+	if (unlikely(ctx->cpu_interpreter.dly_pc & 3))
 		exc(ctx, EXC_ADEL);
 
-	ctx->cpu.interpreter.in_bd	= ctx->cpu.interpreter.next_in_bd;
-	ctx->cpu.interpreter.next_in_bd = false;
+	// Stay in here while anything rare is active. npc is what FETCH() moves into dly_pc, so this is
+	// the same misaligned-target test as before, made one step earlier.
+	ctx->cpu_interpreter.slow = ctx->exe.data || (npc & 3) || BIOS_TRACE_ON();
 
-	pc    = ctx->cpu.interpreter.dly_pc;
-	instr = load32(ctx, pc);
-
-	ctx->cpu.interpreter.dly_pc = npc;
-	npc		    = ctx->cpu.interpreter.dly_pc + sizeof(instr);
-
-	dly_slot_process(ctx);
+	instr_limit--;
+	FETCH();
 
 	if (unlikely(p_bios_trace_in_bios_call(pc)))
 		p_bios_trace_begin(ctx, gpr[PSYCHO_CPU_GPR_T1], (pc >> 4) - 0xA);
 
-	//if (tracing)
-	//	p_disasm_trace_begin(ctx, pc);
-
-	goto *(&&grp_special + op_tbl[op]);
-
-grp_special:
-	goto *(&&op_sll + special_tbl[funct]);
+	goto *dispatch_tbl[op ? (64 + op) : funct];
 
 op_sll:
 	gpr_set(ctx, rd, gpr[rt] << shamt);
-	goto end;
+	DISPATCH();
 
 op_srl:
 	gpr_set(ctx, rd, gpr[rt] >> shamt);
-	goto end;
+	DISPATCH();
 
 op_sra:
 	gpr_set(ctx, rd, (int32_t)gpr[rt] >> shamt);
-	goto end;
+	DISPATCH();
 
 op_sllv:
 	gpr_set(ctx, rd, gpr[rt] << (gpr[rs] & 0x1F));
-	goto end;
+	DISPATCH();
 
 op_srlv:
 	gpr_set(ctx, rd, gpr[rt] >> (gpr[rs] & 0x1F));
-	goto end;
+	DISPATCH();
 
 op_srav:
 	gpr_set(ctx, rd, (int32_t)gpr[rt] >> (gpr[rs] & 0x1F));
-	goto end;
+	DISPATCH();
 
 op_jr:
 	branch(ctx, gpr[rs]);
-	goto end;
+
+	if (unlikely(npc & 3))
+		ctx->cpu_interpreter.slow = true;
+
+	DISPATCH();
 
 op_jalr:
 	do_jalr(ctx, rs, rd);
-	goto end;
+	DISPATCH();
 
 op_syscall:
 	exc(ctx, EXC_SYSCALL);
-	goto end;
+	DISPATCH();
 
 op_break:
 	exc(ctx, EXC_BP);
-	goto end;
+	DISPATCH();
 
 op_mfhi:
 	gpr_set(ctx, rd, hi);
-	goto end;
+	DISPATCH();
 
 op_mthi:
 	hi = gpr[rs];
-	goto end;
+	DISPATCH();
 
 op_mflo:
 	gpr_set(ctx, rd, lo);
-	goto end;
+	DISPATCH();
 
 op_mtlo:
 	lo = gpr[rs];
-	goto end;
+	DISPATCH();
 
 op_mult:
 	do_mult(ctx, rs, rt);
-	goto end;
+	DISPATCH();
 
 op_multu:
 	do_multu(ctx, rs, rt);
-	goto end;
+	DISPATCH();
 
 op_div:
 	do_div(ctx, gpr[rs], gpr[rt]);
-	goto end;
+	DISPATCH();
 
 op_divu:
 	do_divu(ctx, gpr[rs], gpr[rt]);
-	goto end;
+	DISPATCH();
 
 op_add:
 	do_add(ctx, rd, gpr[rs], gpr[rt]);
-	goto end;
+	DISPATCH();
 
 op_addu:
 	gpr_set(ctx, rd, gpr[rs] + gpr[rt]);
-	goto end;
+	DISPATCH();
 
 op_sub:
 	do_sub(ctx, rd, gpr[rs], gpr[rt]);
-	goto end;
+	DISPATCH();
 
 op_subu:
 	gpr_set(ctx, rd, gpr[rs] - gpr[rt]);
-	goto end;
+	DISPATCH();
 
 op_and:
 	gpr_set(ctx, rd, gpr[rs] & gpr[rt]);
-	goto end;
+	DISPATCH();
 
 op_or:
 	gpr_set(ctx, rd, gpr[rs] | gpr[rt]);
-	goto end;
+	DISPATCH();
 
 op_xor:
 	gpr_set(ctx, rd, gpr[rs] ^ gpr[rt]);
-	goto end;
+	DISPATCH();
 
 op_nor:
 	gpr_set(ctx, rd, ~(gpr[rs] | gpr[rt]));
-	goto end;
+	DISPATCH();
 
 op_slt:
 	gpr_set(ctx, rd, (int32_t)gpr[rs] < (int32_t)gpr[rt]);
-	goto end;
+	DISPATCH();
 
 op_sltu:
 	gpr_set(ctx, rd, gpr[rs] < gpr[rt]);
-	goto end;
+	DISPATCH();
 
 grp_regimm:
 	regimm(ctx, rs, rt);
-	goto end;
+	DISPATCH();
 
 op_j:
 	branch(ctx, jmp_addr(pc, instr));
-	goto end;
+	DISPATCH();
 
 op_jal:
 	gpr_set(ctx, PSYCHO_CPU_GPR_RA, pc + (sizeof(instr) * 2));
 	branch(ctx, jmp_addr(pc, instr));
 
-	goto end;
+	DISPATCH();
 
 op_beq:
-	branch_if(ctx, gpr[rs] == gpr[rt]);
-	goto end;
+	branch_if(ctx, instr, gpr[rs] == gpr[rt]);
+	DISPATCH();
 
 op_bne:
-	branch_if(ctx, gpr[rs] != gpr[rt]);
-	goto end;
+	branch_if(ctx, instr, gpr[rs] != gpr[rt]);
+	DISPATCH();
 
 op_blez:
-	branch_if(ctx, (int32_t)gpr[rs] <= 0);
-	goto end;
+	branch_if(ctx, instr, (int32_t)gpr[rs] <= 0);
+	DISPATCH();
 
 op_bgtz:
-	branch_if(ctx, (int32_t)gpr[rs] > 0);
-	goto end;
+	branch_if(ctx, instr, (int32_t)gpr[rs] > 0);
+	DISPATCH();
 
 op_addi:
 	do_addi(ctx, rs, rt);
-	goto end;
+	DISPATCH();
 
 op_addiu:
 	gpr_set(ctx, rt, gpr[rs] + sextimm);
-	goto end;
+	DISPATCH();
 
 op_slti:
 	gpr_set(ctx, rt, (int32_t)gpr[rs] < (int32_t)sextimm);
-	goto end;
+	DISPATCH();
 
 op_sltiu:
 	gpr_set(ctx, rt, gpr[rs] < sextimm);
-	goto end;
+	DISPATCH();
 
 op_andi:
 	gpr_set(ctx, rt, zextimm & gpr[rs]);
-	goto end;
+	DISPATCH();
 
 op_ori:
 	gpr_set(ctx, rt, zextimm | gpr[rs]);
-	goto end;
+	DISPATCH();
 
 op_xori:
 	gpr_set(ctx, rt, zextimm ^ gpr[rs]);
-	goto end;
+	DISPATCH();
 
 op_lui:
 	gpr_set(ctx, rt, zextimm << 16);
-	goto end;
+	DISPATCH();
 
 grp_cop0:
-	goto *(&&cop0_mfc + cop0_tbl[rs]);
+	goto *cop0_tbl[rs];
 
 cop0_mfc:
-	gpr_set(ctx, rt, ctx->cpu.interpreter.cop0[rd]);
-	goto end;
+	gpr_set(ctx, rt, ctx->cpu_interpreter.cop0_cpr[rd]);
+	DISPATCH();
 
 cop0_mtc:
-	ctx->cpu.interpreter.cop0[rd] = gpr[rt];
-	goto end;
+	ctx->cpu_interpreter.cop0_cpr[rd] = gpr[rt];
+	DISPATCH();
 
 cop0_instr:
-	goto *(&&illegal + cop0_instr_tbl[funct]);
+	goto *cop0_instr_tbl[funct];
 
 op_rfe:
 	SR = (SR & ~0x0F) | ((SR >> 2) & 0x0F);
-	goto end;
+	DISPATCH();
 
 grp_cop2:
-	goto *(&&cop2_mfc + cop2_tbl[rs]);
+	goto *cop2_tbl[rs];
 
 cop2_mfc:
 	do_cop2_mfc(ctx, rt, rd);
-	goto end;
+	DISPATCH();
 
 cop2_cfc:
 	do_cop2_cfc(ctx, rt, rd);
-	goto end;
+	DISPATCH();
 
 cop2_mtc:
 	do_cop2_mtc(ctx, rd, rt);
-	goto end;
+	DISPATCH();
 
 cop2_ctc:
 	do_cop2_ctc(ctx, rd, rt);
-	goto end;
+	DISPATCH();
 
 cop2_instr:
-	goto *(&&illegal + cop2_instr_tbl[funct]);
+	goto *cop2_instr_tbl[funct];
 
 op_rtps:
 	FLAG = 0;
@@ -1912,7 +1939,7 @@ op_rtps:
 	rtp(ctx, &V[0], true);
 	update_flag(ctx);
 
-	goto end;
+	DISPATCH();
 
 op_nclip:
 	FLAG = 0;
@@ -1922,7 +1949,7 @@ op_nclip:
 				       ((uint64_t)SX1 * (uint64_t)SY0) - ((uint64_t)SX2 * (uint64_t)SY1));
 
 	update_flag(ctx);
-	goto end;
+	DISPATCH();
 
 op_op:
 	FLAG = 0;
@@ -1930,7 +1957,7 @@ op_op:
 	do_op(ctx);
 
 	update_flag(ctx);
-	goto end;
+	DISPATCH();
 
 op_dpcs:
 	FLAG = 0;
@@ -1938,7 +1965,7 @@ op_dpcs:
 	dpc(ctx, RGBC);
 
 	update_flag(ctx);
-	goto end;
+	DISPATCH();
 
 op_intpl:
 	FLAG = 0;
@@ -1946,7 +1973,7 @@ op_intpl:
 	do_intpl(ctx);
 
 	update_flag(ctx);
-	goto end;
+	DISPATCH();
 
 op_mvmva:
 	FLAG = 0;
@@ -1954,7 +1981,7 @@ op_mvmva:
 	do_mvmva(ctx);
 
 	update_flag(ctx);
-	goto end;
+	DISPATCH();
 
 op_ncds:
 	FLAG = 0;
@@ -1962,7 +1989,7 @@ op_ncds:
 	ncd(ctx, &V[0]);
 
 	update_flag(ctx);
-	goto end;
+	DISPATCH();
 
 op_cdp:
 	FLAG = 0;
@@ -1970,7 +1997,7 @@ op_cdp:
 	do_cdp(ctx);
 
 	update_flag(ctx);
-	goto end;
+	DISPATCH();
 
 op_ncdt:
 	FLAG = 0;
@@ -1979,7 +2006,7 @@ op_ncdt:
 		ncd(ctx, &V[i]);
 
 	update_flag(ctx);
-	goto end;
+	DISPATCH();
 
 op_nccs:
 	FLAG = 0;
@@ -1987,7 +2014,7 @@ op_nccs:
 	ncc(ctx, &V[0]);
 	update_flag(ctx);
 
-	goto end;
+	DISPATCH();
 
 op_cc:
 	FLAG = 0;
@@ -1997,7 +2024,7 @@ op_cc:
 	color_fifo_push(ctx);
 
 	update_flag(ctx);
-	goto end;
+	DISPATCH();
 
 op_ncs:
 	FLAG = 0;
@@ -2005,7 +2032,7 @@ op_ncs:
 	nc(ctx, &V[0]);
 
 	update_flag(ctx);
-	goto end;
+	DISPATCH();
 
 op_nct:
 	FLAG = 0;
@@ -2014,7 +2041,7 @@ op_nct:
 		nc(ctx, &V[i]);
 
 	update_flag(ctx);
-	goto end;
+	DISPATCH();
 
 op_sqr:
 	FLAG = 0;
@@ -2022,7 +2049,7 @@ op_sqr:
 	do_sqr(ctx);
 
 	update_flag(ctx);
-	goto end;
+	DISPATCH();
 
 op_dpcl:
 	FLAG = 0;
@@ -2030,7 +2057,7 @@ op_dpcl:
 	do_dpcl(ctx);
 
 	update_flag(ctx);
-	goto end;
+	DISPATCH();
 
 op_dpct:
 	FLAG = 0;
@@ -2039,15 +2066,15 @@ op_dpct:
 		dpc(ctx, RGB0);
 
 	update_flag(ctx);
-	goto end;
+	DISPATCH();
 
 op_avsz3:
 	avsz(ctx, ZSF3, 1);
-	goto end;
+	DISPATCH();
 
 op_avsz4:
 	avsz(ctx, ZSF4, 0);
-	goto end;
+	DISPATCH();
 
 op_rtpt:
 	FLAG = 0;
@@ -2057,10 +2084,10 @@ op_rtpt:
 	rtp(ctx, &V[2], true);
 
 	update_flag(ctx);
-	goto end;
+	DISPATCH();
 
 op_gpf:
-	memset(&MAC[1], 0, sizeof(MAC) - 1);
+	memset(&MAC[1], 0, sizeof(MAC) - sizeof(MAC[0]));
 
 op_gpl:
 	FLAG = 0;
@@ -2068,7 +2095,7 @@ op_gpl:
 	do_gpl(ctx);
 
 	update_flag(ctx);
-	goto end;
+	DISPATCH();
 
 op_ncct:
 	FLAG = 0;
@@ -2077,74 +2104,60 @@ op_ncct:
 		ncc(ctx, &V[i]);
 
 	update_flag(ctx);
-	goto end;
+	DISPATCH();
 
 op_lb:
 	load_dly(ctx, rt, sext_8_32(load8(ctx, gpr[base] + offset)));
-	goto end;
+	DISPATCH();
 
 op_lh:
 	do_lh(ctx, base, offset, rt);
-	goto end;
+	DISPATCH();
 
 op_lwl:
 	do_lwl(ctx, base, offset, rt);
-	goto end;
+	DISPATCH();
 
 op_lw:
 	do_lw(ctx, base, offset, rt);
-	goto end;
+	DISPATCH();
 
 op_lbu:
 	load_dly(ctx, rt, zext_8_32(load8(ctx, gpr[base] + offset)));
-	goto end;
+	DISPATCH();
 
 op_lhu:
 	do_lhu(ctx, base, offset, rt);
-	goto end;
+	DISPATCH();
 
 op_lwr:
 	do_lwr(ctx, base, offset, rt);
-	goto end;
+	DISPATCH();
 
 op_sb:
 	dbg_bp_write(ctx, gpr[base] + offset);
 
 	store8(ctx, gpr[base] + offset, gpr[rt] & UINT8_MAX);
-	goto end;
+	DISPATCH();
 
 op_sh:
 	do_sh(ctx, base, offset, rt);
-	goto end;
+	DISPATCH();
 
 op_swl:
 	do_swl(ctx, base, offset, rt);
-	goto end;
+	DISPATCH();
 
 op_sw:
 	do_sw(ctx, base, offset, rt);
-	goto end;
+	DISPATCH();
 
 op_swr:
 	do_swr(ctx, base, offset, rt);
-	goto end;
+	DISPATCH();
 
 illegal:
 	illegal_instr(ctx);
-	goto done;
-
-end:
-	gpr[PSYCHO_CPU_GPR_ZERO] = 0;
-
-	if (p_bios_trace_end_of_call(ctx, instr))
-		p_bios_trace_end(ctx, gpr[PSYCHO_CPU_GPR_V0]);
-
-	//if (tracing) {
-	//	p_disasm_trace_end(ctx);
-	//	LOG_TRACE(ctx, "0x%08X: %s", pc, ctx->disasm.res.str.ptr);
-	//}
-
-	goto loop;
 
 done:
 	return;
@@ -2152,19 +2165,19 @@ done:
 
 void p_cpu_int_init(struct p_ctx *ctx)
 {
-	ctx->cpu.ops.irq_mux_set = irq_mux_set;
+	ctx->cpu.irq_mux_assert = irq_mux_assert;
 
-	ctx->cpu.ops.gpr_set = gpr_write_direct;
-	ctx->cpu.ops.gpr_get = gpr_read;
+	ctx->cpu.gpr_set = gpr_write_direct;
+	ctx->cpu.gpr_get = gpr_read;
 
-	ctx->cpu.ops.lo_get = lo_get;
-	ctx->cpu.ops.hi_get = hi_get;
+	ctx->cpu.reg_lo_get = lo_get;
+	ctx->cpu.reg_hi_get = hi_get;
 
-	ctx->cpu.ops.pc_set = pc_set;
-	ctx->cpu.ops.pc_get = pc_get;
+	ctx->cpu.pc_set = pc_set;
+	ctx->cpu.pc_get = pc_get;
 
-	ctx->cpu.ops.run = run;
-	ctx->cpu.ops.rst = rst;
+	ctx->cpu.run   = run;
+	ctx->cpu.reset = reset;
 
-	ctx->cpu.ops.instr_get = instr_get;
+	ctx->cpu.instr_get = instr_get;
 }

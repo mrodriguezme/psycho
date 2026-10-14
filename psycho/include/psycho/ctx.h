@@ -35,31 +35,25 @@ extern "C" {
 #include "system/sio0.h"
 
 struct p_ctx_cfg {
-	struct p_cpu_cfg cpu;
-	struct p_bios_trace_cfg bios_trace;
-	struct p_disasm_cfg disasm;
 	struct p_log_cfg log;
+	struct p_bios_trace_cfg bios_trace;
+	struct psycho_cpu_cfg cpu;
 
 	void (*on_vblank)(struct p_ctx *ctx);
+
+	struct p_disasm_cfg disasm;
 };
 
 struct p_ctx {
 	struct p_bus bus;
 	struct p_gpu gpu;
-
 	struct p_bios_trace bios_trace;
-
 	struct p_disasm disasm;
-
-	struct {
-		struct psycho_cpu_interpreter interpreter;
-		struct psycho_cpu_ops ops;
-	} cpu;
-
+	struct psycho_cpu_interpreter cpu_interpreter;
 	struct p_sched sched;
 	struct psycho_sio0 sio0;
-
 	struct p_ctx_cfg cfg;
+	struct psycho_cpu_ops cpu;
 
 	struct {
 		const uint8_t *data;
@@ -67,7 +61,6 @@ struct p_ctx {
 	} exe;
 
 	struct p_intc intc;
-
 	bool running;
 };
 
@@ -88,7 +81,7 @@ void p_step(struct p_ctx *ctx) P_NONNULL;
 
 P_NODISCARD enum p_ctx_ret p_run_exe(struct p_ctx *ctx, uint8_t *exe, size_t size) P_NONNULL;
 
-void p_run_until_ev(struct p_ctx *ctx) P_NONNULL;
+void psycho_ctx_run_until_event(struct p_ctx *ctx) P_NONNULL;
 
 #ifdef __cplusplus
 }
