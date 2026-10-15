@@ -1688,15 +1688,15 @@ P_NONNULL static void run(struct p_ctx *ctx, bool single_step)
 	};
 
 	uint32_t instr = 0;
-	bool stepped = false;
+	bool stepped   = false;
 
 	goto loop;
 
 slow:
-	if (unlikely(entering_bios_call(pc)))
+	if (unlikely(BIOS_TRACE_ON() && entering_bios_call(pc)))
 		psycho_bios_call_tracer_begin(ctx, gpr[PSYCHO_CPU_GPR_T1], bios_call_tracer_pc_to_offset(pc));
 
-	if (unlikely(leaving_bios_call(ctx, gpr[PSYCHO_CPU_GPR_RA], instr)))
+	if (unlikely(BIOS_TRACE_ON() && leaving_bios_call(ctx, gpr[PSYCHO_CPU_GPR_RA], instr)))
 		psycho_bios_call_tracer_end(ctx, gpr[PSYCHO_CPU_GPR_V0]);
 
 loop:
