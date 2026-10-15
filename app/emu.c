@@ -138,11 +138,13 @@ void emu_init(struct emu_runner *emu, uint8_t *bios_data, uint8_t *exe_data, siz
 
 	cfg->log.log_cb = log_cb;
 
-	cfg->log.modules[PSYCHO_LOG_MODULE_SIO0] = PSYCHO_LOG_LEVEL_TRACE;
-	cfg->log.modules[PSYCHO_LOG_MODULE_DIGITAL_PAD] = PSYCHO_LOG_LEVEL_TRACE;
+	//cfg->log.modules[PSYCHO_LOG_MODULE_SIO0] = PSYCHO_LOG_LEVEL_TRACE;
+	//cfg->log.modules[PSYCHO_LOG_MODULE_DIGITAL_PAD] = PSYCHO_LOG_LEVEL_TRACE;
 
-	cfg->bios_trace.stdout_line = on_stdout_line;
-	cfg->bios_trace.deref_ptrs  = true;
+	cfg->log.modules[PSYCHO_LOG_MODULE_BIOS_CALL_TRACER] = PSYCHO_LOG_LEVEL_TRACE;
+
+	cfg->bios_call_tracer.stdout_line = on_stdout_line;
+	cfg->bios_call_tracer.deref_ptrs  = true;
 
 	cfg->on_vblank = on_vblank;
 
@@ -163,20 +165,13 @@ void emu_init(struct emu_runner *emu, uint8_t *bios_data, uint8_t *exe_data, siz
 
 static int emu_thread_func(void *data)
 {
-	uint32_t last_frame_count = SDL_GetAtomicInt(&m_emu->frame_count);
-
 	while (SDL_GetAtomicInt(&m_emu->running)) {
 		emu_poll_ctrl(m_emu);
 
 		const Uint64 start_ns = SDL_GetTicksNS();
-		p_run_until_ev(&m_emu->ctx);
-
-		uint32_t current_frame_count = SDL_GetAtomicInt(&m_emu->frame_count);
-
-		if (current_frame_count == last_frame_count)
-			continue;
-
+		psycho_ctx_run_until_vblank(&m_emu->ctx);
 		const Uint64 end_ns = SDL_GetTicksNS();
+
 		const Uint64 diff   = end_ns - start_ns;
 		const Uint64 target = 1000000000 / 60;
 
@@ -184,7 +179,6 @@ static int emu_thread_func(void *data)
 		if (diff < target)
 			SDL_DelayNS(target - diff);
 #endif
-		last_frame_count = current_frame_count;
 	}
 	return 0;
 }

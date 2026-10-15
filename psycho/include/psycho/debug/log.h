@@ -26,9 +26,9 @@ extern "C" {
 
 #define PSYCHO_LOG_LEVEL_LIST(X) \
 	X(OFF, "off")            \
-	X(ERROR, "err")          \
-	X(WARN, "warn")          \
 	X(INFO, "info")          \
+	X(WARN, "warn")          \
+	X(ERROR, "err")          \
 	X(DEBUG, "debug")        \
 	X(TRACE, "trace")
 

@@ -17,22 +17,35 @@
 
 #pragma once
 
-#define JR_RA (0x03E00008)
-
 #include "psycho/ctx.h"
 
-void p_bios_trace_init(struct p_ctx *ctx) P_NONNULL;
+enum {
+	JR_RA = 0x03E00008,
+};
 
-P_NONNULL P_ALWAYS_INLINE bool p_bios_trace_in_bios_call(uint32_t pc)
+void psycho_bios_call_tracer_init(struct p_ctx *ctx) P_NONNULL;
+
+P_NONNULL P_ALWAYS_INLINE bool entering_bios_call(uint32_t pc)
 {
 	return (pc == 0xA0) || (pc == 0xB0) || (pc == 0xC0);
 }
 
-void p_bios_trace_begin(struct p_ctx *ctx, uint32_t fn, uint32_t tbl_off) P_NONNULL;
-
-P_NONNULL P_ALWAYS_INLINE bool p_bios_trace_end_of_call(struct p_ctx *ctx, uint32_t instr)
+P_NONNULL P_ALWAYS_INLINE bool leaving_bios_call(struct p_ctx *ctx, uint32_t ra, uint32_t instr)
 {
-	return (instr == JR_RA) && (ctx->bios_trace.stack.top);
+	if (instr != JR_RA)
+		return false;
+
+	if (!ctx->bios_call_tracer.stack.top)
+		return false;
+
+	return ctx->bios_call_tracer.stack.frames[ctx->bios_call_tracer.stack.top - 1].ra == ra;
 }
 
-void p_bios_trace_end(struct p_ctx *ctx, uint32_t v0) P_NONNULL;
+P_NONNULL P_ALWAYS_INLINE size_t bios_call_tracer_pc_to_offset(uint32_t pc)
+{
+	return (pc >> 4) - 0xA;
+}
+
+void psycho_bios_call_tracer_begin(struct p_ctx *ctx, uint32_t func, uint32_t table_offset) P_NONNULL;
+
+void psycho_bios_call_tracer_end(struct p_ctx *ctx, uint32_t v0) P_NONNULL;

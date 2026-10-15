@@ -21,7 +21,7 @@
 #include "common/util.h"
 #include "common/sched.h"
 
-#include "debug/bios_trace.h"
+#include "debug/bios_call_tracer.h"
 #include "debug/log.h"
 
 #include "system/bus.h"
@@ -34,7 +34,6 @@ DECLARE_LOG_MODULE(PSYCHO_LOG_MODULE_CPU);
 
 #define LD_SLOT(m) (((struct p_ctx *)0)->cpu_interpreter.m)
 
-static_assert(__BYTE_ORDER__ == __ORDER_LITTLE_ENDIAN__, "load_dly() packing assumes little-endian");
 static_assert(sizeof(LD_SLOT(ld_pend)) == 8, "ld slot must be exactly 8 bytes");
 static_assert(sizeof(LD_SLOT(ld_pend.dst)) == 4, "ld slot dst must be 32 bits");
 static_assert(sizeof(LD_SLOT(ld_pend.val)) == 4, "ld slot val must be 32 bits");
@@ -1502,7 +1501,7 @@ P_NONNULL static void run(struct p_ctx *ctx, bool single_step)
 #define OP(x)		[64 + (x)]
 #define OPR(a, b)	[64 + (a)... 64 + (b)]
 
-#define BIOS_TRACE_ON() (false)
+#define BIOS_TRACE_ON() (true)
 
 #define FETCH()                                                                            \
 	do {                                                                               \
@@ -1694,8 +1693,11 @@ P_NONNULL static void run(struct p_ctx *ctx, bool single_step)
 	goto loop;
 
 slow:
-	if (unlikely(p_bios_trace_end_of_call(ctx, instr)))
-		p_bios_trace_end(ctx, gpr[PSYCHO_CPU_GPR_V0]);
+	if (unlikely(entering_bios_call(pc)))
+		psycho_bios_call_tracer_begin(ctx, gpr[PSYCHO_CPU_GPR_T1], bios_call_tracer_pc_to_offset(pc));
+
+	if (unlikely(leaving_bios_call(ctx, gpr[PSYCHO_CPU_GPR_RA], instr)))
+		psycho_bios_call_tracer_end(ctx, gpr[PSYCHO_CPU_GPR_V0]);
 
 loop:
 	while (unlikely(ctx->sched.ts_now >= ctx->sched.ev[0]->ts))

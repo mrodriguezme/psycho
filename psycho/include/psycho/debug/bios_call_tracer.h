@@ -28,21 +28,33 @@ extern "C" {
 #endif // __cplusplus
 
 struct p_ctx;
+struct psycho_bios_call_tracer_frame;
 
-#define P_BIOS_TRACE_STACK_MAX		(10)
-#define P_BIOS_TRACE_TTY_STDOUT_LEN_MAX (512)
-
-enum p_bios_fn_ret {
-	P_BIOS_FN_RET_INT,
-	P_BIOS_FN_RET_CHAR,
-	P_BIOS_FN_RET_VOID,
-	P_BIOS_FN_RET_VOID_PTR,
+enum {
+	PSYCHO_BIOS_CALL_TRACER_STACK_MAX	= 16,
+	PSYCHO_BIOS_CALL_TRACER_STDOUT_LEN_MAX	= 128,
 };
 
-struct p_bios_frame {
-	const struct p_bios_fn *fn;
-	struct p_str str;
-	char str_buf[512];
+enum psycho_bios_call_tracer_func_ret {
+	PSYCHO_BIOS_CALL_FUNC_RET_INT,
+	PSYCHO_BIOS_CALL_FUNC_RET_CHAR,
+	PSYCHO_BIOS_CALL_FUNC_RET_VOID,
+	PSYCHO_BIOS_CALL_FUNC_RET_VOID_PTR
+};
+
+struct psycho_bios_call_tracer_func_entry {
+	const char *prototype;
+	const enum psycho_bios_call_tracer_func_ret ret;
+	void (*hook_cb)(struct p_ctx *ctx, struct psycho_bios_call_tracer_frame *frame);
+};
+
+struct psycho_bios_call_tracer_frame {
+	struct {
+		struct p_str str;
+		char buf[512];
+	} result;
+
+	const struct psycho_bios_call_tracer_func_entry *func;
 
 	uint32_t a0;
 	uint32_t a1;
@@ -53,30 +65,26 @@ struct p_bios_frame {
 	uint32_t arg_pos;
 };
 
-struct p_bios_fn {
-	const char *prototype;
-	const enum p_bios_fn_ret ret;
-	void (*hook_cb)(struct p_ctx *ctx, struct p_bios_frame *frame);
-};
-
-struct p_bios_trace_cfg {
+struct psyscho_bios_call_trace_cfg {
 	void (*stdout_line)(struct p_ctx *ctx, struct p_str *str);
 	bool deref_ptrs;
 };
 
-struct p_tty_str {
-	char buf[P_BIOS_TRACE_TTY_STDOUT_LEN_MAX];
+struct psycho_bios_call_tracer_stdout {
+	char buf[PSYCHO_BIOS_CALL_TRACER_STDOUT_LEN_MAX];
 	struct p_str str;
 };
 
-struct p_bios_trace {
+struct psycho_bios_call_tracer {
 	struct {
-		struct p_bios_frame frames[P_BIOS_TRACE_STACK_MAX];
+		struct psycho_bios_call_tracer_frame frames[PSYCHO_BIOS_CALL_TRACER_STACK_MAX];
 		size_t top;
 	} stack;
 
-	struct p_tty_str tty_orig;
-	struct p_tty_str tty_log;
+	struct {
+		struct psycho_bios_call_tracer_stdout tty_original;
+		struct psycho_bios_call_tracer_stdout tty_log;
+	};
 };
 
 #ifdef __cplusplus

@@ -1,0 +1,381 @@
+// SPDX-License-Identifier: MIT
+//
+// Copyright 2026 Michael Rodriguez
+//
+// Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated
+// documentation files (the "Software"), to deal in the Software without restriction, including without limitation the
+// rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to
+// permit persons to whom the Software is furnished to do so, subject to the following conditions:
+//
+// The above copyright notice and this permission notice shall be included in all copies or substantial portions of the
+// Software.
+//
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE
+// WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR
+// COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR
+// OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+
+#include <inttypes.h>
+
+#include "bios_call_tracer.h"
+
+#include "debug/log.h"
+
+#include "str.h"
+
+#include "system/bus.h"
+#include "system/cpu/defs.h"
+
+DECLARE_LOG_MODULE(PSYCHO_LOG_MODULE_BIOS_CALL_TRACER);
+
+static void on_putchar(struct p_ctx *ctx, struct psycho_bios_call_tracer_frame *frame);
+
+static const struct psycho_bios_call_tracer_func_entry call_tbl[3][0xFF] = {
+	// 0xA0
+	[0] = {
+		[0x17] = {
+			.prototype = "int strcmp(const char *s1=%s, const char *s2=%s)",
+			.ret       = PSYCHO_BIOS_CALL_FUNC_RET_INT
+		},
+
+		[0x25] = {
+			.prototype = "char toupper(char c=%c)",
+			.ret       = PSYCHO_BIOS_CALL_FUNC_RET_CHAR
+		},
+
+		[0x2A] = {
+			.prototype = "void *memcpy(unsigned char *s1=%p, const unsigned char *s2=%p, int n=%d)",
+			.ret       = PSYCHO_BIOS_CALL_FUNC_RET_VOID_PTR
+		},
+
+		[0x44] = {
+			.prototype = "void FlushCache(void)",
+			.ret       = PSYCHO_BIOS_CALL_FUNC_RET_VOID
+		},
+
+		[0x96] = {
+			.prototype = "void AddCDROMDevice(void)",
+			.ret       = PSYCHO_BIOS_CALL_FUNC_RET_VOID
+		},
+
+		[0x97] = {
+			.prototype = "void AddMemCardDevice(void)",
+			.ret       = PSYCHO_BIOS_CALL_FUNC_RET_VOID
+		},
+
+		[0x99] = {
+			.prototype = "void add_nullcon_driver()",
+			.ret       = PSYCHO_BIOS_CALL_FUNC_RET_VOID
+		},
+	},
+
+	// 0xB0
+	[1] = {
+		[0x00] = {
+			.prototype = "void alloc_kernel_memory(size_t size=%d)",
+			.ret       = PSYCHO_BIOS_CALL_FUNC_RET_VOID
+		},
+
+		[0x18] = {
+			.prototype = "void *ResetEntryInt(void)",
+			.ret       = PSYCHO_BIOS_CALL_FUNC_RET_VOID_PTR
+		},
+
+		[0x3D] = {
+			.prototype = "void putchar(char c=%c)",
+			.ret       = PSYCHO_BIOS_CALL_FUNC_RET_VOID,
+			.hook_cb   = on_putchar
+		},
+
+		[0x47] = {
+			.prototype = "void AddDrv()",
+			.ret       = PSYCHO_BIOS_CALL_FUNC_RET_VOID
+		},
+	},
+
+	// 0xC0
+	[2] = {
+		[0x00] = {
+			.prototype = "void EnqueueTimerAndVblankIrqs(int prio=%d)",
+			.ret       = PSYCHO_BIOS_CALL_FUNC_RET_VOID
+		},
+
+		[0x01] = {
+			.prototype = "void EnqueueSyscallHandler(int prio=%d)",
+			.ret       = PSYCHO_BIOS_CALL_FUNC_RET_VOID
+		},
+
+		[0x07] = {
+			.prototype = "void InstallExceptionHandlers(void)",
+			.ret       = PSYCHO_BIOS_CALL_FUNC_RET_VOID
+		},
+
+		[0x08] = {
+			.prototype = "void SysInitMemory(void *addr=%p, size_t size=%d)",
+			.ret       = PSYCHO_BIOS_CALL_FUNC_RET_VOID
+		},
+
+		[0x0C] = {
+			.prototype = "void InitDefInt(int prio=%d)",
+			.ret       = PSYCHO_BIOS_CALL_FUNC_RET_VOID
+		},
+
+		[0x12] = {
+			.prototype = "void InstallDevices(int ttyflag=%d)",
+			.ret       = PSYCHO_BIOS_CALL_FUNC_RET_VOID
+		},
+
+		[0x1C] = {
+			.prototype = "void AdjustA0Table(void)",
+			.ret       = PSYCHO_BIOS_CALL_FUNC_RET_VOID
+		},
+	},
+};
+
+P_NODISCARD P_NONNULL static const struct psycho_bios_call_tracer_func_entry *
+func_get(const struct psycho_bios_call_tracer_func_entry *arr, size_t arr_elems, uint32_t func)
+{
+	if (func >= arr_elems)
+		return NULL;
+
+	return arr[func].prototype ? &arr[func] : NULL;
+}
+
+P_NONNULL static void frame_init(struct p_ctx *ctx, struct psycho_bios_call_tracer_frame *frame,
+				 const struct psycho_bios_call_tracer_func_entry *func)
+{
+	frame->func    = func;
+	frame->arg_pos = 0;
+
+	frame->a0 = ctx->cpu.gpr_get(ctx, PSYCHO_CPU_GPR_A0);
+	frame->a1 = ctx->cpu.gpr_get(ctx, PSYCHO_CPU_GPR_A1);
+	frame->a2 = ctx->cpu.gpr_get(ctx, PSYCHO_CPU_GPR_A2);
+	frame->a3 = ctx->cpu.gpr_get(ctx, PSYCHO_CPU_GPR_A3);
+
+	frame->sp = ctx->cpu.gpr_get(ctx, PSYCHO_CPU_GPR_SP);
+	frame->ra = ctx->cpu.gpr_get(ctx, PSYCHO_CPU_GPR_RA);
+
+	p_str_init_fixed(&frame->result.str, frame->result.buf, sizeof(frame->result.buf));
+}
+
+P_NODISCARD P_NONNULL static struct psycho_bios_call_tracer_frame *stack_emplace(struct p_ctx *ctx)
+{
+	if (unlikely(ctx->bios_call_tracer.stack.top >= ARRAY_SIZE(ctx->bios_call_tracer.stack.frames)))
+		return NULL;
+
+	return &ctx->bios_call_tracer.stack.frames[ctx->bios_call_tracer.stack.top++];
+}
+
+P_NODISCARD P_NONNULL static struct psycho_bios_call_tracer_frame *stack_pop(struct p_ctx *ctx)
+{
+	if (!ctx->bios_call_tracer.stack.top)
+		return NULL;
+
+	return &ctx->bios_call_tracer.stack.frames[--ctx->bios_call_tracer.stack.top];
+}
+
+P_NODISCARD P_NONNULL static uint32_t get_arg(struct p_ctx *ctx, struct psycho_bios_call_tracer_frame *frame)
+{
+	if (frame->arg_pos <= PSYCHO_CPU_GPR_A3)
+		return (&frame->a0)[frame->arg_pos++];
+
+	return p_load32(ctx, frame->sp + 16 + (frame->arg_pos++ - 4) * 4);
+}
+
+P_NONNULL static void reset_stdout_strs(struct p_ctx *ctx)
+{
+	p_str_init_fixed(&ctx->bios_call_tracer.tty_log.str, ctx->bios_call_tracer.tty_log.buf,
+			 sizeof(ctx->bios_call_tracer.tty_log.buf));
+
+	p_str_init_fixed(&ctx->bios_call_tracer.tty_original.str, ctx->bios_call_tracer.tty_original.buf,
+			 sizeof(ctx->bios_call_tracer.tty_original.buf));
+}
+
+P_NODISCARD static const char *esc_seq(char c)
+{
+	switch (c) {
+	case '\n':
+		return "\\n";
+	case '\r':
+		return "\\r";
+	case '\t':
+		return "\\t";
+	case '\v':
+		return "\\v";
+	case '\f':
+		return "\\f";
+	case '\b':
+		return "\\b";
+	case '\a':
+		return "\\a";
+	case '\\':
+		return "\\\\";
+	case '\'':
+		return "\\\'";
+	case '\"':
+		return "\\\"";
+	case '\0':
+		return "\\0";
+
+	default:
+		return NULL;
+	}
+}
+
+P_NONNULL static void process_char(struct p_ctx *ctx, struct psycho_bios_call_tracer_frame *frame)
+{
+	const char c = get_arg(ctx, frame);
+
+	const char *const seq = esc_seq(c);
+
+	if (seq)
+		p_str_append(&frame->result.str, NULL, "'%s'", seq);
+	else
+		p_str_append(&frame->result.str, NULL, "'%c'", c);
+}
+
+P_NONNULL static void process_int(struct p_ctx *ctx, struct psycho_bios_call_tracer_frame *frame)
+{
+	p_str_append(&frame->result.str, NULL, "%" PRIu32, get_arg(ctx, frame));
+}
+
+P_NONNULL static void process_str(struct p_ctx *ctx, struct psycho_bios_call_tracer_frame *frame)
+{
+	const uint32_t ptr = get_arg(ctx, frame);
+
+	if (!ctx->cfg.bios_call_tracer.deref_ptrs)
+		goto end;
+
+	uint8_t *area = p_get_mem_area(ctx, vaddr_to_paddr(ptr));
+
+	if (!area)
+		goto end;
+
+	p_str_append(&frame->result.str, NULL, "\"%s\"", area);
+	return;
+
+end:
+	p_str_append(&frame->result.str, NULL, "0x%08X", ptr);
+}
+
+P_NONNULL static void process_ptr(struct p_ctx *ctx, struct psycho_bios_call_tracer_frame *frame)
+{
+	p_str_append(&frame->result.str, NULL, "0x%08X", get_arg(ctx, frame));
+}
+
+P_NONNULL static void on_putchar(struct p_ctx *ctx, struct psycho_bios_call_tracer_frame *frame)
+{
+	const char c = frame->a0;
+
+	const char *seq = esc_seq(c);
+
+	p_str_append(&ctx->bios_call_tracer.tty_original.str, NULL, "%c", c);
+
+	if (!seq) {
+		p_str_append(&ctx->bios_call_tracer.tty_log.str, NULL, "%c", c);
+		return;
+	}
+
+	p_str_append(&ctx->bios_call_tracer.tty_log.str, NULL, "%s", seq);
+
+	if (c == '\n') {
+		LOG_INFO(ctx, "[stdout] %s", ctx->bios_call_tracer.tty_log.buf);
+
+		if (ctx->cfg.bios_call_tracer.stdout_line)
+			ctx->cfg.bios_call_tracer.stdout_line(ctx, &ctx->bios_call_tracer.tty_log.str);
+
+		reset_stdout_strs(ctx);
+	}
+}
+
+P_NONNULL static void process_prototype(struct p_ctx *ctx, struct psycho_bios_call_tracer_frame *frame)
+{
+	const char *src = frame->func->prototype;
+
+	while (*src) {
+		if (*src != '%') {
+			p_str_append(&frame->result.str, NULL, "%c", *src++);
+			continue;
+		}
+
+		const char next = *(src + 1);
+
+		switch (next) {
+		case 'c':
+			process_char(ctx, frame);
+			break;
+
+		case 'd':
+			process_int(ctx, frame);
+			break;
+
+		case 'p':
+			process_ptr(ctx, frame);
+			break;
+
+		case 's':
+			process_str(ctx, frame);
+			break;
+
+		default:
+			p_str_append(&frame->result.str, NULL, "%c", *src++);
+			break;
+		}
+		src += (sizeof("%%") - 1);
+	}
+}
+
+void psycho_bios_call_tracer_init(struct p_ctx *ctx)
+{
+	reset_stdout_strs(ctx);
+}
+
+void psycho_bios_call_tracer_begin(struct p_ctx *ctx, uint32_t func, uint32_t table_offset)
+{
+	const struct psycho_bios_call_tracer_func_entry *entry = &call_tbl[table_offset][func];
+
+	if (!entry->prototype) {
+		LOG_WARN(ctx, "Unimplemented BIOS call: 0x%02X:0x%08X; ignoring", table_offset, func);
+		return;
+	}
+
+	struct psycho_bios_call_tracer_frame *frame = stack_emplace(ctx);
+
+	if (unlikely(!frame)) {
+		LOG_WARN(ctx, "BIOS call stack is too deep for us to handle");
+		return;
+	}
+
+	frame_init(ctx, frame, entry);
+
+	if (entry->hook_cb)
+		entry->hook_cb(ctx, frame);
+
+	process_prototype(ctx, frame);
+}
+
+void psycho_bios_call_tracer_end(struct p_ctx *ctx, uint32_t v0)
+{
+	struct psycho_bios_call_tracer_frame *frame = stack_pop(ctx);
+
+	switch (frame->func->ret) {
+	case PSYCHO_BIOS_CALL_FUNC_RET_CHAR:
+		LOG_DEBUG(ctx, "bios call: %s -> '%c'", frame->result.buf, (char)v0);
+		return;
+
+	case PSYCHO_BIOS_CALL_FUNC_RET_VOID_PTR:
+		LOG_DEBUG(ctx, "bios call: %s -> 0x%08X", frame->result.buf, v0);
+		return;
+
+	case PSYCHO_BIOS_CALL_FUNC_RET_INT:
+		LOG_DEBUG(ctx, "bios call: %s -> %u", frame->result.buf, v0);
+		return;
+
+	case PSYCHO_BIOS_CALL_FUNC_RET_VOID:
+		LOG_DEBUG(ctx, "bios call: %s", frame->result.buf);
+		return;
+
+	default:
+		P_UNREACHABLE;
+	}
+}

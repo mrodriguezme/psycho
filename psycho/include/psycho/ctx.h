@@ -23,7 +23,7 @@ extern "C" {
 
 #include "common/sched.h"
 
-#include "debug/bios_trace.h"
+#include "debug/bios_call_tracer.h"
 #include "debug/disasm.h"
 #include "debug/log.h"
 
@@ -36,7 +36,7 @@ extern "C" {
 
 struct p_ctx_cfg {
 	struct p_log_cfg log;
-	struct p_bios_trace_cfg bios_trace;
+	struct psyscho_bios_call_trace_cfg bios_call_tracer;
 	struct psycho_cpu_cfg cpu;
 
 	void (*on_vblank)(struct p_ctx *ctx);
@@ -47,7 +47,7 @@ struct p_ctx_cfg {
 struct p_ctx {
 	struct p_bus bus;
 	struct p_gpu gpu;
-	struct p_bios_trace bios_trace;
+	struct psycho_bios_call_tracer bios_call_tracer;
 	struct p_disasm disasm;
 	struct psycho_cpu_interpreter cpu_interpreter;
 	struct p_sched sched;

@@ -27,7 +27,7 @@ target_sources(
 	psycho PRIVATE
 	include/psycho/common/compiler_support.h
 	include/psycho/common/sched.h
-	include/psycho/debug/bios_trace.h
+	include/psycho/debug/bios_call_tracer.h
 	include/psycho/debug/disasm.h
 	include/psycho/debug/log.h
 	include/psycho/debug/str.h
@@ -45,8 +45,8 @@ target_sources(
 	src/common/sched.c
 	src/common/sched.h
 	src/common/util.h
-	src/debug/bios_trace.c
-	src/debug/bios_trace.h
+	src/debug/bios_call_tracer.c
+	src/debug/bios_call_tracer.h
 	src/debug/disasm.c
 	src/debug/disasm.h
 	src/debug/log.c
