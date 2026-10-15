@@ -81,7 +81,7 @@ void p_step(struct p_ctx *ctx) P_NONNULL;
 
 P_NODISCARD enum p_ctx_ret p_run_exe(struct p_ctx *ctx, uint8_t *exe, size_t size) P_NONNULL;
 
-void psycho_ctx_run_until_event(struct p_ctx *ctx) P_NONNULL;
+void psycho_ctx_run_until_vblank(struct p_ctx *ctx) P_NONNULL;
 
 #ifdef __cplusplus
 }

@@ -32,6 +32,17 @@
 
 DECLARE_LOG_MODULE(PSYCHO_LOG_MODULE_CPU);
 
+#define LD_SLOT(m) (((struct p_ctx *)0)->cpu_interpreter.m)
+
+static_assert(__BYTE_ORDER__ == __ORDER_LITTLE_ENDIAN__, "load_dly() packing assumes little-endian");
+static_assert(sizeof(LD_SLOT(ld_pend)) == 8, "ld slot must be exactly 8 bytes");
+static_assert(sizeof(LD_SLOT(ld_pend.dst)) == 4, "ld slot dst must be 32 bits");
+static_assert(sizeof(LD_SLOT(ld_pend.val)) == 4, "ld slot val must be 32 bits");
+static_assert(offsetof(__typeof__(LD_SLOT(ld_pend)), dst) == 0, "ld slot dst must come first");
+static_assert(offsetof(__typeof__(LD_SLOT(ld_pend)), val) == 4, "ld slot val must come second");
+
+#undef LD_SLOT
+
 #define gte_clamp(ctx, val, min, max, flag)      \
 	({                                       \
 		if ((val) < (min)) {             \
@@ -106,6 +117,12 @@ P_NONNULL static void reset(struct p_ctx *ctx)
 
 	ctx->cpu_interpreter.slow = false;
 	LOG_INFO(ctx, "reset");
+}
+
+P_NONNULL static void stop(struct p_ctx *ctx)
+{
+	ctx->running		  = false;
+	ctx->cpu_interpreter.slow = true;
 }
 
 P_NONNULL static void illegal_instr(struct p_ctx *ctx)
@@ -1198,11 +1215,10 @@ P_NONNULL static void do_mvmva(struct p_ctx *ctx)
 		vx	  = vx_tmp;
 	}
 
-	if (tx_sel != 2)
+	if (likely(tx_sel != 2))
 		mvmva(ctx, mx, vx, tx);
 	else
-		// Don't need to worry about passing Tx - only the FC
-		// vector is buggy
+		// Don't need to worry about passing Tx - only the FC vector is buggy
 		mvmva_bugged(ctx, mx, vx);
 
 #undef BK
@@ -1448,43 +1464,43 @@ P_NONNULL static void do_swr(struct p_ctx *ctx, size_t base, size_t offset, size
 #undef gpr
 }
 
-P_NONNULL static void run(struct p_ctx *ctx, uint64_t instr_limit, bool stop_on_event)
+P_NONNULL static void run(struct p_ctx *ctx, bool single_step)
 {
-#define gpr	  (ctx->cpu_interpreter.gpr)
-#define pc	  (ctx->cpu_interpreter.pc)
-#define npc	  (ctx->cpu_interpreter.npc)
-#define hi	  (ctx->cpu_interpreter.hi)
-#define lo	  (ctx->cpu_interpreter.lo)
+#define gpr		(ctx->cpu_interpreter.gpr)
+#define pc		(ctx->cpu_interpreter.pc)
+#define npc		(ctx->cpu_interpreter.npc)
+#define hi		(ctx->cpu_interpreter.hi)
+#define lo		(ctx->cpu_interpreter.lo)
 
-#define op	  (instr_op(instr))
-#define rt	  (instr_rt(instr))
-#define rs	  (instr_rs(instr))
-#define rd	  (instr_rd(instr))
-#define shamt	  (instr_shamt(instr))
-#define funct	  (instr_funct(instr))
-#define base	  (rs)
-#define zextimm	  (zext_16_32(instr_imm(instr)))
-#define sextimm	  (sext_16_32(instr_imm(instr)))
-#define offset	  (sextimm)
+#define op		(instr_op(instr))
+#define rt		(instr_rt(instr))
+#define rs		(instr_rs(instr))
+#define rd		(instr_rd(instr))
+#define shamt		(instr_shamt(instr))
+#define funct		(instr_funct(instr))
+#define base		(rs)
+#define zextimm		(zext_16_32(instr_imm(instr)))
+#define sextimm		(sext_16_32(instr_imm(instr)))
+#define offset		(sextimm)
 
-#define SR	  (ctx->cpu_interpreter.cop0_cpr[PSYCHO_CPU_COP0_CPR_SR])
+#define SR		(ctx->cpu_interpreter.cop0_cpr[PSYCHO_CPU_COP0_CPR_SR])
 
-#define FLAG	  (ctx->cpu_interpreter.cop2.ccr.flag)
-#define MAC	  (ctx->cpu_interpreter.cop2.cpr.mac)
-#define V	  (ctx->cpu_interpreter.cop2.cpr.vector)
-#define SX0	  (ctx->cpu_interpreter.cop2.cpr.sxy[0].x)
-#define SX1	  (ctx->cpu_interpreter.cop2.cpr.sxy[1].x)
-#define SX2	  (ctx->cpu_interpreter.cop2.cpr.sxy[2].x)
-#define SY0	  (ctx->cpu_interpreter.cop2.cpr.sxy[0].y)
-#define SY1	  (ctx->cpu_interpreter.cop2.cpr.sxy[1].y)
-#define SY2	  (ctx->cpu_interpreter.cop2.cpr.sxy[2].y)
-#define RGB0	  (ctx->cpu_interpreter.cop2.cpr.rgb[0].array)
-#define RGBC	  (ctx->cpu_interpreter.cop2.cpr.rgbc.array)
-#define ZSF3	  (ctx->cpu_interpreter.cop2.ccr.zsf3)
-#define ZSF4	  (ctx->cpu_interpreter.cop2.ccr.zsf4)
+#define FLAG		(ctx->cpu_interpreter.cop2.ccr.flag)
+#define MAC		(ctx->cpu_interpreter.cop2.cpr.mac)
+#define V		(ctx->cpu_interpreter.cop2.cpr.vector)
+#define SX0		(ctx->cpu_interpreter.cop2.cpr.sxy[0].x)
+#define SX1		(ctx->cpu_interpreter.cop2.cpr.sxy[1].x)
+#define SX2		(ctx->cpu_interpreter.cop2.cpr.sxy[2].x)
+#define SY0		(ctx->cpu_interpreter.cop2.cpr.sxy[0].y)
+#define SY1		(ctx->cpu_interpreter.cop2.cpr.sxy[1].y)
+#define SY2		(ctx->cpu_interpreter.cop2.cpr.sxy[2].y)
+#define RGB0		(ctx->cpu_interpreter.cop2.cpr.rgb[0].array)
+#define RGBC		(ctx->cpu_interpreter.cop2.cpr.rgbc.array)
+#define ZSF3		(ctx->cpu_interpreter.cop2.ccr.zsf3)
+#define ZSF4		(ctx->cpu_interpreter.cop2.ccr.zsf4)
 
-#define OP(x)	  [64 + (x)]
-#define OPR(a, b) [64 + (a)... 64 + (b)]
+#define OP(x)		[64 + (x)]
+#define OPR(a, b)	[64 + (a)... 64 + (b)]
 
 #define BIOS_TRACE_ON() (false)
 
@@ -1503,17 +1519,15 @@ P_NONNULL static void run(struct p_ctx *ctx, uint64_t instr_limit, bool stop_on_
 		dly_slot_process(ctx);                                                     \
 	} while (0)
 
-#define DISPATCH()                                                                            \
-	do {                                                                                  \
-		gpr[PSYCHO_CPU_GPR_ZERO] = 0;                                                 \
-                                                                                              \
-		if (unlikely((!instr_limit) || (ctx->sched.ts_now >= ctx->sched.ev[0]->ts) || \
-			     (ctx->cpu_interpreter.slow)))                                    \
-			goto slow;                                                            \
-                                                                                              \
-		instr_limit--;                                                                \
-		FETCH();                                                                      \
-		goto *dispatch_tbl[op ? (64 + op) : funct];                                   \
+#define DISPATCH()                                                                                        \
+	do {                                                                                              \
+		gpr[PSYCHO_CPU_GPR_ZERO] = 0;                                                             \
+                                                                                                          \
+		if (unlikely((ctx->sched.ts_now >= ctx->sched.ev[0]->ts) || (ctx->cpu_interpreter.slow))) \
+			goto slow;                                                                        \
+                                                                                                          \
+		FETCH();                                                                                  \
+		goto *dispatch_tbl[op ? (64 + op) : funct];                                               \
 	} while (0)
 
 	static void *const dispatch_tbl[128] = {
@@ -1675,6 +1689,7 @@ P_NONNULL static void run(struct p_ctx *ctx, uint64_t instr_limit, bool stop_on_
 	};
 
 	uint32_t instr = 0;
+	bool stepped = false;
 
 	goto loop;
 
@@ -1683,19 +1698,13 @@ slow:
 		p_bios_trace_end(ctx, gpr[PSYCHO_CPU_GPR_V0]);
 
 loop:
-	while (unlikely(ctx->sched.ts_now >= ctx->sched.ev[0]->ts)) {
+	while (unlikely(ctx->sched.ts_now >= ctx->sched.ev[0]->ts))
 		p_sched_run(ctx);
 
-		if (unlikely(stop_on_event)) {
-			ctx->running = false;
-			goto done;
-		}
-	}
-
-	// Must come AFTER the events run: an event callback can clear `running`, and the `slow` recompute below would
-	// otherwise erase that stop request.
-	if (unlikely((!ctx->running) || (!instr_limit)))
+	if (unlikely((!ctx->running) || stepped))
 		goto done;
+
+	stepped = single_step;
 
 	if (unlikely((ctx->exe.data) && (pc == KERNEL_INIT_PC)))
 		p_exe_inject(ctx);
@@ -1703,16 +1712,9 @@ loop:
 	if (unlikely(ctx->cpu_interpreter.dly_pc & 3))
 		exc(ctx, EXC_ADEL);
 
-	// Stay in here while anything rare is active. npc is what FETCH() moves into dly_pc, so this is
-	// the same misaligned-target test as before, made one step earlier.
-	ctx->cpu_interpreter.slow = ctx->exe.data || (npc & 3) || BIOS_TRACE_ON();
+	ctx->cpu_interpreter.slow = ctx->exe.data || (npc & 3) || BIOS_TRACE_ON() || single_step;
 
-	instr_limit--;
 	FETCH();
-
-	if (unlikely(p_bios_trace_in_bios_call(pc)))
-		p_bios_trace_begin(ctx, gpr[PSYCHO_CPU_GPR_T1], (pc >> 4) - 0xA);
-
 	goto *dispatch_tbl[op ? (64 + op) : funct];
 
 op_sll:
@@ -2178,6 +2180,7 @@ void p_cpu_int_init(struct p_ctx *ctx)
 
 	ctx->cpu.run   = run;
 	ctx->cpu.reset = reset;
+	ctx->cpu.stop  = stop;
 
 	ctx->cpu.instr_get = instr_get;
 }

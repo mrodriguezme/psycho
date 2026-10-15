@@ -56,8 +56,8 @@ void p_step(struct p_ctx *ctx)
 {
 }
 
-void psycho_ctx_run_until_event(struct p_ctx *ctx)
+void psycho_ctx_run_until_vblank(struct p_ctx *ctx)
 {
 	ctx->running = true;
-	ctx->cpu.run(ctx, UINT64_MAX, true);
+	ctx->cpu.run(ctx, false);
 }

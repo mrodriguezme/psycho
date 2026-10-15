@@ -65,6 +65,8 @@ P_NONNULL static void on_vblank(struct p_ctx *ctx, void *userdata)
 {
 	(void)userdata;
 
+	ctx->cpu.stop(ctx);
+
 	if (ctx->cfg.on_vblank)
 		ctx->cfg.on_vblank(ctx);
 

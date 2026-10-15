@@ -42,7 +42,8 @@ struct psycho_cpu_ops {
 	void (*pc_set)(struct p_ctx *ctx, uint32_t pc);
 	uint32_t (*pc_get)(struct p_ctx *ctx);
 
-	void (*run)(struct p_ctx *ctx, uint64_t instr_limit, bool stop_on_event);
+	void (*run)(struct p_ctx *ctx, bool single_step);
+	void (*stop)(struct p_ctx *ctx);
 
 	uint32_t (*instr_get)(struct p_ctx *ctx);
 
