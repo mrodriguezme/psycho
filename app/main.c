@@ -20,11 +20,8 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-#include <assert.h>
 #include <stdio.h>
-#include <sys/stat.h>
 #include <SDL3/SDL.h>
-#include <errno.h>
 #include <stdlib.h>
 
 #include "emu.h"
@@ -33,144 +30,41 @@ static const char *prog_name;
 static SDL_Window *window;
 static SDL_Renderer *renderer;
 static SDL_Texture *texture;
-
-static struct emu_runner emu;
 static bool vsync_enabled;
 
-static uint8_t *exe_data;
-static size_t exe_size;
-static uint8_t bios_data[P_BUS_BIOS_SIZE_BYTES];
+static struct emu_runner emu;
 
 static void update_window_title(int render_fps, int emu_fps)
 {
 	char title[128];
-	SDL_snprintf(title, sizeof(title),
-		     "psycho | Host FPS: %d | Emulator FPS: %d", render_fps,
-		     emu_fps);
+	SDL_snprintf(title, sizeof(title), "psycho | Host FPS: %d | Emulator FPS: %d", render_fps, emu_fps);
 	SDL_SetWindowTitle(window, title);
-}
-
-static bool get_file_size(const char *file, size_t *file_size)
-{
-	struct stat st;
-
-	if (stat(file, &st) < 0) {
-		fprintf(stderr, "%s: unable to get file size of %s: %s",
-			prog_name, file, strerror(errno));
-
-		return false;
-	}
-
-	*file_size = st.st_size;
-	return true;
-}
-
-static bool load_exe_file(char *exe_file)
-{
-	assert(exe_file != NULL);
-
-	size_t file_size;
-
-	if (!get_file_size(exe_file, &file_size))
-		return false;
-
-	FILE *handle = fopen(exe_file, "rb");
-
-	if (!handle) {
-		fprintf(stderr, "%s: unable to open exe file %s: %s\n",
-			prog_name, exe_file, strerror(errno));
-		return false;
-	}
-
-	exe_data = malloc(file_size);
-	exe_size = fread(exe_data, sizeof(uint8_t), file_size, handle);
-
-	if (exe_size != file_size) {
-		fprintf(stderr,
-			"%s: not all bytes were read from exe file %s: %s\n",
-			prog_name, exe_file, strerror(errno));
-
-		fclose(handle);
-		free(exe_data);
-
-		return false;
-	}
-	fclose(handle);
-	return true;
-}
-
-static bool load_bios_file(char *bios_file)
-{
-	assert(bios_file != NULL);
-
-	size_t file_size;
-
-	if (!get_file_size(bios_file, &file_size))
-		return false;
-
-	if (file_size != P_BUS_BIOS_SIZE_BYTES) {
-		fprintf(stderr,
-			"%s: bios file size is not correct (expected %d bytes, "
-			"got %zu)\n",
-			prog_name, P_BUS_BIOS_SIZE_BYTES, file_size);
-		return false;
-	}
-
-	FILE *const handle = fopen(bios_file, "rb");
-
-	if (!handle) {
-		fprintf(stderr, "%s: unable to open bios file %s: %s\n",
-			prog_name, bios_file, strerror(errno));
-		return false;
-	}
-
-	const size_t bytes =
-		fread(bios_data, sizeof(uint8_t), file_size, handle);
-
-	if (bytes != file_size) {
-		fprintf(stderr,
-			"%s: not all bytes were read from bios file %s: %s\n",
-			prog_name, bios_file, strerror(errno));
-		fclose(handle);
-
-		return false;
-	}
-	fclose(handle);
-	return true;
 }
 
 static bool gfx_init(void)
 {
 	if (!SDL_Init(SDL_INIT_VIDEO)) {
-		SDL_LogError(SDL_LOG_CATEGORY_APPLICATION,
-			     "SDL_Init() failed: %s", SDL_GetError());
+		SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "SDL_Init() failed: %s", SDL_GetError());
 		return false;
 	}
 
-	if (!SDL_CreateWindowAndRenderer("psycho", 1920, 1080,
-					 SDL_WINDOW_RESIZABLE, &window,
-					 &renderer)) {
-		SDL_LogError(SDL_LOG_CATEGORY_APPLICATION,
-			     "SDL_CreateWindowAndRenderer() failed: %s",
-			     SDL_GetError());
+	if (!SDL_CreateWindowAndRenderer("psycho", 1920, 1080, SDL_WINDOW_RESIZABLE, &window, &renderer)) {
+		SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "SDL_CreateWindowAndRenderer() failed: %s", SDL_GetError());
 		return false;
 	}
 
 	vsync_enabled = SDL_SetRenderVSync(renderer, 1);
-	if (!vsync_enabled) {
-		SDL_Log("vsync not supported, falling back to manual frame "
-			"cap: %s",
-			SDL_GetError());
-	} else
+
+	if (!vsync_enabled)
+		SDL_Log("vsync not supported, falling back to manual frame cap: %s", SDL_GetError());
+	else
 		SDL_Log("vsync enabled");
 
-	texture = SDL_CreateTexture(renderer, SDL_PIXELFORMAT_XBGR1555,
-				    SDL_TEXTUREACCESS_STREAMING, VRAM_WIDTH,
+	texture = SDL_CreateTexture(renderer, SDL_PIXELFORMAT_XBGR1555, SDL_TEXTUREACCESS_STREAMING, VRAM_WIDTH,
 				    VRAM_HEIGHT);
 
 	if (!texture) {
-		SDL_LogError(SDL_LOG_CATEGORY_APPLICATION,
-			     "SDL_CreateTexture() failed: %s", SDL_GetError());
+		SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "SDL_CreateTexture() failed: %s", SDL_GetError());
 		return false;
 	}
 
@@ -202,16 +96,16 @@ static void render_frame(void)
 		return;
 	}
 
-	const size_t row_bytes = VRAM_WIDTH * sizeof(uint16_t);
+	size_t row_bytes = VRAM_WIDTH * sizeof(uint16_t);
 
-	if (pitch == (int)row_bytes) {
+	if (pitch == (int)row_bytes)
 		memcpy(pixels, src, row_bytes * VRAM_HEIGHT);
-	} else {
+	else {
 		uint8_t *src_bytes = (uint8_t *)src;
 		uint8_t *dst_bytes = (uint8_t *)pixels;
+
 		for (int y = 0; y < VRAM_HEIGHT; ++y)
-			memcpy(dst_bytes + y * pitch, src_bytes + y * row_bytes,
-			       row_bytes);
+			memcpy(dst_bytes + y * pitch, src_bytes + y * row_bytes, row_bytes);
 	}
 
 	SDL_UnlockTexture(texture);
@@ -237,21 +131,12 @@ int main(int argc, char **argv)
 {
 	if (argc < 3) {
 		fprintf(stderr, "%s: missing required argument\n", argv[0]);
-		fprintf(stderr, "%s: syntax: %s <bios_file> <exe_file>\n",
-			argv[0], argv[0]);
+		fprintf(stderr, "%s: syntax: %s <bios_file> <exe_file>\n", argv[0], argv[0]);
 
 		return EXIT_FAILURE;
 	}
 
-	prog_name = argv[0];
-
-	if (!load_bios_file(argv[1]))
-		return EXIT_FAILURE;
-
-	if (!load_exe_file(argv[2]))
-		return EXIT_FAILURE;
-
-	emu_init(&emu, bios_data, exe_data, exe_size);
+	emu_init(&emu, argv[1], argv[2]);
 
 	if (!gfx_init())
 		return EXIT_FAILURE;
@@ -275,10 +160,8 @@ int main(int argc, char **argv)
 
 		Uint64 now = SDL_GetTicksNS();
 		if (now - fps_window_start >= 1000000000ULL) {
-			int current_emu_frame_count =
-				SDL_GetAtomicInt(&emu.frame_count);
-			int emu_fps =
-				current_emu_frame_count - last_emu_frame_count;
+			int current_emu_frame_count = SDL_GetAtomicInt(&emu.frame_count);
+			int emu_fps		    = current_emu_frame_count - last_emu_frame_count;
 
 			update_window_title(render_frame_count, emu_fps);
 
@@ -290,8 +173,8 @@ int main(int argc, char **argv)
 		const Uint64 frame_end = SDL_GetTicksNS();
 
 		if (!vsync_enabled) {
-			const Uint64 diff      = frame_end - frame_start;
-			const Uint64 target    = 1000000000 / 60;
+			const Uint64 diff   = frame_end - frame_start;
+			const Uint64 target = 1000000000 / 60;
 
 			if (diff < target)
 				SDL_DelayNS(target - diff);
@@ -299,7 +182,7 @@ int main(int argc, char **argv)
 	}
 
 	emu_stop(&emu);
-
 	gfx_fini();
+
 	return EXIT_SUCCESS;
 }

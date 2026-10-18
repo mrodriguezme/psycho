@@ -15,46 +15,50 @@
 // COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR
 // OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
-#include <assert.h>
-#include <stdlib.h>
 #include <string.h>
 
-#include "bus.h"
-#include "gpu/gpu.h"
-#include "intc.h"
 #include "debug/log.h"
+
+#include "gpu/gpu.h"
+
+#include "bus.h"
+#include "intc.h"
 #include "sio0.h"
 
 DECLARE_LOG_MODULE(PSYCHO_LOG_MODULE_BUS);
 
-#define BIOS_BEGIN (0x1FC00000)
-#define BIOS_END   (0x1FC7FFFF)
-#define BIOS_MASK  (0x000FFFFF)
+enum {
+	BIOS_BEGIN = 0x1FC00000,
+	BIOS_END   = 0x1FC7FFFF,
+	BIOS_MASK  = 0x000FFFFF,
 
-#define RAM_BEGIN  (0x00000000)
-#define RAM_END	   (P_BUS_MAX_RAM_SIZE)
-#define RAM_MASK   (0x001FFFFF)
+	RAM_BEGIN = 0x00000000,
+	RAM_END	  = PSYCHO_BUS_RAM_SIZE_MAX_BYTES,
+	RAM_MASK  = 0x001FFFFF,
 
-#define SPAD_BEGIN (0x1F800000)
-#define SPAD_END   (0x1F8003FF)
-#define SPAD_MASK  (0x00000FFF)
+	SCRATCHPAD_BEGIN = 0x1F800000,
+	SCRATCHPAD_END	 = 0x1F8003FF,
+	SCRATCHPAD_MASK	 = 0x00000FFF
+};
 
 uint8_t *p_bios_data_get(struct p_ctx *ctx)
 {
 	return ctx->bus.bios;
 }
 
-uint32_t p_load32(struct p_ctx *ctx, uint32_t paddr)
+uint32_t psycho_bus_load_word(struct p_ctx *ctx, uint32_t paddr, bool *valid)
 {
 	uint32_t ret;
+
+	*valid = true;
 
 	switch (paddr) {
 	case RAM_BEGIN ... RAM_END:
 		memcpy(&ret, &ctx->bus.ram[paddr & RAM_MASK], sizeof(uint32_t));
 		return ret;
 
-	case SPAD_BEGIN ... SPAD_END:
-		memcpy(&ret, &ctx->bus.spad[paddr & SPAD_MASK], sizeof(uint32_t));
+	case SCRATCHPAD_BEGIN ... SCRATCHPAD_END:
+		memcpy(&ret, &ctx->bus.spad[paddr & SCRATCHPAD_MASK], sizeof(uint32_t));
 		return ret;
 
 	case I_STAT:
@@ -74,41 +78,52 @@ uint32_t p_load32(struct p_ctx *ctx, uint32_t paddr)
 		return ret;
 
 	default:
-		LOG_WARN(ctx, "bad load32 0x%08X; returning 0xFFFFFFFF", paddr);
+		LOG_ERR(ctx, "bad word load from unknown physical address 0x%08X", paddr);
+		*valid = false;
+
 		return UINT32_MAX;
 	}
 }
 
-uint16_t p_load16(struct p_ctx *ctx, uint32_t paddr)
+uint16_t psycho_bus_load_halfword(struct p_ctx *ctx, uint32_t paddr, bool *valid)
 {
 	uint16_t ret;
+
+	*valid = true;
 
 	switch (paddr) {
 	case RAM_BEGIN ... RAM_END:
 		memcpy(&ret, &ctx->bus.ram[paddr & RAM_MASK], sizeof(uint16_t));
 		return ret;
 
-	case SPAD_BEGIN ... SPAD_END:
-		memcpy(&ret, &ctx->bus.spad[paddr & SPAD_MASK], sizeof(uint16_t));
+	case SCRATCHPAD_BEGIN ... SCRATCHPAD_END:
+		memcpy(&ret, &ctx->bus.spad[paddr & SCRATCHPAD_MASK], sizeof(uint16_t));
 		return ret;
 
 	case SIO0_CR:
 		return ctx->sio0.cr;
 
+	case 0x1F801120:
+		return UINT16_MAX;
+
 	default:
-		LOG_WARN(ctx, "bad load16 0x%08X; returning 0xFFFF", paddr);
+		LOG_ERR(ctx, "bad halfword load from unknown physical address 0x%08X", paddr);
+		*valid = false;
+
 		return UINT16_MAX;
 	}
 }
 
-uint8_t p_load8(struct p_ctx *ctx, uint32_t paddr)
+uint8_t psycho_bus_load_byte(struct p_ctx *ctx, uint32_t paddr, bool *valid)
 {
+	*valid = true;
+
 	switch (paddr) {
 	case RAM_BEGIN ... RAM_END:
 		return ctx->bus.ram[paddr & RAM_MASK];
 
-	case SPAD_BEGIN ... SPAD_END:
-		return ctx->bus.spad[paddr & SPAD_MASK];
+	case SCRATCHPAD_BEGIN ... SCRATCHPAD_END:
+		return ctx->bus.spad[paddr & SCRATCHPAD_MASK];
 
 	case BIOS_BEGIN ... BIOS_END:
 		return ctx->bus.bios[paddr & BIOS_MASK];
@@ -116,99 +131,147 @@ uint8_t p_load8(struct p_ctx *ctx, uint32_t paddr)
 	case SIO0_DR:
 		return psycho_sio0_dr_read_byte(ctx);
 
+	case 0x1F000084:
+		return UINT8_MAX;
+
 	default:
-		LOG_WARN(ctx, "bad load8 0x%08X; returning 0xFF", paddr);
+		LOG_ERR(ctx, "bad byte load from unknown physical address 0x%08X", paddr);
+		*valid = false;
+
 		return UINT8_MAX;
 	}
 }
 
-void p_store32(struct p_ctx *ctx, uint32_t paddr, uint32_t data)
+bool psycho_bus_store_word(struct p_ctx *ctx, uint32_t paddr, uint32_t data)
 {
+	bool valid = true;
+
 	switch (paddr) {
 	case RAM_BEGIN ... RAM_END:
 		memcpy(&ctx->bus.ram[paddr & RAM_MASK], &data, sizeof(uint32_t));
-		return;
+		break;
 
-	case SPAD_BEGIN ... SPAD_END:
-		memcpy(&ctx->bus.spad[paddr & SPAD_MASK], &data, sizeof(uint32_t));
-		return;
+	case SCRATCHPAD_BEGIN ... SCRATCHPAD_END:
+		memcpy(&ctx->bus.spad[paddr & SCRATCHPAD_MASK], &data, sizeof(uint32_t));
+		break;
 
 	case I_STAT:
 		psycho_intc_irqs_ack(ctx, data);
-		return;
+		break;
 
 	case I_MASK:
 		psycho_intc_mask_set(ctx, data);
-		return;
+		break;
 
 	case GPU_GP0:
 		p_gp0(ctx, data);
-		return;
+		break;
 
 	case GPU_GP1:
 		p_gp1(ctx, data);
-		return;
+		break;
+
+	case 0x1F801000:
+	case 0x1F801004:
+	case 0x1F801008:
+	case 0x1F80100C:
+	case 0x1F801010:
+	case 0x1F801014:
+	case 0x1F801018:
+	case 0x1F80101C:
+	case 0x1F801020:
+	case 0x1F801060:
+	case 0x1FFE0130:
+		break;
 
 	default:
+		LOG_ERR(ctx, "bad word store to unknown physical address 0x%08X (data=0x%08X)", paddr, data);
+		valid = false;
+
 		break;
 	}
-
-	LOG_WARN(ctx, "bad store32 0x%08X <- 0x%08X; ignoring", paddr, data);
+	return valid;
 }
 
-void p_store16(struct p_ctx *ctx, uint32_t paddr, uint16_t data)
+bool psycho_bus_store_halfword(struct p_ctx *ctx, uint32_t paddr, uint16_t data)
 {
+	bool valid = true;
+
 	switch (paddr) {
 	case RAM_BEGIN ... RAM_END:
 		memcpy(&ctx->bus.ram[paddr & RAM_MASK], &data, sizeof(uint16_t));
-		return;
+		break;
 
-	case SPAD_BEGIN ... SPAD_END:
-		memcpy(&ctx->bus.spad[paddr & SPAD_MASK], &data, sizeof(uint16_t));
-		return;
+	case SCRATCHPAD_BEGIN ... SCRATCHPAD_END:
+		memcpy(&ctx->bus.spad[paddr & SCRATCHPAD_MASK], &data, sizeof(uint16_t));
+		break;
 
 	case SIO0_MR:
 		psycho_sio0_mr_write_halfword(ctx, data);
-		return;
+		break;
 
 	case SIO0_CR:
 		psycho_sio0_cr_write_halfword(ctx, data);
-		return;
+		break;
 
 	case SIO0_BR:
 		psycho_sio0_br_write_halfword(ctx, data);
-		return;
+		break;
+
+	case 0x1F801D80:
+	case 0x1F801D82:
+	case 0x1F801D84:
+	case 0x1F801D86:
+	case 0x1F801104:
+	case 0x1F801108:
+	case 0x1F801100:
+	case 0x1F801114:
+	case 0x1F801118:
+	case 0x1F801110:
+	case 0x1F801124:
+	case 0x1F801128:
+	case 0x1F801120:
+		break;
 
 	default:
+		LOG_ERR(ctx, "bad halfword store to unknown physical address 0x%08X (data=0x%04X)", paddr, data);
+		valid = false;
+
 		break;
 	}
-
-	LOG_WARN(ctx, "bad store16 0x%08X <- 0x%04X; ignoring", paddr, data);
+	return valid;
 }
 
-void p_store8(struct p_ctx *ctx, uint32_t paddr, uint8_t data)
+bool psycho_bus_store_byte(struct p_ctx *ctx, uint32_t paddr, uint8_t data)
 {
+	bool valid = true;
+
 	switch (paddr) {
 	case RAM_BEGIN ... RAM_END:
 		ctx->bus.ram[paddr & RAM_MASK] = data;
-		return;
+		break;
 
-	case SPAD_BEGIN ... SPAD_END:
-		ctx->bus.spad[paddr & SPAD_MASK] = data;
-		return;
+	case SCRATCHPAD_BEGIN ... SCRATCHPAD_END:
+		ctx->bus.spad[paddr & SCRATCHPAD_MASK] = data;
+		break;
 
 	case SIO0_DR:
 		psycho_sio0_dr_write_byte(ctx, data);
-		return;
+		break;
+
+	case 0x1F802041:
+		break;
 
 	default:
+		LOG_ERR(ctx, "bad byte store to unknown physical address 0x%08X (data=0x%02X)", paddr, data);
+		valid = false;
+
 		break;
 	}
-
-	LOG_WARN(ctx, "bad store8 0x%08X <- 0x%02X; ignoring", paddr, data);
+	return valid;
 }
 
-void *p_get_mem_area(struct p_ctx *ctx, const uint32_t paddr)
+void *psycho_bus_get_mem_area_ptr(struct p_ctx *ctx, uint32_t paddr)
 {
 	switch (paddr) {
 	case RAM_BEGIN ... RAM_END:

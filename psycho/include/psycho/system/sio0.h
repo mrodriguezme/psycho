@@ -44,5 +44,5 @@ struct psycho_sio0 {
 
 	uint8_t last_rx;
 
-	struct p_sched_ev tx_event;
+	struct psycho_sched_event tx_event;
 };

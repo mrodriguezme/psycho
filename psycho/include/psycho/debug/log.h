@@ -67,14 +67,14 @@ enum psycho_log_module {
 	// clang-format on
 };
 
-struct p_log_msg {
+struct psycho_log_msg {
 	struct p_str str;
 	enum psycho_log_module module;
 	enum psycho_log_level level;
 };
 
-struct p_log_cfg {
-	void (*log_cb)(struct p_ctx *ctx, struct p_log_msg *msg);
+struct psycho_log_cfg {
+	void (*log_cb)(struct p_ctx *ctx, struct psycho_log_msg *msg);
 	enum psycho_log_level modules[PSYCHO_LOG_MODULE_COUNT];
 };
 

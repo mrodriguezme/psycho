@@ -52,7 +52,7 @@ void psycho_log_msg(struct p_ctx *ctx, enum psycho_log_module module, enum psych
 	p_str_vappend(&str, NULL, fmt, args);
 	va_end(args);
 
-	struct p_log_msg msg = {
+	struct psycho_log_msg msg = {
 		.str	= str,
 		.module = module,
 		.level	= level,

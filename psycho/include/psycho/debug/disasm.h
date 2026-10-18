@@ -64,7 +64,7 @@ struct p_disasm {
 P_NODISCARD P_CONST const char *p_gpr_get(enum psycho_cpu_gpr reg);
 P_NODISCARD P_CONST const char *p_cop0_get(enum psycho_cpu_cop0_cpr reg);
 
-void p_disasm_instr(struct p_ctx *ctx, uint32_t pc, struct p_disasm_traces *traces) __attribute__((nonnull(1)));
+bool p_disasm_instr(struct p_ctx *ctx, uint32_t pc, struct p_disasm_traces *traces) __attribute__((nonnull(1)));
 
 void p_disasm_set_tracing_state(struct p_ctx *ctx, const bool enabled) __attribute__((nonnull));
 

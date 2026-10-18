@@ -105,12 +105,14 @@
 
 #define DCIC_BP_WRITE_EN_MASK (DCIC_TR | DCIC_UD | DCIC_DW | DCIC_DAE | DCIC_DE)
 
-enum cpu_exc {
-	EXC_ADEL    = 4,
-	EXC_ADES    = 5,
-	EXC_SYSCALL = 8,
-	EXC_BP	    = 9,
-	EXC_OV	    = 12,
+enum cpu_exception {
+	EXCEPTION_ADEL	  = 4,
+	EXCEPTION_ADES	  = 5,
+	EXCEPTION_IBE	  = 6,
+	EXCEPTION_DBE	  = 7,
+	EXCEPTION_SYSCALL = 8,
+	EXCEPTION_BP	  = 9,
+	EXCEPTION_OV	  = 12
 };
 
 enum instr_grp_op {
@@ -290,7 +292,7 @@ P_NODISCARD P_ALWAYS_INLINE uint32_t jmp_addr(uint32_t pc, uint32_t instr)
 
 P_NODISCARD P_ALWAYS_INLINE uint32_t branch_addr(uint32_t pc, uint32_t instr)
 {
-	return sext_16_32(instr_imm(instr) << 2) + pc + sizeof(instr);
+	return sign_extend_16_32(instr_imm(instr) << 2) + pc + sizeof(instr);
 }
 
-extern const uint8_t unr[0x101];
+extern const uint8_t psycho_gte_unr_tbl[0x101];

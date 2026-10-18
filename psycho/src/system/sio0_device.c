@@ -31,17 +31,17 @@ void psycho_sio0_device_init(struct psycho_sio0_device *dev)
 
 void psycho_sio0_device_ack(struct psycho_sio0_device *dev, unsigned int delay_us, unsigned int pulse_us)
 {
-	dev->ack_pulse_begin_ev.cb	 = psycho_sio0_dsr_assert;
-	dev->ack_pulse_begin_ev.ts	 = us_to_cycles(delay_us);
-	dev->ack_pulse_begin_ev.type	 = P_SCHED_EV_SIO0_DEV_ACK_PULSE_BEGIN;
-	dev->ack_pulse_begin_ev.userdata = dev;
+	dev->ack_pulse_assert_event.cb	     = psycho_sio0_dsr_assert;
+	dev->ack_pulse_assert_event.ts	     = us_to_cycles(delay_us);
+	dev->ack_pulse_assert_event.type     = PSYCHO_SCHED_EVENT_TYPE_SIO0_DEVICE_ACK_PULSE_ASSERT;
+	dev->ack_pulse_assert_event.userdata = dev;
 
-	dev->ack_pulse_end_ev.cb   = psycho_sio0_dsr_deassert;
-	dev->ack_pulse_end_ev.ts   = us_to_cycles(delay_us + pulse_us);
-	dev->ack_pulse_end_ev.type = P_SCHED_EV_SIO0_DEV_ACK_PULSE_END;
+	dev->ack_pulse_deassert_event.cb   = psycho_sio0_dsr_deassert;
+	dev->ack_pulse_deassert_event.ts   = us_to_cycles(delay_us + pulse_us);
+	dev->ack_pulse_deassert_event.type = PSYCHO_SCHED_EVENT_TYPE_SIO0_DEVICE_ACK_PULSE_DEASSERT;
 
-	p_sched_add(dev->ctx, &dev->ack_pulse_begin_ev);
-	p_sched_add(dev->ctx, &dev->ack_pulse_end_ev);
+	p_sched_add(dev->ctx, &dev->ack_pulse_assert_event);
+	p_sched_add(dev->ctx, &dev->ack_pulse_deassert_event);
 }
 
 void psycho_sio0_device_attach(struct psycho_sio0_device *dev, enum psycho_sio0_slot slot)

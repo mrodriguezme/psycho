@@ -19,16 +19,16 @@
 
 #include "psycho/ctx.h"
 
-P_NODISCARD uint32_t p_load32(struct p_ctx *ctx, uint32_t paddr) P_NONNULL;
+P_NODISCARD uint32_t psycho_bus_load_word(struct p_ctx *ctx, uint32_t paddr, bool *valid) P_NONNULL;
 
-P_NODISCARD uint16_t p_load16(struct p_ctx *ctx, uint32_t paddr) P_NONNULL;
+P_NODISCARD uint16_t psycho_bus_load_halfword(struct p_ctx *ctx, uint32_t paddr, bool *valid) P_NONNULL;
 
-P_NODISCARD uint8_t p_load8(struct p_ctx *ctx, const uint32_t paddr) P_NONNULL;
+P_NODISCARD uint8_t psycho_bus_load_byte(struct p_ctx *ctx, const uint32_t paddr, bool *valid) P_NONNULL;
 
-void p_store32(struct p_ctx *ctx, uint32_t paddr, uint32_t word) P_NONNULL;
+bool psycho_bus_store_word(struct p_ctx *ctx, uint32_t paddr, uint32_t word) P_NONNULL;
 
-void p_store16(struct p_ctx *ctx, uint32_t paddr, uint16_t halfword) P_NONNULL;
+bool psycho_bus_store_halfword(struct p_ctx *ctx, uint32_t paddr, uint16_t halfword) P_NONNULL;
 
-void p_store8(struct p_ctx *ctx, uint32_t paddr, uint8_t byte) P_NONNULL;
+bool psycho_bus_store_byte(struct p_ctx *ctx, uint32_t paddr, uint8_t byte) P_NONNULL;
 
-P_CONST void *p_get_mem_area(struct p_ctx *ctx, uint32_t paddr) P_NONNULL;
+P_CONST void *psycho_bus_get_mem_area_ptr(struct p_ctx *ctx, uint32_t paddr) P_NONNULL;

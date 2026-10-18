@@ -179,7 +179,8 @@ P_NODISCARD P_NONNULL static uint32_t get_arg(struct p_ctx *ctx, struct psycho_b
 	if (frame->arg_pos <= PSYCHO_CPU_GPR_A3)
 		return (&frame->a0)[frame->arg_pos++];
 
-	return p_load32(ctx, frame->sp + 16 + (frame->arg_pos++ - 4) * 4);
+	LOG_WARN(ctx, "not decoding sp args");
+	return 0;
 }
 
 P_NONNULL static void reset_stdout_strs(struct p_ctx *ctx)
@@ -246,7 +247,7 @@ P_NONNULL static void process_str(struct p_ctx *ctx, struct psycho_bios_call_tra
 	if (!ctx->cfg.bios_call_tracer.deref_ptrs)
 		goto end;
 
-	uint8_t *area = p_get_mem_area(ctx, vaddr_to_paddr(ptr));
+	uint8_t *area = psycho_bus_get_mem_area_ptr(ctx, vaddr_to_paddr(ptr));
 
 	if (!area)
 		goto end;

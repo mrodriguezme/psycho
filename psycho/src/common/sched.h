@@ -28,5 +28,5 @@ void p_sched_rst(struct p_ctx *ctx) P_NONNULL;
 
 void p_sched_run(struct p_ctx *ctx) P_NONNULL;
 
-void p_sched_add(struct p_ctx *ctx, struct p_sched_ev *ev) P_NONNULL;
-void p_sched_del(struct p_ctx *ctx, struct p_sched_ev *ev) P_NONNULL;
+void p_sched_add(struct p_ctx *ctx, struct psycho_sched_event *ev) P_NONNULL;
+void p_sched_del(struct p_ctx *ctx, struct psycho_sched_event *ev) P_NONNULL;

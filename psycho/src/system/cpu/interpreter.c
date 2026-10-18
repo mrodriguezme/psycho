@@ -124,81 +124,52 @@ P_NONNULL static void stop(struct p_ctx *ctx)
 	ctx->cpu_interpreter.slow = true;
 }
 
-P_NONNULL static void illegal_instr(struct p_ctx *ctx)
-{
-	LOG_ERR(ctx, "illegal instruction trapped (pc=0x%08X, instr=0x%08X)", ctx->cpu_interpreter.pc,
-		ctx->cpu_interpreter.instr);
-
-	ctx->cfg.cpu.illegal_instr(ctx, ctx->cpu_interpreter.instr);
-}
-
-P_NODISCARD P_NONNULL static uint32_t load32(struct p_ctx *ctx, uint32_t vaddr)
+P_NODISCARD P_NONNULL static uint32_t load_word(struct p_ctx *ctx, uint32_t vaddr, bool *valid)
 {
 	p_sched_adv_ts(ctx, 1);
 
 	vaddr = vaddr_to_paddr(vaddr);
-	return p_load32(ctx, vaddr);
+	return psycho_bus_load_word(ctx, vaddr, valid);
 }
 
-P_NODISCARD P_NONNULL static uint16_t load16(struct p_ctx *ctx, uint32_t vaddr)
+P_NODISCARD P_NONNULL static uint16_t load_halfword(struct p_ctx *ctx, uint32_t vaddr, bool *valid)
 {
 	p_sched_adv_ts(ctx, 1);
 
 	vaddr = vaddr_to_paddr(vaddr);
-	return p_load16(ctx, vaddr);
+	return psycho_bus_load_halfword(ctx, vaddr, valid);
 }
 
-P_NODISCARD P_NONNULL static uint8_t load8(struct p_ctx *ctx, uint32_t vaddr)
+P_NODISCARD P_NONNULL static uint8_t load_byte(struct p_ctx *ctx, uint32_t vaddr, bool *valid)
 {
 	p_sched_adv_ts(ctx, 1);
 
 	vaddr = vaddr_to_paddr(vaddr);
-	return p_load8(ctx, vaddr);
+	return psycho_bus_load_byte(ctx, vaddr, valid);
 }
 
-P_NONNULL static void store32(struct p_ctx *ctx, uint32_t vaddr, uint32_t data)
+P_NONNULL static bool store_word(struct p_ctx *ctx, uint32_t vaddr, uint32_t data)
 {
-#define SR (ctx->cpu_interpreter.cop0_cpr[PSYCHO_CPU_COP0_CPR_SR])
-
-	p_sched_adv_ts(ctx, 1);
-
-	if (SR & SR_ISC)
-		return;
-
-	vaddr = vaddr_to_paddr(vaddr);
-	p_store32(ctx, vaddr, data);
-
-#undef SR
-}
-
-P_NONNULL static void store16(struct p_ctx *ctx, uint32_t vaddr, uint16_t data)
-{
-#define SR (ctx->cpu_interpreter.cop0_cpr[PSYCHO_CPU_COP0_CPR_SR])
-
-	if (SR & SR_ISC)
-		return;
-
 	p_sched_adv_ts(ctx, 1);
 
 	vaddr = vaddr_to_paddr(vaddr);
-	p_store16(ctx, vaddr, data);
-
-#undef SR
+	return psycho_bus_store_word(ctx, vaddr, data);
 }
 
-P_NONNULL static void store8(struct p_ctx *ctx, uint32_t vaddr, uint8_t data)
+P_NONNULL static bool store_halfword(struct p_ctx *ctx, uint32_t vaddr, uint16_t data)
 {
-#define SR (ctx->cpu_interpreter.cop0_cpr[PSYCHO_CPU_COP0_CPR_SR])
-
-	if (SR & SR_ISC)
-		return;
-
 	p_sched_adv_ts(ctx, 1);
 
 	vaddr = vaddr_to_paddr(vaddr);
-	p_store8(ctx, vaddr, data);
+	return psycho_bus_store_halfword(ctx, vaddr, data);
+}
 
-#undef SR
+P_NONNULL static bool store_byte(struct p_ctx *ctx, uint32_t vaddr, uint8_t data)
+{
+	p_sched_adv_ts(ctx, 1);
+
+	vaddr = vaddr_to_paddr(vaddr);
+	return psycho_bus_store_byte(ctx, vaddr, data);
 }
 
 P_NONNULL static void gpr_set(struct p_ctx *ctx, size_t reg, uint32_t val)
@@ -234,7 +205,7 @@ P_NONNULL static void branch_if(struct p_ctx *ctx, uint32_t instr, bool cond)
 	ctx->cpu_interpreter.npc = (target & mask) | (ctx->cpu_interpreter.npc & ~mask);
 }
 
-P_NONNULL static void exc_base(struct p_ctx *ctx, enum cpu_exc exc, uint32_t vec)
+P_NONNULL static void do_exception(struct p_ctx *ctx, enum cpu_exception exc, uint32_t vec)
 {
 #define CAUSE (ctx->cpu_interpreter.cop0_cpr[PSYCHO_CPU_COP0_CPR_CAUSE])
 #define EPC   (ctx->cpu_interpreter.cop0_cpr[PSYCHO_CPU_COP0_CPR_EPC])
@@ -262,14 +233,14 @@ P_NONNULL static void exc_base(struct p_ctx *ctx, enum cpu_exc exc, uint32_t vec
 #undef SR
 }
 
-P_NONNULL static void exc(struct p_ctx *ctx, enum cpu_exc exc)
+P_NONNULL static void raise_exception(struct p_ctx *ctx, enum cpu_exception exc)
 {
-	exc_base(ctx, exc, EXC_VECTOR);
+	do_exception(ctx, exc, EXC_VECTOR);
 }
 
-P_NONNULL static void exc_dbg(struct p_ctx *ctx)
+P_NONNULL static void raise_debug_exception(struct p_ctx *ctx)
 {
-	exc_base(ctx, EXC_BP, DBG_VECTOR);
+	do_exception(ctx, EXCEPTION_BP, DBG_VECTOR);
 }
 
 P_NONNULL static void dbg_bp_write(struct p_ctx *ctx, uint32_t vaddr)
@@ -280,7 +251,7 @@ P_NONNULL static void dbg_bp_write(struct p_ctx *ctx, uint32_t vaddr)
 
 	if (unlikely((DCIC & DCIC_BP_WRITE_EN_MASK) && !((vaddr ^ BDA) & BDAM))) {
 		DCIC |= (DCIC_DB | DCIC_W);
-		exc_dbg(ctx);
+		raise_debug_exception(ctx);
 	}
 
 #undef BDA
@@ -337,7 +308,7 @@ P_NONNULL static void do_add(struct p_ctx *ctx, size_t dst, uint32_t a0, uint32_
 	int sum;
 
 	if (unlikely(__builtin_sadd_overflow(a0, a1, &sum)))
-		exc(ctx, EXC_OV);
+		raise_exception(ctx, EXCEPTION_OV);
 	else
 		gpr_set(ctx, dst, sum);
 }
@@ -347,7 +318,7 @@ P_NONNULL static void do_sub(struct p_ctx *ctx, size_t dst, uint32_t minuend, ui
 	int diff;
 
 	if (unlikely(__builtin_ssub_overflow(minuend, subtrahend, &diff)))
-		exc(ctx, EXC_OV);
+		raise_exception(ctx, EXCEPTION_OV);
 	else
 		gpr_set(ctx, dst, diff);
 }
@@ -373,15 +344,14 @@ P_NONNULL static void flag_set(struct p_ctx *ctx, uint32_t flags)
 #undef FLAG
 }
 
-P_NONNULL static int64_t mac123_chk(struct p_ctx *ctx, int64_t sum, int64_t addend, uint32_t neg_flag,
-				    uint32_t pos_flag)
+P_NONNULL static int64_t mac123_chk(struct p_ctx *ctx, int64_t sum, int64_t addend, uint32_t neg, uint32_t pos)
 {
 	sum += addend;
 
 	if (sum > MAC123_MAX)
-		flag_set(ctx, pos_flag);
+		flag_set(ctx, pos);
 	else if (sum < MAC123_MIN)
-		flag_set(ctx, neg_flag);
+		flag_set(ctx, neg);
 
 	return (int64_t)((uint64_t)sum << 20) >> 20;
 }
@@ -506,7 +476,7 @@ P_NONNULL P_NODISCARD static int64_t gte_div(struct p_ctx *ctx)
 		int z	       = __builtin_clz(SZ3) - 16;
 		n	       = H << z;
 		unsigned int d = SZ3 << z;
-		unsigned int u = unr[(d - 0x7FC0) >> 7] + 0x101;
+		unsigned int u = psycho_gte_unr_tbl[(d - 0x7FC0) >> 7] + 0x101;
 		d	       = ((0x2000080 - (d * u)) >> 8);
 		d	       = ((0x0000080 + (d * u)) >> 8);
 		n	       = min(0x1FFFF, (((n * d) + 0x8000) >> 16));
@@ -811,7 +781,7 @@ P_NONNULL static void do_cop2_cfc(struct p_ctx *ctx, size_t rt, size_t rd)
 #define H (ctx->cpu_interpreter.cop2.ccr.h)
 
 	if (rd == PSYCHO_CPU_COP2_CCR_H)
-		gpr_set(ctx, rt, sext_16_32(H));
+		gpr_set(ctx, rt, sign_extend_16_32(H));
 	else
 		gpr_set(ctx, rt, ctx->cpu_interpreter.cop2.ccr.array[rd]);
 #undef H
@@ -831,7 +801,7 @@ P_NONNULL static void do_cop2_mtc(struct p_ctx *ctx, size_t rd, size_t rt)
 	case PSYCHO_CPU_COP2_CPR_SZ1:
 	case PSYCHO_CPU_COP2_CPR_SZ2:
 	case PSYCHO_CPU_COP2_CPR_SZ3:
-		ctx->cpu_interpreter.cop2.cpr.array[rd] = zext_16_32(gpr[rt]);
+		ctx->cpu_interpreter.cop2.cpr.array[rd] = zero_extend_16_32(gpr[rt]);
 		break;
 
 	case PSYCHO_CPU_COP2_CPR_VZ0:
@@ -841,7 +811,7 @@ P_NONNULL static void do_cop2_mtc(struct p_ctx *ctx, size_t rd, size_t rt)
 	case PSYCHO_CPU_COP2_CPR_IR1:
 	case PSYCHO_CPU_COP2_CPR_IR2:
 	case PSYCHO_CPU_COP2_CPR_IR3:
-		ctx->cpu_interpreter.cop2.cpr.array[rd] = sext_16_32(gpr[rt]);
+		ctx->cpu_interpreter.cop2.cpr.array[rd] = sign_extend_16_32(gpr[rt]);
 		break;
 
 	case PSYCHO_CPU_COP2_CPR_IRGB:
@@ -876,7 +846,7 @@ P_NONNULL static void do_cop2_mtc(struct p_ctx *ctx, size_t rd, size_t rt)
 	}
 
 	case PSYCHO_CPU_COP2_CPR_LZCR:
-		// Read-only register - ignore
+		// Read-only register
 		break;
 
 	default:
@@ -903,7 +873,7 @@ P_NONNULL static void do_cop2_ctc(struct p_ctx *ctx, size_t rd, size_t rt)
 	case PSYCHO_CPU_COP2_CCR_LB3:
 	case PSYCHO_CPU_COP2_CCR_ZSF3:
 	case PSYCHO_CPU_COP2_CCR_ZSF4:
-		ctx->cpu_interpreter.cop2.ccr.array[rd] = sext_16_32(gpr[rt]);
+		ctx->cpu_interpreter.cop2.ccr.array[rd] = sign_extend_16_32(gpr[rt]);
 		break;
 
 	case PSYCHO_CPU_COP2_CCR_FLAG:
@@ -974,7 +944,7 @@ static void mvmva_bugged(struct p_ctx *ctx, int16_t (*Mx)[3], int16_t *Vx)
 #undef MAC
 }
 
-P_NONNULL static void dly_slot_process(struct p_ctx *ctx)
+P_NONNULL static void delay_slot_process(struct p_ctx *ctx)
 {
 	if (likely(!ctx->cpu_interpreter.ld_next.dst && !ctx->cpu_interpreter.ld_pend.dst))
 		return;
@@ -989,7 +959,7 @@ P_NONNULL static void dly_slot_process(struct p_ctx *ctx)
 	memset(&ctx->cpu_interpreter.ld_pend, 0, sizeof(ctx->cpu_interpreter.ld_pend));
 }
 
-P_NONNULL static void load_dly(struct p_ctx *ctx, size_t dst, uint32_t val)
+P_NONNULL static void gpr_set_delayed(struct p_ctx *ctx, size_t dst, uint32_t val)
 {
 	if (unlikely(!dst)) {
 		LOG_DEBUG(ctx, "Load delay rejected - dest was $zero");
@@ -1031,7 +1001,7 @@ P_NONNULL static void do_mult(struct p_ctx *ctx, size_t rs, size_t rt)
 #define hi  (ctx->cpu_interpreter.hi)
 #define lo  (ctx->cpu_interpreter.lo)
 
-	uint64_t prod = sext_32_64(gpr[rs]) * sext_32_64(gpr[rt]);
+	uint64_t prod = sign_extend_32_64(gpr[rs]) * sign_extend_32_64(gpr[rt]);
 
 	lo = prod & UINT32_MAX;
 	hi = prod >> 32;
@@ -1047,7 +1017,7 @@ P_NONNULL static void do_multu(struct p_ctx *ctx, size_t rs, size_t rt)
 #define hi  (ctx->cpu_interpreter.hi)
 #define lo  (ctx->cpu_interpreter.lo)
 
-	uint64_t prod = zext_32_64(gpr[rs]) * zext_32_64(gpr[rt]);
+	uint64_t prod = zero_extend_32_64(gpr[rs]) * zero_extend_32_64(gpr[rt]);
 
 	lo = prod & UINT32_MAX;
 	hi = prod >> 32;
@@ -1078,18 +1048,19 @@ P_NONNULL static void regimm(struct p_ctx *ctx, size_t rs, size_t rt)
 
 P_NONNULL static void do_addi(struct p_ctx *ctx, size_t rs, size_t rt)
 {
-#define gpr	(ctx->cpu_interpreter.gpr)
-#define sextimm (sext_16_32(instr_imm(ctx->cpu_interpreter.instr)))
+#define gpr (ctx->cpu_interpreter.gpr)
 
 	int sum;
 
-	if (unlikely(__builtin_sadd_overflow(gpr[rs], sextimm, &sum)))
-		exc(ctx, EXC_OV);
+	uint32_t a0 = gpr[rs];
+	uint32_t a1 = sign_extend_16_32(instr_imm(ctx->cpu_interpreter.instr));
+
+	if (unlikely(__builtin_sadd_overflow(a0, a1, &sum)))
+		raise_exception(ctx, EXCEPTION_OV);
 	else
 		gpr_set(ctx, rt, sum);
 
 #undef gpr
-#undef sextimm
 }
 
 P_NONNULL static void do_op(struct p_ctx *ctx)
@@ -1315,10 +1286,19 @@ P_NONNULL static void do_lh(struct p_ctx *ctx, size_t base, size_t offset, size_
 	uint32_t vaddr = gpr[base] + offset;
 
 	if (unlikely(vaddr & 1)) {
-		exc(ctx, EXC_ADEL);
+		raise_exception(ctx, EXCEPTION_ADEL);
 		return;
 	}
-	load_dly(ctx, rt, sext_16_32(load16(ctx, vaddr)));
+
+	bool valid;
+	uint32_t data = sign_extend_16_32(load_halfword(ctx, vaddr, &valid));
+
+	if (unlikely(!valid)) {
+		raise_exception(ctx, EXCEPTION_DBE);
+		return;
+	}
+
+	gpr_set_delayed(ctx, rt, data);
 
 #undef gpr
 }
@@ -1326,11 +1306,21 @@ P_NONNULL static void do_lh(struct p_ctx *ctx, size_t base, size_t offset, size_
 P_NONNULL static void do_lwl(struct p_ctx *ctx, size_t base, size_t offset, size_t rt)
 {
 #define gpr (ctx->cpu_interpreter.gpr)
+#define SR  (ctx->cpu_interpreter.cop0_cpr[PSYCHO_CPU_COP0_CPR_SR])
+
+	if (SR & SR_ISC)
+		return;
 
 	uint32_t vaddr	       = gpr[base] + offset;
 	uint32_t aligned_vaddr = vaddr & ~3;
 
-	uint32_t word = load32(ctx, aligned_vaddr);
+	bool valid;
+	uint32_t word = load_word(ctx, aligned_vaddr, &valid);
+
+	if (unlikely(!valid)) {
+		raise_exception(ctx, EXCEPTION_DBE);
+		return;
+	}
 
 	unsigned int shift = (vaddr & 3) * 8;
 	unsigned int mask  = 0x00FFFFFF >> shift;
@@ -1338,50 +1328,88 @@ P_NONNULL static void do_lwl(struct p_ctx *ctx, size_t base, size_t offset, size
 	uint32_t val = (ctx->cpu_interpreter.ld_next.dst == rt) ? ctx->cpu_interpreter.ld_next.val : gpr[rt];
 
 	val = (val & mask) | (word << (24 - shift));
-	load_dly(ctx, rt, val);
+	gpr_set_delayed(ctx, rt, val);
 
 #undef gpr
+#undef SR
 }
 
 P_NONNULL static void do_lw(struct p_ctx *ctx, size_t base, size_t offset, size_t rt)
 {
 #define gpr (ctx->cpu_interpreter.gpr)
+#define SR  (ctx->cpu_interpreter.cop0_cpr[PSYCHO_CPU_COP0_CPR_SR])
+
+	if (SR & SR_ISC)
+		return;
 
 	uint32_t vaddr = gpr[base] + offset;
 
 	if (unlikely(vaddr & 0x3)) {
-		exc(ctx, EXC_ADEL);
+		raise_exception(ctx, EXCEPTION_ADEL);
 		return;
 	}
-	load_dly(ctx, rt, load32(ctx, vaddr));
+
+	bool valid;
+	uint32_t word = load_word(ctx, vaddr, &valid);
+
+	if (unlikely(!valid)) {
+		raise_exception(ctx, EXCEPTION_DBE);
+		return;
+	}
+
+	gpr_set_delayed(ctx, rt, word);
 
 #undef gpr
+#undef SR
 }
 
 P_NONNULL static void do_lhu(struct p_ctx *ctx, size_t base, size_t offset, size_t rt)
 {
 #define gpr (ctx->cpu_interpreter.gpr)
+#define SR  (ctx->cpu_interpreter.cop0_cpr[PSYCHO_CPU_COP0_CPR_SR])
+
+	if (SR & SR_ISC)
+		return;
 
 	uint32_t vaddr = gpr[base] + offset;
 
 	if (unlikely(vaddr & 1)) {
-		exc(ctx, EXC_ADEL);
+		raise_exception(ctx, EXCEPTION_ADEL);
 		return;
 	}
 
-	load_dly(ctx, rt, zext_16_32(load16(ctx, vaddr)));
+	bool valid;
+	uint32_t data = zero_extend_16_32(load_halfword(ctx, vaddr, &valid));
+
+	if (unlikely(!valid)) {
+		raise_exception(ctx, EXCEPTION_DBE);
+		return;
+	}
+
+	gpr_set_delayed(ctx, rt, data);
 
 #undef gpr
+#undef SR
 }
 
 P_NONNULL static void do_lwr(struct p_ctx *ctx, size_t base, size_t offset, size_t rt)
 {
 #define gpr (ctx->cpu_interpreter.gpr)
+#define SR  (ctx->cpu_interpreter.cop0_cpr[PSYCHO_CPU_COP0_CPR_SR])
+
+	if (SR & SR_ISC)
+		return;
 
 	uint32_t vaddr	       = gpr[base] + offset;
 	uint32_t aligned_vaddr = vaddr & ~3;
 
-	uint32_t word = load32(ctx, aligned_vaddr);
+	bool valid;
+	uint32_t word = load_word(ctx, aligned_vaddr, &valid);
+
+	if (unlikely(!valid)) {
+		raise_exception(ctx, EXCEPTION_DBE);
+		return;
+	}
 
 	unsigned int shift = (vaddr & 3) * 8;
 	unsigned int mask  = 0xFFFFFF00 << (24 - shift);
@@ -1390,30 +1418,59 @@ P_NONNULL static void do_lwr(struct p_ctx *ctx, size_t base, size_t offset, size
 
 	val = (val & mask) | (word >> shift);
 
-	load_dly(ctx, rt, val);
+	gpr_set_delayed(ctx, rt, val);
 
 #undef gpr
+#undef SR
+}
+
+
+P_NONNULL static void do_sb(struct p_ctx *ctx, size_t base, size_t offset, size_t rt)
+{
+#define gpr (ctx->cpu_interpreter.gpr)
+#define SR  (ctx->cpu_interpreter.cop0_cpr[PSYCHO_CPU_COP0_CPR_SR])
+
+	if (SR & SR_ISC)
+		return;
+
+	uint32_t vaddr = gpr[base] + offset;
+
+	if (unlikely(!store_byte(ctx, vaddr, gpr[rt] & UINT8_MAX)))
+		raise_exception(ctx, EXCEPTION_DBE);
+
+#undef gpr
+#undef SR
 }
 
 P_NONNULL static void do_sh(struct p_ctx *ctx, size_t base, size_t offset, size_t rt)
 {
 #define gpr (ctx->cpu_interpreter.gpr)
+#define SR  (ctx->cpu_interpreter.cop0_cpr[PSYCHO_CPU_COP0_CPR_SR])
+
+	if (SR & SR_ISC)
+		return;
 
 	uint32_t vaddr = gpr[base] + offset;
 
 	if (unlikely(vaddr & 1)) {
-		exc(ctx, EXC_ADES);
+		raise_exception(ctx, EXCEPTION_ADES);
 		return;
 	}
 
-	store16(ctx, vaddr, gpr[rt] & UINT16_MAX);
+	if (unlikely(!store_halfword(ctx, vaddr, gpr[rt] & UINT16_MAX)))
+		raise_exception(ctx, EXCEPTION_DBE);
 
 #undef gpr
+#undef SR
 }
 
 P_NONNULL static void do_swl(struct p_ctx *ctx, size_t base, size_t offset, size_t rt)
 {
 #define gpr (ctx->cpu_interpreter.gpr)
+#define SR  (ctx->cpu_interpreter.cop0_cpr[PSYCHO_CPU_COP0_CPR_SR])
+
+	if (SR & SR_ISC)
+		return;
 
 	uint32_t vaddr	       = gpr[base] + offset;
 	uint32_t aligned_vaddr = vaddr & ~3;
@@ -1421,34 +1478,54 @@ P_NONNULL static void do_swl(struct p_ctx *ctx, size_t base, size_t offset, size
 	unsigned int shift = (vaddr & 3) * 8;
 	unsigned int mask  = 0xFFFFFF00 << shift;
 
-	uint32_t word = load32(ctx, aligned_vaddr);
-	word	      = (word & mask) | (gpr[rt] >> (24 - shift));
-	store32(ctx, aligned_vaddr, word);
+	bool valid;
+	uint32_t word = load_word(ctx, aligned_vaddr, &valid);
+
+	if (unlikely(!valid)) {
+		raise_exception(ctx, EXCEPTION_DBE);
+		return;
+	}
+
+	word = (word & mask) | (gpr[rt] >> (24 - shift));
+
+	if (unlikely(!store_word(ctx, aligned_vaddr, word)))
+		raise_exception(ctx, EXCEPTION_DBE);
 
 #undef gpr
+#undef SR
 }
 
 P_NONNULL static void do_sw(struct p_ctx *ctx, size_t base, size_t offset, size_t rt)
 {
 #define gpr (ctx->cpu_interpreter.gpr)
+#define SR  (ctx->cpu_interpreter.cop0_cpr[PSYCHO_CPU_COP0_CPR_SR])
+
+	if (SR & SR_ISC)
+		return;
 
 	uint32_t vaddr = gpr[base] + offset;
 
 	if (unlikely(vaddr & 3)) {
-		exc(ctx, EXC_ADES);
+		raise_exception(ctx, EXCEPTION_ADES);
 		return;
 	}
 
 	dbg_bp_write(ctx, vaddr);
 
-	store32(ctx, vaddr, gpr[rt]);
+	if (unlikely(!store_word(ctx, vaddr, gpr[rt])))
+		raise_exception(ctx, EXCEPTION_DBE);
 
 #undef gpr
+#undef SR
 }
 
 P_NONNULL static void do_swr(struct p_ctx *ctx, size_t base, size_t offset, size_t rt)
 {
 #define gpr (ctx->cpu_interpreter.gpr)
+#define SR  (ctx->cpu_interpreter.cop0_cpr[PSYCHO_CPU_COP0_CPR_SR])
+
+	if (SR & SR_ISC)
+		return;
 
 	uint32_t vaddr	       = gpr[base] + offset;
 	uint32_t aligned_vaddr = vaddr & ~3;
@@ -1456,9 +1533,51 @@ P_NONNULL static void do_swr(struct p_ctx *ctx, size_t base, size_t offset, size
 	unsigned int shift = (vaddr & 3) * 8;
 	unsigned int mask  = 0x00FFFFFF >> (24 - shift);
 
-	uint32_t word = load32(ctx, aligned_vaddr);
-	word	      = (word & mask) | (gpr[rt] << shift);
-	store32(ctx, aligned_vaddr, word);
+	bool valid;
+	uint32_t word = load_word(ctx, aligned_vaddr, &valid);
+
+	if (unlikely(!valid)) {
+		raise_exception(ctx, EXCEPTION_DBE);
+		return;
+	}
+
+	word = (word & mask) | (gpr[rt] << shift);
+
+	if (unlikely(!store_word(ctx, aligned_vaddr, word)))
+		raise_exception(ctx, EXCEPTION_DBE);
+
+#undef gpr
+#undef SR
+}
+
+P_NONNULL static void do_lb(struct p_ctx *ctx, size_t base, size_t offset, size_t rt)
+{
+#define gpr (ctx->cpu_interpreter.gpr)
+
+	bool valid;
+	uint32_t data = sign_extend_8_32(load_byte(ctx, gpr[base] + offset, &valid));
+
+	if (unlikely(!valid)) {
+		raise_exception(ctx, EXCEPTION_DBE);
+		return;
+	}
+	gpr_set_delayed(ctx, rt, data);
+
+#undef gpr
+}
+
+P_NONNULL static void do_lbu(struct p_ctx *ctx, size_t base, size_t offset, size_t rt)
+{
+#define gpr (ctx->cpu_interpreter.gpr)
+
+	bool valid;
+	uint32_t data = zero_extend_8_32(load_byte(ctx, gpr[base] + offset, &valid));
+
+	if (unlikely(!valid)) {
+		raise_exception(ctx, EXCEPTION_DBE);
+		return;
+	}
+	gpr_set_delayed(ctx, rt, data);
 
 #undef gpr
 }
@@ -1478,8 +1597,8 @@ P_NONNULL static void run(struct p_ctx *ctx, bool single_step)
 #define shamt		(instr_shamt(instr))
 #define funct		(instr_funct(instr))
 #define base		(rs)
-#define zextimm		(zext_16_32(instr_imm(instr)))
-#define sextimm		(sext_16_32(instr_imm(instr)))
+#define zextimm		(zero_extend_16_32(instr_imm(instr)))
+#define sextimm		(sign_extend_16_32(instr_imm(instr)))
 #define offset		(sextimm)
 
 #define SR		(ctx->cpu_interpreter.cop0_cpr[PSYCHO_CPU_COP0_CPR_SR])
@@ -1501,32 +1620,37 @@ P_NONNULL static void run(struct p_ctx *ctx, bool single_step)
 #define OP(x)		[64 + (x)]
 #define OPR(a, b)	[64 + (a)... 64 + (b)]
 
-#define BIOS_TRACE_ON() (true)
+#define BIOS_TRACE_ON() (false)
 
 #define FETCH()                                                                            \
 	do {                                                                               \
+		bool valid;                                                                \
+                                                                                           \
 		ctx->cpu_interpreter.in_bd	= ctx->cpu_interpreter.next_in_bd;         \
 		ctx->cpu_interpreter.next_in_bd = false;                                   \
                                                                                            \
 		pc    = ctx->cpu_interpreter.dly_pc;                                       \
-		instr = load32(ctx, pc);                                                   \
+		instr = load_word(ctx, pc, &valid);                                        \
+                                                                                           \
+		if (unlikely(!valid))                                                      \
+			raise_exception(ctx, EXCEPTION_IBE);                               \
                                                                                            \
 		ctx->cpu_interpreter.instr  = instr;                                       \
 		ctx->cpu_interpreter.dly_pc = npc;                                         \
 		npc			    = ctx->cpu_interpreter.dly_pc + sizeof(instr); \
                                                                                            \
-		dly_slot_process(ctx);                                                     \
+		delay_slot_process(ctx);                                                   \
 	} while (0)
 
-#define DISPATCH()                                                                                        \
-	do {                                                                                              \
-		gpr[PSYCHO_CPU_GPR_ZERO] = 0;                                                             \
-                                                                                                          \
-		if (unlikely((ctx->sched.ts_now >= ctx->sched.ev[0]->ts) || (ctx->cpu_interpreter.slow))) \
-			goto slow;                                                                        \
-                                                                                                          \
-		FETCH();                                                                                  \
-		goto *dispatch_tbl[op ? (64 + op) : funct];                                               \
+#define DISPATCH()                                                                                            \
+	do {                                                                                                  \
+		gpr[PSYCHO_CPU_GPR_ZERO] = 0;                                                                 \
+                                                                                                              \
+		if (unlikely((ctx->sched.ts_now >= ctx->sched.events[0]->ts) || (ctx->cpu_interpreter.slow))) \
+			goto slow;                                                                            \
+                                                                                                              \
+		FETCH();                                                                                      \
+		goto *dispatch_tbl[op ? (64 + op) : funct];                                                   \
 	} while (0)
 
 	static void *const dispatch_tbl[128] = {
@@ -1700,7 +1824,7 @@ slow:
 		psycho_bios_call_tracer_end(ctx, gpr[PSYCHO_CPU_GPR_V0]);
 
 loop:
-	while (unlikely(ctx->sched.ts_now >= ctx->sched.ev[0]->ts))
+	while (unlikely(ctx->sched.ts_now >= ctx->sched.events[0]->ts))
 		p_sched_run(ctx);
 
 	if (unlikely((!ctx->running) || stepped))
@@ -1712,7 +1836,7 @@ loop:
 		p_exe_inject(ctx);
 
 	if (unlikely(ctx->cpu_interpreter.dly_pc & 3))
-		exc(ctx, EXC_ADEL);
+		raise_exception(ctx, EXCEPTION_ADEL);
 
 	ctx->cpu_interpreter.slow = ctx->exe.data || (npc & 3) || BIOS_TRACE_ON() || single_step;
 
@@ -1756,11 +1880,11 @@ op_jalr:
 	DISPATCH();
 
 op_syscall:
-	exc(ctx, EXC_SYSCALL);
+	raise_exception(ctx, EXCEPTION_SYSCALL);
 	DISPATCH();
 
 op_break:
-	exc(ctx, EXC_BP);
+	raise_exception(ctx, EXCEPTION_BP);
 	DISPATCH();
 
 op_mfhi:
@@ -2111,7 +2235,7 @@ op_ncct:
 	DISPATCH();
 
 op_lb:
-	load_dly(ctx, rt, sext_8_32(load8(ctx, gpr[base] + offset)));
+	do_lb(ctx, base, offset, rt);
 	DISPATCH();
 
 op_lh:
@@ -2127,7 +2251,7 @@ op_lw:
 	DISPATCH();
 
 op_lbu:
-	load_dly(ctx, rt, zext_8_32(load8(ctx, gpr[base] + offset)));
+	do_lbu(ctx, base, offset, rt);
 	DISPATCH();
 
 op_lhu:
@@ -2139,9 +2263,7 @@ op_lwr:
 	DISPATCH();
 
 op_sb:
-	dbg_bp_write(ctx, gpr[base] + offset);
-
-	store8(ctx, gpr[base] + offset, gpr[rt] & UINT8_MAX);
+	do_sb(ctx, base, offset, rt);
 	DISPATCH();
 
 op_sh:
@@ -2161,7 +2283,8 @@ op_swr:
 	DISPATCH();
 
 illegal:
-	illegal_instr(ctx);
+	LOG_ERR(ctx, "illegal instruction trapped (pc=0x%08X, instr=0x%08X)", pc, instr);
+	ctx->cfg.cpu.illegal_instr(ctx, ctx->cpu_interpreter.instr);
 
 done:
 	return;
@@ -2170,19 +2293,14 @@ done:
 void p_cpu_int_init(struct p_ctx *ctx)
 {
 	ctx->cpu.irq_mux_assert = irq_mux_assert;
-
-	ctx->cpu.gpr_set = gpr_write_direct;
-	ctx->cpu.gpr_get = gpr_read;
-
-	ctx->cpu.reg_lo_get = lo_get;
-	ctx->cpu.reg_hi_get = hi_get;
-
-	ctx->cpu.pc_set = pc_set;
-	ctx->cpu.pc_get = pc_get;
-
-	ctx->cpu.run   = run;
-	ctx->cpu.reset = reset;
-	ctx->cpu.stop  = stop;
-
-	ctx->cpu.instr_get = instr_get;
+	ctx->cpu.gpr_set	= gpr_write_direct;
+	ctx->cpu.gpr_get	= gpr_read;
+	ctx->cpu.reg_lo_get	= lo_get;
+	ctx->cpu.reg_hi_get	= hi_get;
+	ctx->cpu.pc_set		= pc_set;
+	ctx->cpu.pc_get		= pc_get;
+	ctx->cpu.run		= run;
+	ctx->cpu.reset		= reset;
+	ctx->cpu.stop		= stop;
+	ctx->cpu.instr_get	= instr_get;
 }

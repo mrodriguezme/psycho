@@ -65,7 +65,7 @@ struct p_gpu {
 
 	void (*cmd_fn)(struct p_ctx *ctx, uint32_t packet);
 
-	struct p_sched_ev ev_vblank;
+	struct psycho_sched_event vblank_event;
 
 	uint32_t gpustat;
 	uint32_t gpuread;

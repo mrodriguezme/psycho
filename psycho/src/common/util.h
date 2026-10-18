@@ -66,26 +66,23 @@ P_ALWAYS_INLINE uint64_t us_to_cycles(uint64_t us)
 	return (us * PSYCHO_CPU_CLKFREQ_HZ) / UINT64_C(1000000);
 }
 
-#define static_assert_offset(x, memb, off) \
-	_Static_assert(offsetof(x, memb) == (off), "Offset is not correct.")
+#define static_assert_offset(x, memb, off) _Static_assert(offsetof(x, memb) == (off), "Offset is not correct.")
 
-#define ZEXT_FUNC(from, to)                                          \
-	P_NODISCARD P_ALWAYS_INLINE uint##to##_t zext_##from##_##to( \
-		uint##from##_t val)                                  \
-	{                                                            \
-		return val;                                          \
+#define ZERO_EXTEND_FUNC(from, to)                                                             \
+	P_NODISCARD P_ALWAYS_INLINE uint##to##_t zero_extend_##from##_##to(uint##from##_t val) \
+	{                                                                                      \
+		return val;                                                                    \
 	}
 
-#define SEXT_FUNC(from, to)                                          \
-	P_NODISCARD P_ALWAYS_INLINE uint##to##_t sext_##from##_##to( \
-		uint##from##_t val)                                  \
-	{                                                            \
-		return (int##from##_t)val;                           \
+#define SIGN_EXTEND_FUNC(from, to)                                                             \
+	P_NODISCARD P_ALWAYS_INLINE uint##to##_t sign_extend_##from##_##to(uint##from##_t val) \
+	{                                                                                      \
+		return (int##from##_t)val;                                                     \
 	}
 
-ZEXT_FUNC(8, 32);
-ZEXT_FUNC(16, 32);
-ZEXT_FUNC(32, 64);
-SEXT_FUNC(8, 32);
-SEXT_FUNC(16, 32);
-SEXT_FUNC(32, 64);
+ZERO_EXTEND_FUNC(8, 32);
+ZERO_EXTEND_FUNC(16, 32);
+ZERO_EXTEND_FUNC(32, 64);
+SIGN_EXTEND_FUNC(8, 32);
+SIGN_EXTEND_FUNC(16, 32);
+SIGN_EXTEND_FUNC(32, 64);

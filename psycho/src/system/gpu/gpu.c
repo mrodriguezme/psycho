@@ -65,10 +65,8 @@ P_NONNULL static void on_vblank(struct p_ctx *ctx, void *userdata)
 {
 	(void)userdata;
 
-	ctx->cpu.stop(ctx);
-
 	if (ctx->cfg.on_vblank)
-		ctx->cfg.on_vblank(ctx);
+		ctx->cfg.on_vblank(ctx, ctx->cfg.vblank_userdata);
 
 	psycho_intc_irqs_pending_set(ctx, IRQ_VBLANK);
 }
@@ -201,12 +199,12 @@ void p_gpu_init(struct p_ctx *ctx)
 
 void p_gpu_rst(struct p_ctx *ctx)
 {
-	ctx->gpu.ev_vblank.type	     = P_SCHED_EV_VBLANK;
-	ctx->gpu.ev_vblank.cb	     = on_vblank;
-	ctx->gpu.ev_vblank.ts	     = PSYCHO_CPU_CLKFREQ_HZ / 60;
-	ctx->gpu.ev_vblank.permanent = true;
+	ctx->gpu.vblank_event.type	= PSYCHO_SCHED_EVENT_TYPE_VBLANK;
+	ctx->gpu.vblank_event.cb	= on_vblank;
+	ctx->gpu.vblank_event.ts	= PSYCHO_CPU_CLKFREQ_HZ / 60;
+	ctx->gpu.vblank_event.permanent = true;
 
-	p_sched_add(ctx, &ctx->gpu.ev_vblank);
+	p_sched_add(ctx, &ctx->gpu.vblank_event);
 }
 
 void p_gp0(struct p_ctx *ctx, uint32_t packet)
@@ -256,9 +254,9 @@ void p_gp1(struct p_ctx *ctx, uint32_t packet)
 uint32_t p_gpuread(struct p_ctx *ctx)
 {
 	if (ctx->gpu.gpustat & GPUSTAT_FIFO_DATA_AVAIL_BIT) {
-		const uint16_t px0	 = cpy_pixel_to_cpu(ctx);
-		const uint16_t px1	 = cpy_pixel_to_cpu(ctx);
-		ctx->gpu.gpuread = ((uint32_t)px0 << 16) | px1;
+		const uint16_t px0 = cpy_pixel_to_cpu(ctx);
+		const uint16_t px1 = cpy_pixel_to_cpu(ctx);
+		ctx->gpu.gpuread   = ((uint32_t)px0 << 16) | px1;
 
 		ctx->gpu.copy.rem--;
 

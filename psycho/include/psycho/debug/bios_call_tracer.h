@@ -65,7 +65,7 @@ struct psycho_bios_call_tracer_frame {
 	uint32_t arg_pos;
 };
 
-struct psyscho_bios_call_trace_cfg {
+struct psycho_bios_call_trace_cfg {
 	void (*stdout_line)(struct p_ctx *ctx, struct p_str *str);
 	bool deref_ptrs;
 };

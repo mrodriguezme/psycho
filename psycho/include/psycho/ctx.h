@@ -34,25 +34,26 @@ extern "C" {
 #include "system/intc.h"
 #include "system/sio0.h"
 
-struct p_ctx_cfg {
-	struct p_log_cfg log;
-	struct psyscho_bios_call_trace_cfg bios_call_tracer;
+struct psycho_ctx_cfg {
+	struct psycho_log_cfg log;
+	struct psycho_bios_call_trace_cfg bios_call_tracer;
 	struct psycho_cpu_cfg cpu;
 
-	void (*on_vblank)(struct p_ctx *ctx);
+	void (*on_vblank)(struct p_ctx *ctx, void *userdata);
+	void *vblank_userdata;
 
 	struct p_disasm_cfg disasm;
 };
 
 struct p_ctx {
-	struct p_bus bus;
+	struct psycho_bus bus;
 	struct p_gpu gpu;
 	struct psycho_bios_call_tracer bios_call_tracer;
 	struct p_disasm disasm;
 	struct psycho_cpu_interpreter cpu_interpreter;
-	struct p_sched sched;
+	struct psycho_sched sched;
 	struct psycho_sio0 sio0;
-	struct p_ctx_cfg cfg;
+	struct psycho_ctx_cfg cfg;
 	struct psycho_cpu_ops cpu;
 
 	struct {
@@ -71,7 +72,7 @@ enum p_ctx_ret {
 	P_OK			= 1,
 };
 
-P_NODISCARD P_CONST struct p_ctx_cfg *p_cfg_get(struct p_ctx *ctx) P_NONNULL;
+P_NODISCARD P_CONST struct psycho_ctx_cfg *p_cfg_get(struct p_ctx *ctx) P_NONNULL;
 
 void p_init(struct p_ctx *ctx) P_NONNULL;
 
@@ -81,7 +82,8 @@ void p_step(struct p_ctx *ctx) P_NONNULL;
 
 P_NODISCARD enum p_ctx_ret p_run_exe(struct p_ctx *ctx, uint8_t *exe, size_t size) P_NONNULL;
 
-void psycho_ctx_run_until_vblank(struct p_ctx *ctx) P_NONNULL;
+void psycho_ctx_run(struct p_ctx *ctx) P_NONNULL;
+void psycho_ctx_stop(struct p_ctx *ctx) P_NONNULL;
 
 #ifdef __cplusplus
 }

@@ -25,11 +25,11 @@
 
 DECLARE_LOG_MODULE(PSYCHO_LOG_MODULE_SCHED);
 
-static const char *ev_names[P_SCHED_EV_COUNT] = {
-	[P_SCHED_EV_VBLANK]		      = "vblank",
-	[P_SCHED_EV_SIO0_TX]		      = "sio0 tx",
-	[P_SCHED_EV_SIO0_DEV_ACK_PULSE_BEGIN] = "sio0 dev ack begin",
-	[P_SCHED_EV_SIO0_DEV_ACK_PULSE_END]   = "sio0 dev ack end"
+static const char *event_names[PSYCHO_SCHED_EVENT_TYPE_COUNT] = {
+	[PSYCHO_SCHED_EVENT_TYPE_VBLANK]			 = "vblank",
+	[PSYCHO_SCHED_EVENT_TYPE_SIO0_TX]			 = "sio0 tx",
+	[PSYCHO_SCHED_EVENT_TYPE_SIO0_DEVICE_ACK_PULSE_ASSERT]	 = "sio0 device ack assert",
+	[PSYCHO_SCHED_EVENT_TYPE_SIO0_DEVICE_ACK_PULSE_DEASSERT] = "sio0 device ack deassert"
 };
 
 P_NODISCARD static size_t node_parent(size_t node)
@@ -49,10 +49,10 @@ P_NODISCARD static size_t node_right(size_t node)
 
 P_NONNULL static void heap_swap(struct p_ctx *ctx, size_t a, size_t b)
 {
-	swap(&ctx->sched.ev[a], &ctx->sched.ev[b]);
+	swap(&ctx->sched.events[a], &ctx->sched.events[b]);
 
-	ctx->sched.ev[a]->idx = a;
-	ctx->sched.ev[b]->idx = b;
+	ctx->sched.events[a]->idx = a;
+	ctx->sched.events[b]->idx = b;
 }
 
 P_NONNULL static void sift_up(struct p_ctx *ctx, size_t node)
@@ -60,7 +60,7 @@ P_NONNULL static void sift_up(struct p_ctx *ctx, size_t node)
 	while (node) {
 		size_t parent = node_parent(node);
 
-		if (ctx->sched.ev[parent]->ts <= ctx->sched.ev[node]->ts)
+		if (ctx->sched.events[parent]->ts <= ctx->sched.events[node]->ts)
 			break;
 
 		heap_swap(ctx, parent, node);
@@ -75,12 +75,10 @@ P_NONNULL static void sift_down(struct p_ctx *ctx, size_t node)
 		const size_t l	= node_left(node);
 		const size_t r	= node_right(node);
 
-		if ((l < ctx->sched.num_ev) &&
-		    (ctx->sched.ev[l]->ts < ctx->sched.ev[smallest]->ts))
+		if ((l < ctx->sched.num_events) && (ctx->sched.events[l]->ts < ctx->sched.events[smallest]->ts))
 			smallest = l;
 
-		if ((r < ctx->sched.num_ev) &&
-		    ctx->sched.ev[r]->ts < ctx->sched.ev[smallest]->ts)
+		if ((r < ctx->sched.num_events) && ctx->sched.events[r]->ts < ctx->sched.events[smallest]->ts)
 			smallest = r;
 
 		if (smallest == node)
@@ -99,79 +97,70 @@ void p_sched_rst(struct p_ctx *ctx)
 
 void p_sched_run(struct p_ctx *ctx)
 {
-	assert(ctx->sched.num_ev > 0);
+	struct psycho_sched_event *event = ctx->sched.events[0];
 
-	struct p_sched_ev *ev = ctx->sched.ev[0];
-	uint64_t latency	      = ctx->sched.ts_now - ev->ts;
+	LOG_TRACE(ctx, "servicing event \"%s\" (ts_now=%" PRIu64 ")", event_names[event->type], ctx->sched.ts_now);
 
-	LOG_TRACE(ctx,
-		  "servicing event \"%s\" (ts_now=%" PRIu64 "), drift=%" PRIu64,
-		  ev_names[ev->type], ctx->sched.ts_now, latency);
-
-	if (unlikely(ev->permanent)) {
-		ev->ts += ev->period;
-		sift_down(ctx, ev->idx);
+	if (unlikely(event->permanent)) {
+		event->ts += event->period;
+		sift_down(ctx, event->idx);
 	} else
-		p_sched_del(ctx, ev);
+		p_sched_del(ctx, event);
 
-	ev->cb(ctx, ev->userdata);
+	event->cb(ctx, event->userdata);
 }
 
-void p_sched_add(struct p_ctx *ctx, struct p_sched_ev *ev)
+void p_sched_add(struct p_ctx *ctx, struct psycho_sched_event *event)
 {
-	assert(ctx->sched.num_ev < ARRAY_SIZE(ctx->sched.ev));
+	assert(ctx->sched.num_events < ARRAY_SIZE(ctx->sched.events));
 
-	if (unlikely(ctx->sched.num_ev >= ARRAY_SIZE(ctx->sched.ev))) {
-		LOG_ERR(ctx, "event heap full; dropping event \"%s\"",
-			ev_names[ev->type]);
-
+	if (unlikely(ctx->sched.num_events >= ARRAY_SIZE(ctx->sched.events))) {
+		LOG_ERR(ctx, "event heap full; dropping event \"%s\"", event_names[event->type]);
 		return;
 	}
 
-	size_t node = ctx->sched.num_ev;
+	size_t node = ctx->sched.num_events;
 
-	ev->idx	  = node;
-	ev->valid = true;
+	event->idx   = node;
+	event->valid = true;
 
-	if (unlikely(ev->permanent)) {
-		assert(ev->ts > 0);
-		ev->period = ev->ts;
+	if (unlikely(event->permanent)) {
+		assert(event->ts > 0);
+		event->period = event->ts;
 	}
 
-	ev->ts += ctx->sched.ts_now;
+	event->ts += ctx->sched.ts_now;
 
-	ctx->sched.ev[ctx->sched.num_ev++] = ev;
+	ctx->sched.events[ctx->sched.num_events++] = event;
 
-	uint64_t expiry	   = ev->ts - ctx->sched.ts_now;
+	uint64_t expiry	   = event->ts - ctx->sched.ts_now;
 	const char *plural = likely(expiry != 1) ? "s" : "";
 
-	LOG_TRACE(ctx,
-		  "adding event \"%s\"; will be serviced within %" PRIu64
-		  " cycle%s; ts_now=%" PRIu64,
-		  ev_names[ev->type], expiry, plural, ctx->sched.ts_now);
+	LOG_TRACE(ctx, "adding event \"%s\"; will be serviced within %" PRIu64 " cycle%s; ts_now=%" PRIu64,
+		  event_names[event->type], expiry, plural, ctx->sched.ts_now);
 
 	sift_up(ctx, node);
 }
 
-void p_sched_del(struct p_ctx *ctx, struct p_sched_ev *ev)
+void p_sched_del(struct p_ctx *ctx, struct psycho_sched_event *event)
 {
-	if (unlikely(!ev->valid))
+	if (unlikely(!event->valid))
 		return;
 
-	assert(!ev->permanent);
+	assert(!event->permanent);
 
-	ev->valid = false;
+	event->valid = false;
 
-	size_t idx  = ev->idx;
-	size_t last = --ctx->sched.num_ev;
+	size_t idx  = event->idx;
+	size_t last = --ctx->sched.num_events;
 
 	if (idx != last) {
-		ctx->sched.ev[idx]	= ctx->sched.ev[last];
-		ctx->sched.ev[idx]->idx = idx;
+		ctx->sched.events[idx]	    = ctx->sched.events[last];
+		ctx->sched.events[idx]->idx = idx;
 
 		sift_down(ctx, idx);
 		sift_up(ctx, idx);
 	}
 
-	LOG_TRACE(ctx, "event \"%s\" deleted", ev_names[ev->type]);
+	LOG_TRACE(ctx, "event \"%s\" deleted", event_names[event->type]);
 }

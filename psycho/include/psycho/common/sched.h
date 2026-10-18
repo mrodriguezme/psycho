@@ -27,22 +27,24 @@ extern "C" {
 
 struct p_ctx;
 
-#define P_SCHED_NUM_EVENTS (25)
-
-enum p_sched_ev_type {
-	P_SCHED_EV_VBLANK,
-	P_SCHED_EV_SIO0_TX,
-	P_SCHED_EV_SIO0_DEV_ACK_PULSE_BEGIN,
-	P_SCHED_EV_SIO0_DEV_ACK_PULSE_END,
-	P_SCHED_EV_COUNT,
+enum {
+	PSYCHO_SCHED_NUM_EVENTS = 25,
 };
 
-struct p_sched_ev {
+enum psycho_sched_event_type {
+	PSYCHO_SCHED_EVENT_TYPE_VBLANK,
+	PSYCHO_SCHED_EVENT_TYPE_SIO0_TX,
+	PSYCHO_SCHED_EVENT_TYPE_SIO0_DEVICE_ACK_PULSE_ASSERT,
+	PSYCHO_SCHED_EVENT_TYPE_SIO0_DEVICE_ACK_PULSE_DEASSERT,
+	PSYCHO_SCHED_EVENT_TYPE_COUNT
+};
+
+struct psycho_sched_event {
 	uint64_t ts;
 	uint64_t period;
 
 	void (*cb)(struct p_ctx *ctx, void *userdata);
-	enum p_sched_ev_type type;
+	enum psycho_sched_event_type type;
 	bool permanent;
 
 	size_t idx;
@@ -51,9 +53,9 @@ struct p_sched_ev {
 	void *userdata;
 };
 
-struct p_sched {
-	struct p_sched_ev *ev[P_SCHED_NUM_EVENTS];
-	size_t num_ev;
+struct psycho_sched {
+	struct psycho_sched_event *events[PSYCHO_SCHED_NUM_EVENTS];
+	size_t num_events;
 	uint64_t ts_now;
 };
 

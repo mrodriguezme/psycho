@@ -27,18 +27,18 @@
 
 DECLARE_LOG_MODULE(PSYCHO_LOG_MODULE_SIO0);
 
-#define SR_TXRDY	     (1 << 0)
-#define SR_RXRDY	     (1 << 1)
-#define SR_TXU		     (1 << 2)
-#define SR_PERROR	     (1 << 3)
-#define SR_DSR		     (1 << 7)
-#define SR_IRQ		     (1 << 9)
+#define SR_TXRDY  (1 << 0)
+#define SR_RXRDY  (1 << 1)
+#define SR_TXU	  (1 << 2)
+#define SR_PERROR (1 << 3)
+#define SR_DSR	  (1 << 7)
+#define SR_IRQ	  (1 << 9)
 
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wunused-macros"
 
-#define SR_BAUDTMR_MASK	     (0xFFFFF800)
-#define SR_BAUDTMR_SHIFT     (11)
+#define SR_BAUDTMR_MASK	 (0xFFFFF800)
+#define SR_BAUDTMR_SHIFT (11)
 
 #pragma GCC diagnostic pop
 
@@ -157,8 +157,8 @@ P_NONNULL static void devices_reset(struct p_ctx *ctx)
 
 		device->reset(device);
 
-		p_sched_del(ctx, &device->ack_pulse_begin_ev);
-		p_sched_del(ctx, &device->ack_pulse_end_ev);
+		p_sched_del(ctx, &device->ack_pulse_assert_event);
+		p_sched_del(ctx, &device->ack_pulse_deassert_event);
 
 		LOG_DEBUG(ctx, "device \"%s\" reset in slot %u", device->name, slot + 1);
 	}
@@ -239,7 +239,7 @@ P_NONNULL static void do_tx(struct p_ctx *ctx)
 	ctx->sio0.tx_event.ts = ctx->sio0.br * mr_br * word_len;
 
 	ctx->sio0.tx_event.cb	     = transceive_event;
-	ctx->sio0.tx_event.type	     = P_SCHED_EV_SIO0_TX;
+	ctx->sio0.tx_event.type	     = PSYCHO_SCHED_EVENT_TYPE_SIO0_TX;
 	ctx->sio0.tx_event.permanent = false;
 
 	p_sched_add(ctx, &ctx->sio0.tx_event);

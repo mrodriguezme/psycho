@@ -46,8 +46,8 @@ struct psycho_sio0_device {
 	const char *name;
 	enum psycho_sio0_device_type type;
 
-	struct p_sched_ev ack_pulse_begin_ev;
-	struct p_sched_ev ack_pulse_end_ev;
+	struct psycho_sched_event ack_pulse_assert_event;
+	struct psycho_sched_event ack_pulse_deassert_event;
 };
 
 void psycho_sio0_device_init(struct psycho_sio0_device *dev);

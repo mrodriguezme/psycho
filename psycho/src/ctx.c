@@ -26,7 +26,7 @@
 
 DECLARE_LOG_MODULE(PSYCHO_LOG_MODULE_CTX);
 
-struct p_ctx_cfg *p_cfg_get(struct p_ctx *ctx)
+struct psycho_ctx_cfg *p_cfg_get(struct p_ctx *ctx)
 {
 	return &ctx->cfg;
 }
@@ -56,8 +56,13 @@ void p_step(struct p_ctx *ctx)
 {
 }
 
-void psycho_ctx_run_until_vblank(struct p_ctx *ctx)
+void psycho_ctx_run(struct p_ctx *ctx)
 {
 	ctx->running = true;
 	ctx->cpu.run(ctx, false);
+}
+
+void psycho_ctx_stop(struct p_ctx *ctx)
+{
+	ctx->running = false;
 }

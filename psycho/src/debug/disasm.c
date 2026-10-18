@@ -184,10 +184,10 @@ static const char *const cop2_ccr[PSYCHO_CPU_COP2_CCR_COUNT] = {
 	// clang-format on
 };
 
-P_NODISCARD P_NONNULL static uint32_t instr_get(struct p_ctx *ctx, uint32_t pc)
+P_NODISCARD P_NONNULL static uint32_t instr_get(struct p_ctx *ctx, uint32_t pc, bool *valid)
 {
 	pc = vaddr_to_paddr(pc);
-	return p_load32(ctx, pc);
+	return psycho_bus_load_word(ctx, pc, valid);
 }
 
 static void trace_add(struct p_disasm_traces *traces, enum p_disasm_trace trace)
@@ -210,11 +210,17 @@ P_NODISCARD const char *p_cop0_get(enum psycho_cpu_cop0_cpr reg)
 	return cop0_cpr[reg];
 }
 
-void p_disasm_instr(struct p_ctx *ctx, uint32_t pc, struct p_disasm_traces *traces)
+bool p_disasm_instr(struct p_ctx *ctx, uint32_t pc, struct p_disasm_traces *traces)
 {
-	p_str_init_fixed(&ctx->disasm.res.str, ctx->disasm.res.str_buf, sizeof(ctx->disasm.res.str_buf));
+	bool valid;
+	uint32_t instr = instr_get(ctx, pc, &valid);
 
-	uint32_t instr = instr_get(ctx, pc);
+	if (unlikely(!valid))
+		return false;
+
+	valid = true;
+
+	p_str_init_fixed(&ctx->disasm.res.str, ctx->disasm.res.str_buf, sizeof(ctx->disasm.res.str_buf));
 
 	ctx->disasm.res.instr = instr;
 	ctx->disasm.res.pc    = pc;
@@ -245,169 +251,170 @@ void p_disasm_instr(struct p_ctx *ctx, uint32_t pc, struct p_disasm_traces *trac
 			fmt("sll %s, %s, 0x%X", gpr[rd], gpr[rt], shamt);
 			trace_add(traces, P_DISASM_TRACE_GPR_RD);
 
-			return;
+			break;
 
 		case SRL:
 			fmt("srl %s, %s, %u", gpr[rd], gpr[rt], shamt);
 			trace_add(traces, P_DISASM_TRACE_GPR_RD);
 
-			return;
+			break;
 
 		case SRA:
 			fmt("sra %s, %s, %u", gpr[rd], gpr[rt], shamt);
 			trace_add(traces, P_DISASM_TRACE_GPR_RD);
 
-			return;
+			break;
 
 		case SLLV:
 			fmt("sllv %s, %s, %s", gpr[rd], gpr[rt], gpr[rs]);
 			trace_add(traces, P_DISASM_TRACE_GPR_RD);
 
-			return;
+			break;
 
 		case SRLV:
 			fmt("srlv %s, %s, %s", gpr[rd], gpr[rt], gpr[rs]);
 			trace_add(traces, P_DISASM_TRACE_GPR_RD);
 
-			return;
+			break;
 
 		case SRAV:
 			fmt("srav %s, %s, %s", gpr[rd], gpr[rt], gpr[rs]);
 			trace_add(traces, P_DISASM_TRACE_GPR_RD);
 
-			return;
+			break;
 
 		case JR:
 			fmt("jr %s", gpr[rs]);
-			return;
+			break;
 
 		case JALR:
 			fmt("jalr %s, %s", gpr[rd], gpr[rs]);
 			trace_add(traces, P_DISASM_TRACE_GPR_RD);
 
-			return;
+			break;
 
 		case SYSCALL:
 			fmt("syscall");
-			return;
+			break;
 
 		case BREAK:
 			fmt("break");
-			return;
+			break;
 
 		case MFHI:
 			fmt("mfhi %s", gpr[rd]);
 			trace_add(traces, P_DISASM_TRACE_GPR_RD);
 
-			return;
+			break;
 
 		case MTHI:
 			fmt("mthi %s", gpr[rs]);
 			trace_add(traces, P_DISASM_TRACE_CPU_HI);
 
-			return;
+			break;
 
 		case MFLO:
 			fmt("mflo %s", gpr[rd]);
 			trace_add(traces, P_DISASM_TRACE_GPR_RD);
 
-			return;
+			break;
 
 		case MTLO:
 			fmt("mtlo %s", gpr[rs]);
 			trace_add(traces, P_DISASM_TRACE_CPU_LO);
 
-			return;
+			break;
 
 		case MULT:
 			fmt("mult %s, %s", gpr[rs], gpr[rt]);
 			trace_add(traces, P_DISASM_TRACE_CPU_LO);
 			trace_add(traces, P_DISASM_TRACE_CPU_HI);
 
-			return;
+			break;
 
 		case MULTU:
 			fmt("multu %s, %s", gpr[rs], gpr[rt]);
 			trace_add(traces, P_DISASM_TRACE_CPU_LO);
 			trace_add(traces, P_DISASM_TRACE_CPU_HI);
 
-			return;
+			break;
 
 		case DIV:
 			fmt("div %s, %s", gpr[rs], gpr[rt]);
 			trace_add(traces, P_DISASM_TRACE_CPU_LO);
 			trace_add(traces, P_DISASM_TRACE_CPU_HI);
 
-			return;
+			break;
 
 		case DIVU:
 			fmt("divu %s, %s", gpr[rs], gpr[rt]);
 			trace_add(traces, P_DISASM_TRACE_CPU_LO);
 			trace_add(traces, P_DISASM_TRACE_CPU_HI);
 
-			return;
+			break;
 
 		case ADD:
 			fmt("add %s, %s, %s", gpr[rd], gpr[rs], gpr[rt]);
 
 			trace_add(traces, P_DISASM_TRACE_GPR_RD);
-			return;
+			break;
 
 		case ADDU:
 			fmt("addu %s, %s, %s", gpr[rd], gpr[rs], gpr[rt]);
 			trace_add(traces, P_DISASM_TRACE_GPR_RD);
 
-			return;
+			break;
 
 		case SUB:
 			fmt("sub %s, %s, %s", gpr[rd], gpr[rs], gpr[rt]);
 			trace_add(traces, P_DISASM_TRACE_GPR_RD);
 
-			return;
+			break;
 
 		case SUBU:
 			fmt("subu %s, %s, %s", gpr[rd], gpr[rs], gpr[rt]);
 			trace_add(traces, P_DISASM_TRACE_GPR_RD);
 
-			return;
+			break;
 
 		case AND:
 			fmt("and %s, %s, %s", gpr[rd], gpr[rs], gpr[rt]);
 			trace_add(traces, P_DISASM_TRACE_GPR_RD);
 
-			return;
+			break;
 
 		case OR:
 			fmt("or %s, %s, %s", gpr[rd], gpr[rs], gpr[rt]);
 			trace_add(traces, P_DISASM_TRACE_GPR_RD);
 
-			return;
+			break;
 
 		case XOR:
 			fmt("xor %s, %s, %s", gpr[rd], gpr[rs], gpr[rt]);
 			trace_add(traces, P_DISASM_TRACE_GPR_RD);
 
-			return;
+			break;
 
 		case NOR:
 			fmt("nor %s, %s, %s", gpr[rd], gpr[rs], gpr[rt]);
 			trace_add(traces, P_DISASM_TRACE_GPR_RD);
 
-			return;
+			break;
 
 		case SLT:
 			fmt("slt %s, %s, %s", gpr[rd], gpr[rs], gpr[rt]);
 			trace_add(traces, P_DISASM_TRACE_GPR_RD);
 
-			return;
+			break;
 
 		case SLTU:
 			fmt("sltu %s, %s, %s", gpr[rd], gpr[rs], gpr[rt]);
 
 			trace_add(traces, P_DISASM_TRACE_GPR_RD);
-			return;
+			break;
 
 		default:
+			valid = false;
 			break;
 		}
 		break;
@@ -417,80 +424,80 @@ void p_disasm_instr(struct p_ctx *ctx, uint32_t pc, struct p_disasm_traces *trac
 		const char *name = (rt & 1) ? "bgez" : "bltz";
 
 		fmt("%s%s %s, 0x%08X", name, link, gpr[rs], branch_addr);
-		return;
+		break;
 	}
 
 	case J:
 		fmt("j 0x%08X", jmp_addr(pc, instr));
-		return;
+		break;
 
 	case JAL:
 		fmt("jal 0x%08X", jmp_addr(pc, instr));
-		return;
+		break;
 
 	case BEQ:
 		fmt("beq %s, %s, 0x%08X", gpr[rs], gpr[rt], branch_addr);
-		return;
+		break;
 
 	case BNE:
 		fmt("bne %s, %s, 0x%08X", gpr[rs], gpr[rt], branch_addr);
-		return;
+		break;
 
 	case BLEZ:
 		fmt("blez %s, 0x%08X", gpr[rs], branch_addr);
-		return;
+		break;
 
 	case BGTZ:
 		fmt("bgtz %s, 0x%08X", gpr[rs], branch_addr);
-		return;
+		break;
 
 	case ADDI:
 		fmt("addi %s, %s, %d", gpr[rt], gpr[rs], simm);
 		trace_add(traces, P_DISASM_TRACE_GPR_RT);
 
-		return;
+		break;
 
 	case ADDIU:
 		fmt("addiu %s, %s, %d", gpr[rt], gpr[rs], simm);
 		trace_add(traces, P_DISASM_TRACE_GPR_RT);
 
-		return;
+		break;
 
 	case SLTI:
 		fmt("slti %s, %s, %d", gpr[rt], gpr[rs], simm);
 		trace_add(traces, P_DISASM_TRACE_GPR_RT);
 
-		return;
+		break;
 
 	case SLTIU:
 		fmt("sltiu %s, %s, %d", gpr[rt], gpr[rs], simm);
 		trace_add(traces, P_DISASM_TRACE_GPR_RT);
 
-		return;
+		break;
 
 	case ANDI:
 		fmt("andi %s, %s, 0x%04X", gpr[rt], gpr[rs], imm);
 		trace_add(traces, P_DISASM_TRACE_GPR_RT);
 
-		return;
+		break;
 
 	case ORI:
 		fmt("ori %s, %s, 0x%04X", gpr[rt], gpr[rs], imm);
 		trace_add(traces, P_DISASM_TRACE_GPR_RT);
 
-		return;
+		break;
 
 	case XORI:
 		fmt("xori %s, %s, 0x%04X", gpr[rt], gpr[rs], imm);
 		trace_add(traces, P_DISASM_TRACE_GPR_RT);
 
-		return;
+		break;
 
 	case LUI:
 		fmt("lui %s, 0x%04X", gpr[rt], imm);
 
 		trace_add(traces, P_DISASM_TRACE_GPR_RT);
-		return;
+		break;
 
 	case GRP_COP0:
 		switch (rs) {
@@ -498,19 +505,20 @@ void p_disasm_instr(struct p_ctx *ctx, uint32_t pc, struct p_disasm_traces *trac
 			fmt("mfc0 %s, %s", gpr[rt], cop0_cpr[rd]);
 			trace_add(traces, P_DISASM_TRACE_GPR_RT);
 
-			return;
+			break;
 
 		case MTC:
 			fmt("mtc0 %s, %s", cop0_cpr[rd], gpr[rt]);
-			return;
+			break;
 
 		default:
 			switch (funct) {
 			case RFE:
 				fmt("rfe");
-				return;
+				break;
 
 			default:
+				valid = false;
 				break;
 			}
 			break;
@@ -521,13 +529,14 @@ void p_disasm_instr(struct p_ctx *ctx, uint32_t pc, struct p_disasm_traces *trac
 		switch (rs) {
 		case MTC:
 			fmt("mtc2 %s, %s", gpr[rt], cop2_cpr[rd]);
-			return;
+			break;
 
 		case CTC:
 			fmt("ctc2 %s, %s", gpr[rt], cop2_ccr[rd]);
-			return;
+			break;
 
 		default:
+			valid = false;
 			break;
 		}
 		break;
@@ -537,85 +546,89 @@ void p_disasm_instr(struct p_ctx *ctx, uint32_t pc, struct p_disasm_traces *trac
 		trace_add(traces, P_DISASM_TRACE_GPR_RT);
 		trace_add(traces, P_DISASM_TRACE_CPU_PADDR);
 
-		return;
+		break;
 
 	case LH:
 		fmt("lh %s, %d(%s)", gpr[rt], offset, gpr[base]);
 		trace_add(traces, P_DISASM_TRACE_GPR_RT);
 		trace_add(traces, P_DISASM_TRACE_CPU_PADDR);
 
-		return;
+		break;
 
 	case LWL:
 		fmt("lwl %s, %d(%s)", gpr[rt], offset, gpr[base]);
 		trace_add(traces, P_DISASM_TRACE_GPR_RT);
 		trace_add(traces, P_DISASM_TRACE_CPU_PADDR);
 
-		return;
+		break;
 
 	case LW:
 		fmt("lw %s, %d(%s)", gpr[rt], offset, gpr[base]);
 		trace_add(traces, P_DISASM_TRACE_GPR_RT);
 		trace_add(traces, P_DISASM_TRACE_CPU_PADDR);
 
-		return;
+		break;
 
 	case LBU:
 		fmt("lbu %s, %d(%s)", gpr[rt], offset, gpr[base]);
 		trace_add(traces, P_DISASM_TRACE_GPR_RT);
 		trace_add(traces, P_DISASM_TRACE_CPU_PADDR);
 
-		return;
+		break;
 
 	case LHU:
 		fmt("lhu %s, %d(%s)", gpr[rt], offset, gpr[base]);
 		trace_add(traces, P_DISASM_TRACE_GPR_RT);
 		trace_add(traces, P_DISASM_TRACE_CPU_PADDR);
 
-		return;
+		break;
 
 	case LWR:
 		fmt("lwr %s, %d(%s)", gpr[rt], offset, gpr[base]);
 		trace_add(traces, P_DISASM_TRACE_GPR_RT);
 		trace_add(traces, P_DISASM_TRACE_CPU_PADDR);
 
-		return;
+		break;
 
 	case SB:
 		fmt("sb %s, %d(%s)", gpr[rt], offset, gpr[base]);
 
 		trace_add(traces, P_DISASM_TRACE_CPU_PADDR);
-		return;
+		break;
 
 	case SH:
 		fmt("sh %s, %d(%s)", gpr[rt], offset, gpr[base]);
 
 		trace_add(traces, P_DISASM_TRACE_CPU_PADDR);
-		return;
+		break;
 
 	case SWL:
 		fmt("swl %s, %d(%s)", gpr[rt], offset, gpr[base]);
 
 		trace_add(traces, P_DISASM_TRACE_CPU_PADDR);
-		return;
+		break;
 
 	case SW:
 		fmt("sw %s, %d(%s)", gpr[rt], offset, gpr[base]);
 		trace_add(traces, P_DISASM_TRACE_CPU_PADDR);
 
-		return;
+		break;
 
 	case SWR:
 		fmt("swr %s, %d(%s)", gpr[rt], offset, gpr[base]);
 		trace_add(traces, P_DISASM_TRACE_CPU_PADDR);
 
-		return;
+		break;
 
 	default:
+		valid = false;
 		break;
 	}
 
-	fmt("illegal 0x%08X", instr);
+	if (!valid)
+		fmt("illegal 0x%08X", instr);
+
+	return true;
 
 #undef fmt
 #undef op

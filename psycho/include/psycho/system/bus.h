@@ -27,15 +27,16 @@ extern "C" {
 
 struct p_ctx;
 
-#define P_BUS_BIOS_SIZE_BYTES (524288)
-#define P_BUS_SPAD_SIZE	      (1024)
+enum {
+	PSYCHO_BUS_BIOS_SIZE_BYTES    = 524288,
+	PSYCHO_BUS_SPAD_SIZE_BYTES    = 1024,
+	PSYCHO_BUS_RAM_SIZE_MAX_BYTES = 0x00FFFFFF
+};
 
-#define P_BUS_MAX_RAM_SIZE    (0x00FFFFFF)
-
-struct p_bus {
-	uint8_t ram[P_BUS_MAX_RAM_SIZE];
-	uint8_t bios[P_BUS_BIOS_SIZE_BYTES];
-	uint8_t spad[P_BUS_SPAD_SIZE];
+struct psycho_bus {
+	uint8_t ram[PSYCHO_BUS_RAM_SIZE_MAX_BYTES];
+	uint8_t bios[PSYCHO_BUS_BIOS_SIZE_BYTES];
+	uint8_t spad[PSYCHO_BUS_SPAD_SIZE_BYTES];
 };
 
 P_NODISCARD P_CONST uint8_t *p_bios_data_get(struct p_ctx *ctx) P_NONNULL;
