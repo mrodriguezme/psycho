@@ -29,14 +29,13 @@ target_sources(
 	include/psycho/common/sched.h
 	include/psycho/debug/bios_call_tracer.h
 	include/psycho/debug/disasm.h
+	include/psycho/debug/fixed_string.h
 	include/psycho/debug/log.h
-	include/psycho/debug/str.h
 	include/psycho/devices/digital_pad.h
 	include/psycho/system/cpu/defs.h
 	include/psycho/system/cpu/interpreter.h
 	include/psycho/system/cpu/ops.h
 	include/psycho/system/bus.h
-	include/psycho/system/dmac.h
 	include/psycho/system/gpu.h
 	include/psycho/system/intc.h
 	include/psycho/system/sio0_device.h
@@ -49,10 +48,10 @@ target_sources(
 	src/debug/bios_call_tracer.h
 	src/debug/disasm.c
 	src/debug/disasm.h
+	src/debug/fixed_string.c
+	src/debug/fixed_string.h
 	src/debug/log.c
 	src/debug/log.h
-	src/debug/str.c
-	src/debug/str.h
 	src/devices/digital_pad.c
 	src/system/cpu/defs.c
 	src/system/cpu/defs.h

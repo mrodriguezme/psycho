@@ -21,7 +21,7 @@
 #include <stdio.h>
 
 #include "log.h"
-#include "str.h"
+#include "fixed_string.h"
 
 static const char *const level_names[PSYCHO_LOG_LEVEL_COUNT] = {
 #define X(id, name) [PSYCHO_LOG_LEVEL_##id] = name,
@@ -35,21 +35,23 @@ static const char *const module_names[PSYCHO_LOG_MODULE_COUNT] = {
 #undef X
 };
 
-void psycho_log_msg(struct p_ctx *ctx, enum psycho_log_module module, enum psycho_log_level level, const char *fmt, ...)
+void psycho_log_msg(struct psycho_ctx *ctx, enum psycho_log_module module, enum psycho_log_level level, const char *fmt,
+		    ...)
 {
 	assert(ctx->cfg.log.log_cb != NULL);
 	assert(module < PSYCHO_LOG_MODULE_COUNT);
 	assert((level > PSYCHO_LOG_LEVEL_OFF) && (level < PSYCHO_LOG_LEVEL_COUNT));
 
 	char buf[512];
-	struct p_str str;
+	struct psycho_fixed_string str;
 
-	p_str_init_fixed(&str, buf, sizeof(buf));
-	p_str_append(&str, NULL, "[%s/%s] ", level_names[level], module_names[module]);
+	psycho_fixed_string_init(&str, buf, sizeof(buf));
+
+	psycho_fixed_string_append(&str, "[%s/%s] ", level_names[level], module_names[module]);
 
 	va_list args;
 	va_start(args, fmt);
-	p_str_vappend(&str, NULL, fmt, args);
+	psycho_fixed_string_vappend(&str, fmt, args);
 	va_end(args);
 
 	struct psycho_log_msg msg = {

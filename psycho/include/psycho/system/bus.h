@@ -25,7 +25,7 @@
 extern "C" {
 #endif // __cplusplus
 
-struct p_ctx;
+struct psycho_ctx;
 
 enum {
 	PSYCHO_BUS_BIOS_SIZE_BYTES    = 524288,
@@ -39,7 +39,7 @@ struct psycho_bus {
 	uint8_t spad[PSYCHO_BUS_SPAD_SIZE_BYTES];
 };
 
-P_NODISCARD P_CONST uint8_t *p_bios_data_get(struct p_ctx *ctx) P_NONNULL;
+PSYCHO_NODISCARD PSYCHO_CONST uint8_t *p_bios_data_get(struct psycho_ctx *ctx) PSYCHO_NONNULL;
 
 #ifdef __cplusplus
 }

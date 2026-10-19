@@ -22,6 +22,7 @@
 #include "common/sched.h"
 
 #include "debug/bios_call_tracer.h"
+#include "debug/disasm.h"
 #include "debug/log.h"
 
 #include "system/bus.h"
@@ -32,7 +33,7 @@
 
 DECLARE_LOG_MODULE(PSYCHO_LOG_MODULE_CPU);
 
-#define LD_SLOT(m) (((struct p_ctx *)0)->cpu_interpreter.m)
+#define LD_SLOT(m) (((struct psycho_ctx *)0)->cpu_interpreter.m)
 
 static_assert(sizeof(LD_SLOT(ld_pend)) == 8, "ld slot must be exactly 8 bytes");
 static_assert(sizeof(LD_SLOT(ld_pend.dst)) == 4, "ld slot dst must be 32 bits");
@@ -55,7 +56,7 @@ static_assert(offsetof(__typeof__(LD_SLOT(ld_pend)), val) == 4, "ld slot val mus
 		(val);                           \
 	})
 
-P_NONNULL static void irq_mux_assert(struct p_ctx *ctx, bool set)
+PSYCHO_NONNULL static void irq_mux_assert(struct psycho_ctx *ctx, bool set)
 {
 	if (set) {
 		ctx->cpu_interpreter.cop0_cpr[PSYCHO_CPU_COP0_CPR_SR] |= SR_IM2;
@@ -66,46 +67,46 @@ P_NONNULL static void irq_mux_assert(struct p_ctx *ctx, bool set)
 	}
 }
 
-P_NONNULL static void pc_set(struct p_ctx *ctx, uint32_t pc)
+PSYCHO_NONNULL static void pc_set(struct psycho_ctx *ctx, uint32_t pc)
 {
 	ctx->cpu_interpreter.dly_pc = pc;
 	ctx->cpu_interpreter.pc	    = pc;
 	ctx->cpu_interpreter.npc    = pc + sizeof(ctx->cpu_interpreter.instr);
 }
 
-P_NONNULL static uint32_t pc_get(struct p_ctx *ctx)
+PSYCHO_NONNULL static uint32_t pc_get(struct psycho_ctx *ctx)
 {
 	return ctx->cpu_interpreter.pc;
 }
 
-P_NONNULL static uint32_t instr_get(struct p_ctx *ctx)
+PSYCHO_NONNULL static uint32_t instr_get(struct psycho_ctx *ctx)
 {
 	return ctx->cpu_interpreter.instr;
 }
 
-P_NONNULL static void gpr_write_direct(struct p_ctx *ctx, enum psycho_cpu_gpr gpr, uint32_t val)
+PSYCHO_NONNULL static void gpr_write_direct(struct psycho_ctx *ctx, enum psycho_cpu_gpr gpr, uint32_t val)
 {
 	assert(gpr < PSYCHO_CPU_GPR_COUNT);
 	ctx->cpu_interpreter.gpr[gpr] = val;
 }
 
-P_NONNULL static uint32_t gpr_read(struct p_ctx *ctx, enum psycho_cpu_gpr gpr)
+PSYCHO_NONNULL static uint32_t gpr_read(struct psycho_ctx *ctx, enum psycho_cpu_gpr gpr)
 {
 	assert(gpr < PSYCHO_CPU_GPR_COUNT);
 	return ctx->cpu_interpreter.gpr[gpr];
 }
 
-P_NONNULL static uint32_t lo_get(struct p_ctx *ctx)
+PSYCHO_NONNULL static uint32_t lo_get(struct psycho_ctx *ctx)
 {
 	return ctx->cpu_interpreter.lo;
 }
 
-P_NONNULL static uint32_t hi_get(struct p_ctx *ctx)
+PSYCHO_NONNULL static uint32_t hi_get(struct psycho_ctx *ctx)
 {
 	return ctx->cpu_interpreter.hi;
 }
 
-P_NONNULL static void reset(struct p_ctx *ctx)
+PSYCHO_NONNULL static void reset(struct psycho_ctx *ctx)
 {
 	memset(ctx->cpu_interpreter.gpr, 0, sizeof(ctx->cpu_interpreter.gpr));
 	pc_set(ctx, RST_VECTOR);
@@ -118,13 +119,13 @@ P_NONNULL static void reset(struct p_ctx *ctx)
 	LOG_INFO(ctx, "reset");
 }
 
-P_NONNULL static void stop(struct p_ctx *ctx)
+PSYCHO_NONNULL static void stop(struct psycho_ctx *ctx)
 {
 	ctx->running		  = false;
 	ctx->cpu_interpreter.slow = true;
 }
 
-P_NODISCARD P_NONNULL static uint32_t load_word(struct p_ctx *ctx, uint32_t vaddr, bool *valid)
+PSYCHO_NODISCARD PSYCHO_NONNULL static uint32_t load_word(struct psycho_ctx *ctx, uint32_t vaddr, bool *valid)
 {
 	p_sched_adv_ts(ctx, 1);
 
@@ -132,7 +133,7 @@ P_NODISCARD P_NONNULL static uint32_t load_word(struct p_ctx *ctx, uint32_t vadd
 	return psycho_bus_load_word(ctx, vaddr, valid);
 }
 
-P_NODISCARD P_NONNULL static uint16_t load_halfword(struct p_ctx *ctx, uint32_t vaddr, bool *valid)
+PSYCHO_NODISCARD PSYCHO_NONNULL static uint16_t load_halfword(struct psycho_ctx *ctx, uint32_t vaddr, bool *valid)
 {
 	p_sched_adv_ts(ctx, 1);
 
@@ -140,7 +141,7 @@ P_NODISCARD P_NONNULL static uint16_t load_halfword(struct p_ctx *ctx, uint32_t 
 	return psycho_bus_load_halfword(ctx, vaddr, valid);
 }
 
-P_NODISCARD P_NONNULL static uint8_t load_byte(struct p_ctx *ctx, uint32_t vaddr, bool *valid)
+PSYCHO_NODISCARD PSYCHO_NONNULL static uint8_t load_byte(struct psycho_ctx *ctx, uint32_t vaddr, bool *valid)
 {
 	p_sched_adv_ts(ctx, 1);
 
@@ -148,7 +149,7 @@ P_NODISCARD P_NONNULL static uint8_t load_byte(struct p_ctx *ctx, uint32_t vaddr
 	return psycho_bus_load_byte(ctx, vaddr, valid);
 }
 
-P_NONNULL static bool store_word(struct p_ctx *ctx, uint32_t vaddr, uint32_t data)
+PSYCHO_NONNULL static bool store_word(struct psycho_ctx *ctx, uint32_t vaddr, uint32_t data)
 {
 	p_sched_adv_ts(ctx, 1);
 
@@ -156,7 +157,7 @@ P_NONNULL static bool store_word(struct p_ctx *ctx, uint32_t vaddr, uint32_t dat
 	return psycho_bus_store_word(ctx, vaddr, data);
 }
 
-P_NONNULL static bool store_halfword(struct p_ctx *ctx, uint32_t vaddr, uint16_t data)
+PSYCHO_NONNULL static bool store_halfword(struct psycho_ctx *ctx, uint32_t vaddr, uint16_t data)
 {
 	p_sched_adv_ts(ctx, 1);
 
@@ -164,7 +165,7 @@ P_NONNULL static bool store_halfword(struct p_ctx *ctx, uint32_t vaddr, uint16_t
 	return psycho_bus_store_halfword(ctx, vaddr, data);
 }
 
-P_NONNULL static bool store_byte(struct p_ctx *ctx, uint32_t vaddr, uint8_t data)
+PSYCHO_NONNULL static bool store_byte(struct psycho_ctx *ctx, uint32_t vaddr, uint8_t data)
 {
 	p_sched_adv_ts(ctx, 1);
 
@@ -172,7 +173,7 @@ P_NONNULL static bool store_byte(struct p_ctx *ctx, uint32_t vaddr, uint8_t data
 	return psycho_bus_store_byte(ctx, vaddr, data);
 }
 
-P_NONNULL static void gpr_set(struct p_ctx *ctx, size_t reg, uint32_t val)
+PSYCHO_NONNULL static void gpr_set(struct psycho_ctx *ctx, size_t reg, uint32_t val)
 {
 	// If the instruction following a load writes to the same destination register, the load’s delay slot is
 	// canceled.
@@ -184,13 +185,13 @@ P_NONNULL static void gpr_set(struct p_ctx *ctx, size_t reg, uint32_t val)
 	ctx->cpu_interpreter.gpr[reg] = val;
 }
 
-P_NONNULL static void branch(struct p_ctx *ctx, uint32_t addr)
+PSYCHO_NONNULL static void branch(struct psycho_ctx *ctx, uint32_t addr)
 {
 	ctx->cpu_interpreter.next_in_bd = true;
 	ctx->cpu_interpreter.npc	= addr;
 }
 
-P_NONNULL static void branch_if(struct p_ctx *ctx, uint32_t instr, bool cond)
+PSYCHO_NONNULL static void branch_if(struct psycho_ctx *ctx, uint32_t instr, bool cond)
 {
 	ctx->cpu_interpreter.next_in_bd = true;
 
@@ -205,7 +206,7 @@ P_NONNULL static void branch_if(struct p_ctx *ctx, uint32_t instr, bool cond)
 	ctx->cpu_interpreter.npc = (target & mask) | (ctx->cpu_interpreter.npc & ~mask);
 }
 
-P_NONNULL static void do_exception(struct p_ctx *ctx, enum cpu_exception exc, uint32_t vec)
+PSYCHO_NONNULL static void do_exception(struct psycho_ctx *ctx, enum cpu_exception exc, uint32_t vec)
 {
 #define CAUSE (ctx->cpu_interpreter.cop0_cpr[PSYCHO_CPU_COP0_CPR_CAUSE])
 #define EPC   (ctx->cpu_interpreter.cop0_cpr[PSYCHO_CPU_COP0_CPR_EPC])
@@ -233,17 +234,17 @@ P_NONNULL static void do_exception(struct p_ctx *ctx, enum cpu_exception exc, ui
 #undef SR
 }
 
-P_NONNULL static void raise_exception(struct p_ctx *ctx, enum cpu_exception exc)
+PSYCHO_NONNULL static void raise_exception(struct psycho_ctx *ctx, enum cpu_exception exc)
 {
 	do_exception(ctx, exc, EXC_VECTOR);
 }
 
-P_NONNULL static void raise_debug_exception(struct p_ctx *ctx)
+PSYCHO_NONNULL static void raise_debug_exception(struct psycho_ctx *ctx)
 {
 	do_exception(ctx, EXCEPTION_BP, DBG_VECTOR);
 }
 
-P_NONNULL static void dbg_bp_write(struct p_ctx *ctx, uint32_t vaddr)
+PSYCHO_NONNULL static void dbg_bp_write(struct psycho_ctx *ctx, uint32_t vaddr)
 {
 #define BDA  (ctx->cpu_interpreter.cop0_cpr[PSYCHO_CPU_COP0_CPR_BDA])
 #define BDAM (ctx->cpu_interpreter.cop0_cpr[PSYCHO_CPU_COP0_CPR_BDAM])
@@ -259,7 +260,7 @@ P_NONNULL static void dbg_bp_write(struct p_ctx *ctx, uint32_t vaddr)
 #undef DCIC
 }
 
-P_NONNULL static void do_div(struct p_ctx *ctx, int32_t dividend, int32_t divisor)
+PSYCHO_NONNULL static void do_div(struct psycho_ctx *ctx, int32_t dividend, int32_t divisor)
 {
 #define LO (ctx->cpu_interpreter.lo)
 #define HI (ctx->cpu_interpreter.hi)
@@ -284,7 +285,7 @@ P_NONNULL static void do_div(struct p_ctx *ctx, int32_t dividend, int32_t diviso
 #undef HI
 }
 
-P_NONNULL static void do_divu(struct p_ctx *ctx, uint32_t dividend, uint32_t divisor)
+PSYCHO_NONNULL static void do_divu(struct psycho_ctx *ctx, uint32_t dividend, uint32_t divisor)
 {
 #define LO (ctx->cpu_interpreter.lo)
 #define HI (ctx->cpu_interpreter.hi)
@@ -303,7 +304,7 @@ P_NONNULL static void do_divu(struct p_ctx *ctx, uint32_t dividend, uint32_t div
 #undef HI
 }
 
-P_NONNULL static void do_add(struct p_ctx *ctx, size_t dst, uint32_t a0, uint32_t a1)
+PSYCHO_NONNULL static void do_add(struct psycho_ctx *ctx, size_t dst, uint32_t a0, uint32_t a1)
 {
 	int sum;
 
@@ -313,7 +314,7 @@ P_NONNULL static void do_add(struct p_ctx *ctx, size_t dst, uint32_t a0, uint32_
 		gpr_set(ctx, dst, sum);
 }
 
-P_NONNULL static void do_sub(struct p_ctx *ctx, size_t dst, uint32_t minuend, uint32_t subtrahend)
+PSYCHO_NONNULL static void do_sub(struct psycho_ctx *ctx, size_t dst, uint32_t minuend, uint32_t subtrahend)
 {
 	int diff;
 
@@ -323,7 +324,7 @@ P_NONNULL static void do_sub(struct p_ctx *ctx, size_t dst, uint32_t minuend, ui
 		gpr_set(ctx, dst, diff);
 }
 
-P_NONNULL static void update_flag(struct p_ctx *ctx)
+PSYCHO_NONNULL static void update_flag(struct psycho_ctx *ctx)
 {
 #define FLAG (ctx->cpu_interpreter.cop2.ccr.flag)
 
@@ -335,7 +336,7 @@ P_NONNULL static void update_flag(struct p_ctx *ctx)
 #undef FLAG
 }
 
-P_NONNULL static void flag_set(struct p_ctx *ctx, uint32_t flags)
+PSYCHO_NONNULL static void flag_set(struct psycho_ctx *ctx, uint32_t flags)
 {
 #define FLAG (ctx->cpu_interpreter.cop2.ccr.flag)
 
@@ -344,7 +345,8 @@ P_NONNULL static void flag_set(struct p_ctx *ctx, uint32_t flags)
 #undef FLAG
 }
 
-P_NONNULL static int64_t mac123_chk(struct p_ctx *ctx, int64_t sum, int64_t addend, uint32_t neg, uint32_t pos)
+PSYCHO_NONNULL static int64_t mac123_chk(struct psycho_ctx *ctx, int64_t sum, int64_t addend, uint32_t neg,
+					 uint32_t pos)
 {
 	sum += addend;
 
@@ -356,7 +358,7 @@ P_NONNULL static int64_t mac123_chk(struct p_ctx *ctx, int64_t sum, int64_t adde
 	return (int64_t)((uint64_t)sum << 20) >> 20;
 }
 
-P_NONNULL static int64_t mac0_add(struct p_ctx *ctx, int64_t res)
+PSYCHO_NONNULL static int64_t mac0_add(struct psycho_ctx *ctx, int64_t res)
 {
 	if (res > INT32_MAX)
 		flag_set(ctx, MAC0_POS_OVF);
@@ -366,7 +368,7 @@ P_NONNULL static int64_t mac0_add(struct p_ctx *ctx, int64_t res)
 	return res;
 }
 
-P_NONNULL static int64_t mac123_add(struct p_ctx *ctx, size_t mac, int64_t sum, int64_t addend)
+PSYCHO_NONNULL static int64_t mac123_add(struct psycho_ctx *ctx, size_t mac, int64_t sum, int64_t addend)
 {
 	switch (mac) {
 	case 1:
@@ -379,16 +381,16 @@ P_NONNULL static int64_t mac123_add(struct p_ctx *ctx, size_t mac, int64_t sum, 
 		return mac123_chk(ctx, sum, addend, MAC3_OVF_NEG, MAC3_OVF_POS);
 
 	default:
-		P_UNREACHABLE;
+		PSYCHO_UNREACHABLE;
 	}
 }
 
-P_NONNULL P_NODISCARD static int16_t ir0_sat(struct p_ctx *ctx, int64_t val)
+PSYCHO_NONNULL PSYCHO_NODISCARD static int16_t ir0_sat(struct psycho_ctx *ctx, int64_t val)
 {
 	return gte_clamp(ctx, val, IR0_MIN, IR0_MAX, IR0_SAT);
 }
 
-P_NONNULL static int16_t ir123_sat(struct p_ctx *ctx, unsigned int ir, int32_t val, bool lm)
+PSYCHO_NONNULL static int16_t ir123_sat(struct psycho_ctx *ctx, unsigned int ir, int32_t val, bool lm)
 {
 	int16_t min = lm ? IR123_LM_MIN : IR123_MIN;
 
@@ -403,11 +405,11 @@ P_NONNULL static int16_t ir123_sat(struct p_ctx *ctx, unsigned int ir, int32_t v
 		return gte_clamp(ctx, val, min, IR123_MAX, IR3_SAT);
 
 	default:
-		P_UNREACHABLE;
+		PSYCHO_UNREACHABLE;
 	}
 }
 
-P_NONNULL static void sx_push(struct p_ctx *ctx, int64_t val)
+PSYCHO_NONNULL static void sx_push(struct psycho_ctx *ctx, int64_t val)
 {
 #define SXY (ctx->cpu_interpreter.cop2.cpr.sxy)
 
@@ -419,7 +421,7 @@ P_NONNULL static void sx_push(struct p_ctx *ctx, int64_t val)
 #undef SXY
 }
 
-P_NONNULL static void sy_push(struct p_ctx *ctx, int64_t val)
+PSYCHO_NONNULL static void sy_push(struct psycho_ctx *ctx, int64_t val)
 {
 #define SXY (ctx->cpu_interpreter.cop2.cpr.sxy)
 
@@ -431,7 +433,7 @@ P_NONNULL static void sy_push(struct p_ctx *ctx, int64_t val)
 #undef SXY
 }
 
-P_NONNULL static void sz_push(struct p_ctx *ctx, int64_t val)
+PSYCHO_NONNULL static void sz_push(struct psycho_ctx *ctx, int64_t val)
 {
 #define SZ (ctx->cpu_interpreter.cop2.cpr.sz)
 
@@ -443,12 +445,12 @@ P_NONNULL static void sz_push(struct p_ctx *ctx, int64_t val)
 #undef SZ
 }
 
-P_NONNULL static uint16_t otz_set(struct p_ctx *ctx, int64_t val)
+PSYCHO_NONNULL static uint16_t otz_set(struct psycho_ctx *ctx, int64_t val)
 {
 	return gte_clamp(ctx, val, SZ_OTZ_MIN, SZ_OTZ_MAX, SZ3_OTZ_SAT);
 }
 
-P_NONNULL static uint32_t rgb_set(struct p_ctx *ctx, unsigned int color, int32_t val)
+PSYCHO_NONNULL static uint32_t rgb_set(struct psycho_ctx *ctx, unsigned int color, int32_t val)
 {
 	switch (color) {
 	case 0:
@@ -461,36 +463,32 @@ P_NONNULL static uint32_t rgb_set(struct p_ctx *ctx, unsigned int color, int32_t
 		return gte_clamp(ctx, val, RGB_MIN, RGB_MAX, RGB_B_SAT);
 
 	default:
-		P_UNREACHABLE;
+		PSYCHO_UNREACHABLE;
 	}
 }
 
-P_NONNULL P_NODISCARD static int64_t gte_div(struct p_ctx *ctx)
+PSYCHO_NONNULL PSYCHO_NODISCARD static int64_t gte_div(struct psycho_ctx *ctx)
 {
-#define H   (ctx->cpu_interpreter.cop2.ccr.h)
-#define SZ3 (ctx->cpu_interpreter.cop2.cpr.sz[3].val)
+	uint32_t h   = ctx->cpu_interpreter.cop2.ccr.h;
+	uint32_t sz3 = ctx->cpu_interpreter.cop2.cpr.sz[3].val;
 
-	int64_t n;
-
-	if (likely(H < (SZ3 * 2))) {
-		int z	       = __builtin_clz(SZ3) - 16;
-		n	       = H << z;
-		unsigned int d = SZ3 << z;
-		unsigned int u = psycho_gte_unr_tbl[(d - 0x7FC0) >> 7] + 0x101;
-		d	       = ((0x2000080 - (d * u)) >> 8);
-		d	       = ((0x0000080 + (d * u)) >> 8);
-		n	       = min(0x1FFFF, (((n * d) + 0x8000) >> 16));
-	} else {
+	if (unlikely(h >= (sz3 * 2))) {
 		flag_set(ctx, DIV_OVF);
-		n = 0x1FFFF;
+		return 0x1FFFF;
 	}
-	return n;
 
-#undef H
-#undef SZ3
+	int z	   = __builtin_clz(sz3) - 16;
+	uint32_t d = sz3 << z;
+	uint32_t u = psycho_gte_unr_tbl[(d - 0x7FC0) >> 7] + 0x101;
+
+	d = (0x2000080 - (d * u)) >> 8;
+	d = (0x0000080 + (d * u)) >> 8;
+
+	uint64_t n = (((uint64_t)(h << z) * d) + 0x8000) >> 16;
+	return min(n, UINT64_C(0x1FFFF));
 }
 
-P_NONNULL static void color_fifo_push(struct p_ctx *ctx)
+PSYCHO_NONNULL static void color_fifo_push(struct psycho_ctx *ctx)
 {
 #define MAC  (ctx->cpu_interpreter.cop2.cpr.mac)
 #define RGB  (ctx->cpu_interpreter.cop2.cpr.rgb)
@@ -510,7 +508,7 @@ P_NONNULL static void color_fifo_push(struct p_ctx *ctx)
 #undef RGBC
 }
 
-P_NONNULL static void rtp(struct p_ctx *ctx, struct psycho_gte_vector *vec, bool dq)
+PSYCHO_NONNULL static void rtp(struct psycho_ctx *ctx, struct psycho_gte_vector *vec, bool dq)
 {
 #define DQA (ctx->cpu_interpreter.cop2.ccr.dqa)
 #define DQB (ctx->cpu_interpreter.cop2.ccr.dqb)
@@ -572,7 +570,7 @@ P_NONNULL static void rtp(struct p_ctx *ctx, struct psycho_gte_vector *vec, bool
 #undef TR
 }
 
-P_NONNULL static void intpl_llm_vec(struct p_ctx *ctx, struct psycho_gte_vector *vec)
+PSYCHO_NONNULL static void intpl_llm_vec(struct psycho_ctx *ctx, struct psycho_gte_vector *vec)
 {
 #define IR  (ctx->cpu_interpreter.cop2.cpr.ir)
 #define LLM (ctx->cpu_interpreter.cop2.ccr.llm)
@@ -596,7 +594,7 @@ P_NONNULL static void intpl_llm_vec(struct p_ctx *ctx, struct psycho_gte_vector 
 #undef MAC
 }
 
-P_NONNULL static void intpl_bk_lcm(struct p_ctx *ctx)
+PSYCHO_NONNULL static void intpl_bk_lcm(struct psycho_ctx *ctx)
 {
 #define BK  (ctx->cpu_interpreter.cop2.ccr.bk)
 #define IR  (ctx->cpu_interpreter.cop2.cpr.ir)
@@ -625,7 +623,7 @@ P_NONNULL static void intpl_bk_lcm(struct p_ctx *ctx)
 #undef MAC
 }
 
-P_NONNULL static void intpl_rgb(struct p_ctx *ctx)
+PSYCHO_NONNULL static void intpl_rgb(struct psycho_ctx *ctx)
 {
 #define IR   (ctx->cpu_interpreter.cop2.cpr.ir)
 #define MAC  (ctx->cpu_interpreter.cop2.cpr.mac)
@@ -644,7 +642,7 @@ P_NONNULL static void intpl_rgb(struct p_ctx *ctx)
 #undef RGBC
 }
 
-P_NONNULL static void intpl_fc(struct p_ctx *ctx, int64_t *sums)
+PSYCHO_NONNULL static void intpl_fc(struct psycho_ctx *ctx, int64_t *sums)
 {
 #define FC  (ctx->cpu_interpreter.cop2.ccr.fc)
 #define IR  (ctx->cpu_interpreter.cop2.cpr.ir)
@@ -674,7 +672,7 @@ P_NONNULL static void intpl_fc(struct p_ctx *ctx, int64_t *sums)
 #undef MAC
 }
 
-P_NONNULL static void dpc(struct p_ctx *ctx, uint8_t *rgb)
+PSYCHO_NONNULL static void dpc(struct psycho_ctx *ctx, uint8_t *rgb)
 {
 	int64_t sums[3];
 
@@ -685,14 +683,14 @@ P_NONNULL static void dpc(struct p_ctx *ctx, uint8_t *rgb)
 	color_fifo_push(ctx);
 }
 
-P_NONNULL static void nc(struct p_ctx *ctx, struct psycho_gte_vector *vec)
+PSYCHO_NONNULL static void nc(struct psycho_ctx *ctx, struct psycho_gte_vector *vec)
 {
 	intpl_llm_vec(ctx, vec);
 	intpl_bk_lcm(ctx);
 	color_fifo_push(ctx);
 }
 
-P_NONNULL static void ncc(struct p_ctx *ctx, struct psycho_gte_vector *vec)
+PSYCHO_NONNULL static void ncc(struct psycho_ctx *ctx, struct psycho_gte_vector *vec)
 {
 	intpl_llm_vec(ctx, vec);
 	intpl_bk_lcm(ctx);
@@ -700,7 +698,7 @@ P_NONNULL static void ncc(struct p_ctx *ctx, struct psycho_gte_vector *vec)
 	color_fifo_push(ctx);
 }
 
-P_NONNULL static void ncd(struct p_ctx *ctx, struct psycho_gte_vector *vec)
+PSYCHO_NONNULL static void ncd(struct psycho_ctx *ctx, struct psycho_gte_vector *vec)
 {
 #define IR   (ctx->cpu_interpreter.cop2.cpr.ir)
 #define RGBC (ctx->cpu_interpreter.cop2.cpr.rgbc.array)
@@ -720,7 +718,7 @@ P_NONNULL static void ncd(struct p_ctx *ctx, struct psycho_gte_vector *vec)
 #undef RGBC
 }
 
-P_NONNULL static void avsz(struct p_ctx *ctx, int16_t scale, size_t sz_off)
+PSYCHO_NONNULL static void avsz(struct psycho_ctx *ctx, int16_t scale, size_t sz_off)
 {
 #define FLAG (ctx->cpu_interpreter.cop2.ccr.flag)
 #define MAC0 (ctx->cpu_interpreter.cop2.cpr.mac[0])
@@ -747,7 +745,7 @@ P_NONNULL static void avsz(struct p_ctx *ctx, int16_t scale, size_t sz_off)
 #undef SZ
 }
 
-P_NONNULL static void do_cop2_mfc(struct p_ctx *ctx, size_t rt, size_t rd)
+PSYCHO_NONNULL static void do_cop2_mfc(struct psycho_ctx *ctx, size_t rt, size_t rd)
 {
 #define IR   (ctx->cpu_interpreter.cop2.cpr.ir)
 #define SXY2 (ctx->cpu_interpreter.cop2.cpr.sxy[2].val)
@@ -776,7 +774,7 @@ P_NONNULL static void do_cop2_mfc(struct p_ctx *ctx, size_t rt, size_t rd)
 #undef SXY2
 }
 
-P_NONNULL static void do_cop2_cfc(struct p_ctx *ctx, size_t rt, size_t rd)
+PSYCHO_NONNULL static void do_cop2_cfc(struct psycho_ctx *ctx, size_t rt, size_t rd)
 {
 #define H (ctx->cpu_interpreter.cop2.ccr.h)
 
@@ -787,7 +785,7 @@ P_NONNULL static void do_cop2_cfc(struct p_ctx *ctx, size_t rt, size_t rd)
 #undef H
 }
 
-P_NONNULL static void do_cop2_mtc(struct p_ctx *ctx, size_t rd, size_t rt)
+PSYCHO_NONNULL static void do_cop2_mtc(struct psycho_ctx *ctx, size_t rd, size_t rt)
 {
 #define gpr  (ctx->cpu_interpreter.gpr)
 #define IR   (ctx->cpu_interpreter.cop2.cpr.ir)
@@ -861,7 +859,7 @@ P_NONNULL static void do_cop2_mtc(struct p_ctx *ctx, size_t rd, size_t rt)
 #undef SXY
 }
 
-P_NONNULL static void do_cop2_ctc(struct p_ctx *ctx, size_t rd, size_t rt)
+PSYCHO_NONNULL static void do_cop2_ctc(struct psycho_ctx *ctx, size_t rd, size_t rt)
 {
 #define gpr  (ctx->cpu_interpreter.gpr)
 #define FLAG (ctx->cpu_interpreter.cop2.ccr.flag)
@@ -891,7 +889,7 @@ P_NONNULL static void do_cop2_ctc(struct p_ctx *ctx, size_t rd, size_t rt)
 #undef FLAG
 }
 
-static void mvmva(struct p_ctx *ctx, int16_t (*Mx)[3], int16_t *Vx, int32_t *Tx)
+static void mvmva(struct psycho_ctx *ctx, int16_t (*Mx)[3], int16_t *Vx, int32_t *Tx)
 {
 #define IR  (ctx->cpu_interpreter.cop2.cpr.ir)
 #define MAC (ctx->cpu_interpreter.cop2.cpr.mac)
@@ -914,7 +912,7 @@ static void mvmva(struct p_ctx *ctx, int16_t (*Mx)[3], int16_t *Vx, int32_t *Tx)
 #undef MAC
 }
 
-static void mvmva_bugged(struct p_ctx *ctx, int16_t (*Mx)[3], int16_t *Vx)
+static void mvmva_bugged(struct psycho_ctx *ctx, int16_t (*Mx)[3], int16_t *Vx)
 {
 #define FC  (ctx->cpu_interpreter.cop2.ccr.fc)
 #define IR  (ctx->cpu_interpreter.cop2.cpr.ir)
@@ -944,7 +942,7 @@ static void mvmva_bugged(struct p_ctx *ctx, int16_t (*Mx)[3], int16_t *Vx)
 #undef MAC
 }
 
-P_NONNULL static void delay_slot_process(struct p_ctx *ctx)
+PSYCHO_NONNULL static void delay_slot_process(struct psycho_ctx *ctx)
 {
 	if (likely(!ctx->cpu_interpreter.ld_next.dst && !ctx->cpu_interpreter.ld_pend.dst))
 		return;
@@ -959,7 +957,7 @@ P_NONNULL static void delay_slot_process(struct p_ctx *ctx)
 	memset(&ctx->cpu_interpreter.ld_pend, 0, sizeof(ctx->cpu_interpreter.ld_pend));
 }
 
-P_NONNULL static void gpr_set_delayed(struct p_ctx *ctx, size_t dst, uint32_t val)
+PSYCHO_NONNULL static void gpr_set_delayed(struct psycho_ctx *ctx, size_t dst, uint32_t val)
 {
 	if (unlikely(!dst)) {
 		LOG_DEBUG(ctx, "Load delay rejected - dest was $zero");
@@ -976,7 +974,7 @@ P_NONNULL static void gpr_set_delayed(struct p_ctx *ctx, size_t dst, uint32_t va
 		memset(&ctx->cpu_interpreter.ld_next, 0, sizeof(ctx->cpu_interpreter.ld_next));
 }
 
-P_NONNULL static void do_jalr(struct p_ctx *ctx, size_t rs, size_t rd)
+PSYCHO_NONNULL static void do_jalr(struct psycho_ctx *ctx, size_t rs, size_t rd)
 {
 #define gpr   (ctx->cpu_interpreter.gpr)
 #define instr (ctx->cpu_interpreter.instr)
@@ -995,7 +993,7 @@ P_NONNULL static void do_jalr(struct p_ctx *ctx, size_t rs, size_t rd)
 #undef pc
 }
 
-P_NONNULL static void do_mult(struct p_ctx *ctx, size_t rs, size_t rt)
+PSYCHO_NONNULL static void do_mult(struct psycho_ctx *ctx, size_t rs, size_t rt)
 {
 #define gpr (ctx->cpu_interpreter.gpr)
 #define hi  (ctx->cpu_interpreter.hi)
@@ -1011,7 +1009,7 @@ P_NONNULL static void do_mult(struct p_ctx *ctx, size_t rs, size_t rt)
 #undef lo
 }
 
-P_NONNULL static void do_multu(struct p_ctx *ctx, size_t rs, size_t rt)
+PSYCHO_NONNULL static void do_multu(struct psycho_ctx *ctx, size_t rs, size_t rt)
 {
 #define gpr (ctx->cpu_interpreter.gpr)
 #define hi  (ctx->cpu_interpreter.hi)
@@ -1027,7 +1025,7 @@ P_NONNULL static void do_multu(struct p_ctx *ctx, size_t rs, size_t rt)
 #undef lo
 }
 
-P_NONNULL static void regimm(struct p_ctx *ctx, size_t rs, size_t rt)
+PSYCHO_NONNULL static void regimm(struct psycho_ctx *ctx, size_t rs, size_t rt)
 {
 #define gpr   (ctx->cpu_interpreter.gpr)
 #define pc    (ctx->cpu_interpreter.pc)
@@ -1046,7 +1044,7 @@ P_NONNULL static void regimm(struct p_ctx *ctx, size_t rs, size_t rt)
 #undef instr
 }
 
-P_NONNULL static void do_addi(struct p_ctx *ctx, size_t rs, size_t rt)
+PSYCHO_NONNULL static void do_addi(struct psycho_ctx *ctx, size_t rs, size_t rt)
 {
 #define gpr (ctx->cpu_interpreter.gpr)
 
@@ -1063,7 +1061,7 @@ P_NONNULL static void do_addi(struct p_ctx *ctx, size_t rs, size_t rt)
 #undef gpr
 }
 
-P_NONNULL static void do_op(struct p_ctx *ctx)
+PSYCHO_NONNULL static void do_op(struct psycho_ctx *ctx)
 {
 #define D1  (ctx->cpu_interpreter.cop2.ccr.r[0][0])
 #define D2  (ctx->cpu_interpreter.cop2.ccr.r[1][1])
@@ -1099,7 +1097,7 @@ P_NONNULL static void do_op(struct p_ctx *ctx)
 #undef MAC
 }
 
-P_NONNULL static void do_intpl(struct p_ctx *ctx)
+PSYCHO_NONNULL static void do_intpl(struct psycho_ctx *ctx)
 {
 #define IR (ctx->cpu_interpreter.cop2.cpr.ir)
 
@@ -1114,7 +1112,7 @@ P_NONNULL static void do_intpl(struct p_ctx *ctx)
 #undef IR
 }
 
-P_NONNULL static void do_mvmva(struct p_ctx *ctx)
+PSYCHO_NONNULL static void do_mvmva(struct psycho_ctx *ctx)
 {
 #define BK   (ctx->cpu_interpreter.cop2.ccr.bk)
 #define FC   (ctx->cpu_interpreter.cop2.ccr.fc)
@@ -1202,7 +1200,7 @@ P_NONNULL static void do_mvmva(struct p_ctx *ctx)
 #undef V
 }
 
-P_NONNULL static void do_cdp(struct p_ctx *ctx)
+PSYCHO_NONNULL static void do_cdp(struct psycho_ctx *ctx)
 {
 #define IR   (ctx->cpu_interpreter.cop2.cpr.ir)
 #define RGBC (ctx->cpu_interpreter.cop2.cpr.rgbc.array)
@@ -1221,7 +1219,7 @@ P_NONNULL static void do_cdp(struct p_ctx *ctx)
 #undef RGBC
 }
 
-P_NONNULL static void do_sqr(struct p_ctx *ctx)
+PSYCHO_NONNULL static void do_sqr(struct psycho_ctx *ctx)
 {
 #define IR  (ctx->cpu_interpreter.cop2.cpr.ir)
 #define MAC (ctx->cpu_interpreter.cop2.cpr.mac)
@@ -1238,7 +1236,7 @@ P_NONNULL static void do_sqr(struct p_ctx *ctx)
 #undef MAC
 }
 
-P_NONNULL static void do_dpcl(struct p_ctx *ctx)
+PSYCHO_NONNULL static void do_dpcl(struct psycho_ctx *ctx)
 {
 #define IR   (ctx->cpu_interpreter.cop2.cpr.ir)
 #define RGBC (ctx->cpu_interpreter.cop2.cpr.rgbc.array)
@@ -1255,7 +1253,7 @@ P_NONNULL static void do_dpcl(struct p_ctx *ctx)
 #undef RGBC
 }
 
-P_NONNULL static void do_gpl(struct p_ctx *ctx)
+PSYCHO_NONNULL static void do_gpl(struct psycho_ctx *ctx)
 {
 #define IR  (ctx->cpu_interpreter.cop2.cpr.ir)
 #define MAC (ctx->cpu_interpreter.cop2.cpr.mac)
@@ -1279,7 +1277,7 @@ P_NONNULL static void do_gpl(struct p_ctx *ctx)
 #undef MAC
 }
 
-P_NONNULL static void do_lh(struct p_ctx *ctx, size_t base, size_t offset, size_t rt)
+PSYCHO_NONNULL static void do_lh(struct psycho_ctx *ctx, size_t base, size_t offset, size_t rt)
 {
 #define gpr (ctx->cpu_interpreter.gpr)
 
@@ -1303,7 +1301,7 @@ P_NONNULL static void do_lh(struct p_ctx *ctx, size_t base, size_t offset, size_
 #undef gpr
 }
 
-P_NONNULL static void do_lwl(struct p_ctx *ctx, size_t base, size_t offset, size_t rt)
+PSYCHO_NONNULL static void do_lwl(struct psycho_ctx *ctx, size_t base, size_t offset, size_t rt)
 {
 #define gpr (ctx->cpu_interpreter.gpr)
 #define SR  (ctx->cpu_interpreter.cop0_cpr[PSYCHO_CPU_COP0_CPR_SR])
@@ -1334,7 +1332,7 @@ P_NONNULL static void do_lwl(struct p_ctx *ctx, size_t base, size_t offset, size
 #undef SR
 }
 
-P_NONNULL static void do_lw(struct p_ctx *ctx, size_t base, size_t offset, size_t rt)
+PSYCHO_NONNULL static void do_lw(struct psycho_ctx *ctx, size_t base, size_t offset, size_t rt)
 {
 #define gpr (ctx->cpu_interpreter.gpr)
 #define SR  (ctx->cpu_interpreter.cop0_cpr[PSYCHO_CPU_COP0_CPR_SR])
@@ -1363,7 +1361,7 @@ P_NONNULL static void do_lw(struct p_ctx *ctx, size_t base, size_t offset, size_
 #undef SR
 }
 
-P_NONNULL static void do_lhu(struct p_ctx *ctx, size_t base, size_t offset, size_t rt)
+PSYCHO_NONNULL static void do_lhu(struct psycho_ctx *ctx, size_t base, size_t offset, size_t rt)
 {
 #define gpr (ctx->cpu_interpreter.gpr)
 #define SR  (ctx->cpu_interpreter.cop0_cpr[PSYCHO_CPU_COP0_CPR_SR])
@@ -1392,7 +1390,7 @@ P_NONNULL static void do_lhu(struct p_ctx *ctx, size_t base, size_t offset, size
 #undef SR
 }
 
-P_NONNULL static void do_lwr(struct p_ctx *ctx, size_t base, size_t offset, size_t rt)
+PSYCHO_NONNULL static void do_lwr(struct psycho_ctx *ctx, size_t base, size_t offset, size_t rt)
 {
 #define gpr (ctx->cpu_interpreter.gpr)
 #define SR  (ctx->cpu_interpreter.cop0_cpr[PSYCHO_CPU_COP0_CPR_SR])
@@ -1424,8 +1422,7 @@ P_NONNULL static void do_lwr(struct p_ctx *ctx, size_t base, size_t offset, size
 #undef SR
 }
 
-
-P_NONNULL static void do_sb(struct p_ctx *ctx, size_t base, size_t offset, size_t rt)
+PSYCHO_NONNULL static void do_sb(struct psycho_ctx *ctx, size_t base, size_t offset, size_t rt)
 {
 #define gpr (ctx->cpu_interpreter.gpr)
 #define SR  (ctx->cpu_interpreter.cop0_cpr[PSYCHO_CPU_COP0_CPR_SR])
@@ -1442,7 +1439,7 @@ P_NONNULL static void do_sb(struct p_ctx *ctx, size_t base, size_t offset, size_
 #undef SR
 }
 
-P_NONNULL static void do_sh(struct p_ctx *ctx, size_t base, size_t offset, size_t rt)
+PSYCHO_NONNULL static void do_sh(struct psycho_ctx *ctx, size_t base, size_t offset, size_t rt)
 {
 #define gpr (ctx->cpu_interpreter.gpr)
 #define SR  (ctx->cpu_interpreter.cop0_cpr[PSYCHO_CPU_COP0_CPR_SR])
@@ -1464,7 +1461,7 @@ P_NONNULL static void do_sh(struct p_ctx *ctx, size_t base, size_t offset, size_
 #undef SR
 }
 
-P_NONNULL static void do_swl(struct p_ctx *ctx, size_t base, size_t offset, size_t rt)
+PSYCHO_NONNULL static void do_swl(struct psycho_ctx *ctx, size_t base, size_t offset, size_t rt)
 {
 #define gpr (ctx->cpu_interpreter.gpr)
 #define SR  (ctx->cpu_interpreter.cop0_cpr[PSYCHO_CPU_COP0_CPR_SR])
@@ -1495,7 +1492,7 @@ P_NONNULL static void do_swl(struct p_ctx *ctx, size_t base, size_t offset, size
 #undef SR
 }
 
-P_NONNULL static void do_sw(struct p_ctx *ctx, size_t base, size_t offset, size_t rt)
+PSYCHO_NONNULL static void do_sw(struct psycho_ctx *ctx, size_t base, size_t offset, size_t rt)
 {
 #define gpr (ctx->cpu_interpreter.gpr)
 #define SR  (ctx->cpu_interpreter.cop0_cpr[PSYCHO_CPU_COP0_CPR_SR])
@@ -1519,7 +1516,7 @@ P_NONNULL static void do_sw(struct p_ctx *ctx, size_t base, size_t offset, size_
 #undef SR
 }
 
-P_NONNULL static void do_swr(struct p_ctx *ctx, size_t base, size_t offset, size_t rt)
+PSYCHO_NONNULL static void do_swr(struct psycho_ctx *ctx, size_t base, size_t offset, size_t rt)
 {
 #define gpr (ctx->cpu_interpreter.gpr)
 #define SR  (ctx->cpu_interpreter.cop0_cpr[PSYCHO_CPU_COP0_CPR_SR])
@@ -1550,7 +1547,7 @@ P_NONNULL static void do_swr(struct p_ctx *ctx, size_t base, size_t offset, size
 #undef SR
 }
 
-P_NONNULL static void do_lb(struct p_ctx *ctx, size_t base, size_t offset, size_t rt)
+PSYCHO_NONNULL static void do_lb(struct psycho_ctx *ctx, size_t base, size_t offset, size_t rt)
 {
 #define gpr (ctx->cpu_interpreter.gpr)
 
@@ -1566,7 +1563,7 @@ P_NONNULL static void do_lb(struct p_ctx *ctx, size_t base, size_t offset, size_
 #undef gpr
 }
 
-P_NONNULL static void do_lbu(struct p_ctx *ctx, size_t base, size_t offset, size_t rt)
+PSYCHO_NONNULL static void do_lbu(struct psycho_ctx *ctx, size_t base, size_t offset, size_t rt)
 {
 #define gpr (ctx->cpu_interpreter.gpr)
 
@@ -1582,45 +1579,52 @@ P_NONNULL static void do_lbu(struct p_ctx *ctx, size_t base, size_t offset, size
 #undef gpr
 }
 
-P_NONNULL static void run(struct p_ctx *ctx, bool single_step)
+PSYCHO_NONNULL static void disasm_trace_emit(struct psycho_ctx *ctx)
 {
-#define gpr		(ctx->cpu_interpreter.gpr)
-#define pc		(ctx->cpu_interpreter.pc)
-#define npc		(ctx->cpu_interpreter.npc)
-#define hi		(ctx->cpu_interpreter.hi)
-#define lo		(ctx->cpu_interpreter.lo)
+	psycho_disasm_trace_end(ctx);
+	LOG_TRACE(ctx, "[disasm] 0x%08X: %s", ctx->disasm.res.pc, ctx->disasm.res.buf);
+}
 
-#define op		(instr_op(instr))
-#define rt		(instr_rt(instr))
-#define rs		(instr_rs(instr))
-#define rd		(instr_rd(instr))
-#define shamt		(instr_shamt(instr))
-#define funct		(instr_funct(instr))
-#define base		(rs)
-#define zextimm		(zero_extend_16_32(instr_imm(instr)))
-#define sextimm		(sign_extend_16_32(instr_imm(instr)))
-#define offset		(sextimm)
+PSYCHO_NONNULL static void run(struct psycho_ctx *ctx, bool single_step)
+{
+#define gpr		  (ctx->cpu_interpreter.gpr)
+#define pc		  (ctx->cpu_interpreter.pc)
+#define npc		  (ctx->cpu_interpreter.npc)
+#define hi		  (ctx->cpu_interpreter.hi)
+#define lo		  (ctx->cpu_interpreter.lo)
 
-#define SR		(ctx->cpu_interpreter.cop0_cpr[PSYCHO_CPU_COP0_CPR_SR])
+#define op		  (instr_op(instr))
+#define rt		  (instr_rt(instr))
+#define rs		  (instr_rs(instr))
+#define rd		  (instr_rd(instr))
+#define shamt		  (instr_shamt(instr))
+#define funct		  (instr_funct(instr))
+#define base		  (rs)
+#define zextimm		  (zero_extend_16_32(instr_imm(instr)))
+#define sextimm		  (sign_extend_16_32(instr_imm(instr)))
+#define offset		  (sextimm)
 
-#define FLAG		(ctx->cpu_interpreter.cop2.ccr.flag)
-#define MAC		(ctx->cpu_interpreter.cop2.cpr.mac)
-#define V		(ctx->cpu_interpreter.cop2.cpr.vector)
-#define SX0		(ctx->cpu_interpreter.cop2.cpr.sxy[0].x)
-#define SX1		(ctx->cpu_interpreter.cop2.cpr.sxy[1].x)
-#define SX2		(ctx->cpu_interpreter.cop2.cpr.sxy[2].x)
-#define SY0		(ctx->cpu_interpreter.cop2.cpr.sxy[0].y)
-#define SY1		(ctx->cpu_interpreter.cop2.cpr.sxy[1].y)
-#define SY2		(ctx->cpu_interpreter.cop2.cpr.sxy[2].y)
-#define RGB0		(ctx->cpu_interpreter.cop2.cpr.rgb[0].array)
-#define RGBC		(ctx->cpu_interpreter.cop2.cpr.rgbc.array)
-#define ZSF3		(ctx->cpu_interpreter.cop2.ccr.zsf3)
-#define ZSF4		(ctx->cpu_interpreter.cop2.ccr.zsf4)
+#define SR		  (ctx->cpu_interpreter.cop0_cpr[PSYCHO_CPU_COP0_CPR_SR])
 
-#define OP(x)		[64 + (x)]
-#define OPR(a, b)	[64 + (a)... 64 + (b)]
+#define FLAG		  (ctx->cpu_interpreter.cop2.ccr.flag)
+#define MAC		  (ctx->cpu_interpreter.cop2.cpr.mac)
+#define V		  (ctx->cpu_interpreter.cop2.cpr.vector)
+#define SX0		  (ctx->cpu_interpreter.cop2.cpr.sxy[0].x)
+#define SX1		  (ctx->cpu_interpreter.cop2.cpr.sxy[1].x)
+#define SX2		  (ctx->cpu_interpreter.cop2.cpr.sxy[2].x)
+#define SY0		  (ctx->cpu_interpreter.cop2.cpr.sxy[0].y)
+#define SY1		  (ctx->cpu_interpreter.cop2.cpr.sxy[1].y)
+#define SY2		  (ctx->cpu_interpreter.cop2.cpr.sxy[2].y)
+#define RGB0		  (ctx->cpu_interpreter.cop2.cpr.rgb[0].array)
+#define RGBC		  (ctx->cpu_interpreter.cop2.cpr.rgbc.array)
+#define ZSF3		  (ctx->cpu_interpreter.cop2.ccr.zsf3)
+#define ZSF4		  (ctx->cpu_interpreter.cop2.ccr.zsf4)
 
-#define BIOS_TRACE_ON() (false)
+#define OP(x)		  [64 + (x)]
+#define OPR(a, b)	  [64 + (a)... 64 + (b)]
+
+#define BIOS_TRACE_ON()	  (ctx->cfg.bios_call_tracer.enabled)
+#define DISASM_TRACE_ON() (ctx->cfg.disasm.tracing)
 
 #define FETCH()                                                                            \
 	do {                                                                               \
@@ -1811,12 +1815,18 @@ P_NONNULL static void run(struct p_ctx *ctx, bool single_step)
 		// clang-format on
 	};
 
-	uint32_t instr = 0;
-	bool stepped   = false;
+	uint32_t instr	   = 0;
+	bool stepped	   = false;
+	bool trace_pending = false;
 
 	goto loop;
 
 slow:
+	if (unlikely(trace_pending)) {
+		disasm_trace_emit(ctx);
+		trace_pending = false;
+	}
+
 	if (unlikely(BIOS_TRACE_ON() && entering_bios_call(pc)))
 		psycho_bios_call_tracer_begin(ctx, gpr[PSYCHO_CPU_GPR_T1], bios_call_tracer_pc_to_offset(pc));
 
@@ -1833,12 +1843,17 @@ loop:
 	stepped = single_step;
 
 	if (unlikely((ctx->exe.data) && (pc == KERNEL_INIT_PC)))
-		p_exe_inject(ctx);
+		psycho_ctx_exe_inject(ctx);
 
 	if (unlikely(ctx->cpu_interpreter.dly_pc & 3))
 		raise_exception(ctx, EXCEPTION_ADEL);
 
-	ctx->cpu_interpreter.slow = ctx->exe.data || (npc & 3) || BIOS_TRACE_ON() || single_step;
+	ctx->cpu_interpreter.slow = ctx->exe.data || (npc & 3) || BIOS_TRACE_ON() || DISASM_TRACE_ON() || single_step;
+
+	if (unlikely(DISASM_TRACE_ON())) {
+		psycho_disasm_trace_begin(ctx, ctx->cpu_interpreter.dly_pc);
+		trace_pending = true;
+	}
 
 	FETCH();
 	goto *dispatch_tbl[op ? (64 + op) : funct];
@@ -2287,10 +2302,13 @@ illegal:
 	ctx->cfg.cpu.illegal_instr(ctx, ctx->cpu_interpreter.instr);
 
 done:
+	if (unlikely(trace_pending))
+		disasm_trace_emit(ctx);
+
 	return;
 }
 
-void p_cpu_int_init(struct p_ctx *ctx)
+void p_cpu_int_init(struct psycho_ctx *ctx)
 {
 	ctx->cpu.irq_mux_assert = irq_mux_assert;
 	ctx->cpu.gpr_set	= gpr_write_direct;

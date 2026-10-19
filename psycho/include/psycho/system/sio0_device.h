@@ -22,12 +22,12 @@
 #include "psycho/common/compiler_support.h"
 #include "psycho/common/sched.h"
 
-struct p_ctx;
+struct psycho_ctx;
 
 enum psycho_sio0_slot {
 	PSYCHO_SIO0_SLOT_1,
 	PSYCHO_SIO0_SLOT_2,
-	PSYCHO_SIO0_SLOT_COUNT
+	PSYCHO_SIO0_SLOT_COUNT,
 };
 
 enum psycho_sio0_device_type {
@@ -37,7 +37,7 @@ enum psycho_sio0_device_type {
 };
 
 struct psycho_sio0_device {
-	struct p_ctx *ctx;
+	struct psycho_ctx *ctx;
 	void *handle;
 
 	uint8_t (*transceive)(void *dev, uint8_t mosi);
@@ -51,5 +51,5 @@ struct psycho_sio0_device {
 };
 
 void psycho_sio0_device_init(struct psycho_sio0_device *dev);
-void psycho_sio0_device_attach(struct psycho_sio0_device *dev, enum psycho_sio0_slot slot) P_NONNULL;
+void psycho_sio0_device_attach(struct psycho_sio0_device *dev, enum psycho_sio0_slot slot) PSYCHO_NONNULL;
 void psycho_sio0_device_ack(struct psycho_sio0_device *dev, unsigned int delay_us, unsigned int pulse_us);

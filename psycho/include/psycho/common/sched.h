@@ -25,7 +25,7 @@
 extern "C" {
 #endif // __cplusplus
 
-struct p_ctx;
+struct psycho_ctx;
 
 enum {
 	PSYCHO_SCHED_NUM_EVENTS = 25,
@@ -43,7 +43,7 @@ struct psycho_sched_event {
 	uint64_t ts;
 	uint64_t period;
 
-	void (*cb)(struct p_ctx *ctx, void *userdata);
+	void (*cb)(struct psycho_ctx *ctx, void *userdata);
 	enum psycho_sched_event_type type;
 	bool permanent;
 

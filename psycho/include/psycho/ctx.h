@@ -39,17 +39,17 @@ struct psycho_ctx_cfg {
 	struct psycho_bios_call_trace_cfg bios_call_tracer;
 	struct psycho_cpu_cfg cpu;
 
-	void (*on_vblank)(struct p_ctx *ctx, void *userdata);
+	void (*on_vblank)(struct psycho_ctx *ctx, void *userdata);
 	void *vblank_userdata;
 
-	struct p_disasm_cfg disasm;
+	struct psycho_disasm_cfg disasm;
 };
 
-struct p_ctx {
+struct psycho_ctx {
 	struct psycho_bus bus;
-	struct p_gpu gpu;
+	struct psycho_gpu gpu;
 	struct psycho_bios_call_tracer bios_call_tracer;
-	struct p_disasm disasm;
+	struct psycho_disasm disasm;
 	struct psycho_cpu_interpreter cpu_interpreter;
 	struct psycho_sched sched;
 	struct psycho_sio0 sio0;
@@ -61,29 +61,28 @@ struct p_ctx {
 		size_t size;
 	} exe;
 
-	struct p_intc intc;
+	struct psycho_intc intc;
 	bool running;
 };
 
-enum p_ctx_ret {
-	P_EXE_FILE_SIZE_INVALID = -3,
-	P_EXE_SIZE_INVALID	= -2,
-	P_EXE_ID_INVALID	= -1,
-	P_OK			= 1,
+enum psycho_ctx_ret {
+	PSYCHO_CTX_EXE_FILE_SIZE_INVALID = -3,
+	PSYCHO_CTX_EXE_SIZE_INVALID	 = -2,
+	PSYCHO_CTX_EXE_ID_INVALID	 = -1,
+	PSYCHO_CTX_OK			 = 1,
 };
 
-P_NODISCARD P_CONST struct psycho_ctx_cfg *p_cfg_get(struct p_ctx *ctx) P_NONNULL;
+PSYCHO_NODISCARD PSYCHO_CONST struct psycho_ctx_cfg *psycho_ctx_cfg_get(struct psycho_ctx *ctx) PSYCHO_NONNULL;
 
-void p_init(struct p_ctx *ctx) P_NONNULL;
+void psycho_ctx_init(struct psycho_ctx *ctx) PSYCHO_NONNULL;
 
-void p_rst(struct p_ctx *ctx) P_NONNULL;
+void psycho_ctx_reset(struct psycho_ctx *ctx) PSYCHO_NONNULL;
 
-void p_step(struct p_ctx *ctx) P_NONNULL;
+PSYCHO_NODISCARD enum psycho_ctx_ret psycho_ctx_run_exe(struct psycho_ctx *ctx, uint8_t *exe,
+							size_t size) PSYCHO_NONNULL;
 
-P_NODISCARD enum p_ctx_ret p_run_exe(struct p_ctx *ctx, uint8_t *exe, size_t size) P_NONNULL;
-
-void psycho_ctx_run(struct p_ctx *ctx) P_NONNULL;
-void psycho_ctx_stop(struct p_ctx *ctx) P_NONNULL;
+void psycho_ctx_run(struct psycho_ctx *ctx) PSYCHO_NONNULL;
+void psycho_ctx_stop(struct psycho_ctx *ctx) PSYCHO_NONNULL;
 
 #ifdef __cplusplus
 }

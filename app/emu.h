@@ -28,10 +28,10 @@
 #include "psycho/devices/digital_pad.h"
 
 struct emu_runner {
-	struct p_ctx ctx;
+	struct psycho_ctx ctx;
 	struct psycho_digital_pad pad;
 
-	p_gpu_vram fbufs[2];
+	psycho_gpu_vram fbufs[2];
 	SDL_AtomicInt write_idx;
 	SDL_AtomicInt running;
 	SDL_AtomicInt frame_count;
@@ -43,7 +43,7 @@ void emu_init(struct emu_runner *emu, const char *bios_file, const char *exe_fil
 void emu_run(struct emu_runner *emu);
 void emu_stop(struct emu_runner *emu);
 
-P_NONNULL P_ALWAYS_INLINE uint16_t *emu_front_buffer_get(struct emu_runner *emu)
+PSYCHO_NONNULL PSYCHO_ALWAYS_INLINE uint16_t *emu_front_buffer_get(struct emu_runner *emu)
 {
 	return (uint16_t *)emu->fbufs[SDL_GetAtomicInt(&emu->write_idx) ^ 1];
 }

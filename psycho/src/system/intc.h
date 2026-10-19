@@ -39,8 +39,8 @@ enum {
 	IRQ_COUNT    = 11
 };
 
-void psycho_intc_mask_set(struct p_ctx *ctx, uint32_t mask) P_NONNULL;
+void psycho_intc_mask_set(struct psycho_ctx *ctx, uint32_t mask) PSYCHO_NONNULL;
 
-void psycho_intc_irqs_ack(struct p_ctx *ctx, uint32_t mask) P_NONNULL;
+void psycho_intc_irqs_ack(struct psycho_ctx *ctx, uint32_t mask) PSYCHO_NONNULL;
 
-void psycho_intc_irqs_pending_set(struct p_ctx *ctx, uint32_t mask) P_NONNULL;
+void psycho_intc_irqs_pending_set(struct psycho_ctx *ctx, uint32_t mask) PSYCHO_NONNULL;

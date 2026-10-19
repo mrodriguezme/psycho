@@ -22,51 +22,55 @@
 
 #include "psycho/common/compiler_support.h"
 #include "psycho/system/cpu/defs.h"
-#include "psycho/debug/str.h"
+#include "psycho/debug/fixed_string.h"
 
 #ifdef __cplusplus
 extern "C" {
 #endif // __cplusplus
 
-struct p_ctx;
+struct psycho_ctx;
 
-#define P_DISASM_TRACE_LEN_MAX (512)
-
-enum p_disasm_trace {
-	P_DISASM_TRACE_GPR_RT,
-	P_DISASM_TRACE_GPR_RD,
-	P_DISASM_TRACE_CPU_LO,
-	P_DISASM_TRACE_CPU_HI,
-	P_DISASM_TRACE_CPU_PADDR,
-	P_DISASM_TRACE_COUNT
+enum {
+	PSYCHO_DISASM_TRACE_LEN_MAX = 512,
 };
 
-struct p_disasm_cfg {
+enum psycho_disasm_trace {
+	PSYCHO_DISASM_TRACE_GPR_RT,
+	PSYCHO_DISASM_TRACE_GPR_RD,
+	PSYCHO_DISASM_TRACE_CPU_LO,
+	PSYCHO_DISASM_TRACE_CPU_HI,
+	PSYCHO_DISASM_TRACE_CPU_PADDR,
+	PSYCHO_DISASM_TRACE_COUNT
+};
+
+struct psycho_disasm_cfg {
 	bool tracing;
 };
 
-struct p_disasm_traces {
-	enum p_disasm_trace data[P_DISASM_TRACE_COUNT];
+struct psycho_disasm_traces {
+	enum psycho_disasm_trace data[PSYCHO_DISASM_TRACE_COUNT];
 	size_t count;
 };
 
-struct p_disasm {
+struct psycho_disasm {
 	struct {
-		char str_buf[P_DISASM_TRACE_LEN_MAX];
-		struct p_str str;
+		struct {
+			char buf[PSYCHO_DISASM_TRACE_LEN_MAX];
+			struct psycho_fixed_string str;
+		};
+
 		uint32_t instr;
 		uint32_t pc;
 	} res;
 
-	struct p_disasm_traces traces;
+	struct psycho_disasm_traces traces;
 };
 
-P_NODISCARD P_CONST const char *p_gpr_get(enum psycho_cpu_gpr reg);
-P_NODISCARD P_CONST const char *p_cop0_get(enum psycho_cpu_cop0_cpr reg);
+PSYCHO_NODISCARD PSYCHO_CONST const char *p_gpr_get(enum psycho_cpu_gpr reg);
+PSYCHO_NODISCARD PSYCHO_CONST const char *p_cop0_get(enum psycho_cpu_cop0_cpr reg);
 
-bool p_disasm_instr(struct p_ctx *ctx, uint32_t pc, struct p_disasm_traces *traces) __attribute__((nonnull(1)));
-
-void p_disasm_set_tracing_state(struct p_ctx *ctx, const bool enabled) __attribute__((nonnull));
+bool psycho_disasm_instr(struct psycho_ctx *ctx, uint32_t pc, struct psycho_disasm_traces *traces)
+	PSYCHO_NONNULL_ARGS(1);
 
 #ifdef __cplusplus
 }

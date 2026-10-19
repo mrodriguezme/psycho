@@ -93,7 +93,7 @@ enum {
 	HI_Z = UINT8_MAX,
 };
 
-P_NONNULL static void irq_assert(struct p_ctx *ctx)
+PSYCHO_NONNULL static void irq_assert(struct psycho_ctx *ctx)
 {
 	if (unlikely(ctx->sio0.sr & SR_IRQ))
 		return;
@@ -104,12 +104,12 @@ P_NONNULL static void irq_assert(struct p_ctx *ctx)
 	LOG_TRACE(ctx, "IRQ asserted");
 }
 
-P_NODISCARD P_NONNULL static enum psycho_sio0_slot asserted_slot_get(struct p_ctx *ctx)
+PSYCHO_NODISCARD PSYCHO_NONNULL static enum psycho_sio0_slot asserted_slot_get(struct psycho_ctx *ctx)
 {
 	return !(ctx->sio0.cr & CR_PORT) ? PSYCHO_SIO0_SLOT_1 : PSYCHO_SIO0_SLOT_2;
 }
 
-P_NODISCARD P_NONNULL static unsigned int mr_br_get(struct p_ctx *ctx)
+PSYCHO_NODISCARD PSYCHO_NONNULL static unsigned int mr_br_get(struct psycho_ctx *ctx)
 {
 	static const unsigned int mr_br_lut[] = {
 		// clang-format off
@@ -124,7 +124,7 @@ P_NODISCARD P_NONNULL static unsigned int mr_br_get(struct p_ctx *ctx)
 	return mr_br_lut[(ctx->sio0.mr & MR_BR_MASK) >> MR_BR_SHIFT];
 }
 
-P_NODISCARD P_NONNULL static unsigned int cr_bufsz_get(struct p_ctx *ctx)
+PSYCHO_NODISCARD PSYCHO_NONNULL static unsigned int cr_bufsz_get(struct psycho_ctx *ctx)
 {
 	static const unsigned int cr_bufsz_lut[] = {
 		// clang-format off
@@ -140,12 +140,12 @@ P_NODISCARD P_NONNULL static unsigned int cr_bufsz_get(struct p_ctx *ctx)
 	return cr_bufsz_lut[(ctx->sio0.cr & CR_BUFSZ_MASK) >> CR_BUFSZ_SHIFT];
 }
 
-P_NODISCARD P_NONNULL static unsigned int word_len_get(struct p_ctx *ctx)
+PSYCHO_NODISCARD PSYCHO_NONNULL static unsigned int word_len_get(struct psycho_ctx *ctx)
 {
 	return 5 + ((ctx->sio0.mr & MR_CHLEN_MASK) >> MR_CHLEN_SHIFT);
 }
 
-P_NONNULL static void devices_reset(struct p_ctx *ctx)
+PSYCHO_NONNULL static void devices_reset(struct psycho_ctx *ctx)
 {
 	enum psycho_sio0_slot slot = asserted_slot_get(ctx);
 
@@ -164,13 +164,13 @@ P_NONNULL static void devices_reset(struct p_ctx *ctx)
 	}
 }
 
-P_NODISCARD P_NONNULL static unsigned int calc_baud_rate(struct p_ctx *ctx, uint16_t baud)
+PSYCHO_NODISCARD PSYCHO_NONNULL static unsigned int calc_baud_rate(struct psycho_ctx *ctx, uint16_t baud)
 {
 	baud *= mr_br_get(ctx);
 	return PSYCHO_CPU_CLKFREQ_HZ / baud;
 }
 
-P_NONNULL static void rx_push(struct p_ctx *ctx, uint8_t byte)
+PSYCHO_NONNULL static void rx_push(struct psycho_ctx *ctx, uint8_t byte)
 {
 	LOG_TRACE(ctx, "RX FIFO push request: 0x%02X", byte);
 
@@ -204,7 +204,7 @@ P_NONNULL static void rx_push(struct p_ctx *ctx, uint8_t byte)
 	LOG_TRACE(ctx, "Pushed 0x%02X to RX FIFO", byte);
 }
 
-static void transceive_event(struct p_ctx *ctx, void *userdata)
+static void transceive_event(struct psycho_ctx *ctx, void *userdata)
 {
 	(void)userdata;
 
@@ -231,7 +231,7 @@ static void transceive_event(struct p_ctx *ctx, void *userdata)
 	ctx->sio0.sr |= SR_TXU;
 }
 
-P_NONNULL static void do_tx(struct p_ctx *ctx)
+PSYCHO_NONNULL static void do_tx(struct psycho_ctx *ctx)
 {
 	unsigned int mr_br    = mr_br_get(ctx);
 	unsigned int word_len = word_len_get(ctx);
@@ -246,7 +246,7 @@ P_NONNULL static void do_tx(struct p_ctx *ctx)
 	ctx->sio0.sr &= ~SR_TXU;
 }
 
-void psycho_sio0_dsr_assert(struct p_ctx *ctx, void *dev)
+void psycho_sio0_dsr_assert(struct psycho_ctx *ctx, void *dev)
 {
 	enum psycho_sio0_slot slot = asserted_slot_get(ctx) + 1;
 
@@ -263,7 +263,7 @@ void psycho_sio0_dsr_assert(struct p_ctx *ctx, void *dev)
 		irq_assert(ctx);
 }
 
-void psycho_sio0_dsr_deassert(struct p_ctx *ctx, void *userdata)
+void psycho_sio0_dsr_deassert(struct psycho_ctx *ctx, void *userdata)
 {
 	(void)userdata;
 
@@ -275,7 +275,7 @@ void psycho_sio0_dsr_deassert(struct p_ctx *ctx, void *userdata)
 	ctx->sio0.sr &= ~SR_DSR;
 }
 
-void psycho_sio0_reset(struct p_ctx *ctx)
+void psycho_sio0_reset(struct psycho_ctx *ctx)
 {
 	p_sched_del(ctx, &ctx->sio0.tx_event);
 
@@ -289,7 +289,7 @@ void psycho_sio0_reset(struct p_ctx *ctx)
 	psycho_sio0_br_write_halfword(ctx, 0x0088);
 }
 
-void psycho_sio0_dr_write_byte(struct p_ctx *ctx, uint8_t byte)
+void psycho_sio0_dr_write_byte(struct psycho_ctx *ctx, uint8_t byte)
 {
 	LOG_TRACE(ctx, "TX FIFO push request: 0x%02X", byte);
 
@@ -310,7 +310,7 @@ void psycho_sio0_dr_write_byte(struct p_ctx *ctx, uint8_t byte)
 	do_tx(ctx);
 }
 
-uint8_t psycho_sio0_dr_read_byte(struct p_ctx *ctx)
+uint8_t psycho_sio0_dr_read_byte(struct psycho_ctx *ctx)
 {
 	if (unlikely(!ctx->sio0.rxfifo.num_entries)) {
 		// Reading from Empty RX FIFO returns either the most recently received byte or zero.
@@ -333,7 +333,7 @@ uint8_t psycho_sio0_dr_read_byte(struct p_ctx *ctx)
 	return byte;
 }
 
-void psycho_sio0_mr_write_halfword(struct p_ctx *ctx, uint16_t mr)
+void psycho_sio0_mr_write_halfword(struct psycho_ctx *ctx, uint16_t mr)
 {
 	mr &= MR_BITS;
 
@@ -374,7 +374,7 @@ void psycho_sio0_mr_write_halfword(struct p_ctx *ctx, uint16_t mr)
 	ctx->sio0.mr = mr;
 }
 
-void psycho_sio0_cr_write_halfword(struct p_ctx *ctx, uint16_t cr)
+void psycho_sio0_cr_write_halfword(struct psycho_ctx *ctx, uint16_t cr)
 {
 	static const char *cr_bufsz_lut[] = {
 		// clang-format off
@@ -426,7 +426,7 @@ void psycho_sio0_cr_write_halfword(struct p_ctx *ctx, uint16_t cr)
 	ctx->sio0.cr = cr;
 }
 
-void psycho_sio0_br_write_halfword(struct p_ctx *ctx, uint16_t br)
+void psycho_sio0_br_write_halfword(struct psycho_ctx *ctx, uint16_t br)
 {
 	unsigned int bps = calc_baud_rate(ctx, br);
 

@@ -21,14 +21,14 @@
 
 #include "debug/log.h"
 
-#include "str.h"
+#include "fixed_string.h"
 
 #include "system/bus.h"
 #include "system/cpu/defs.h"
 
 DECLARE_LOG_MODULE(PSYCHO_LOG_MODULE_BIOS_CALL_TRACER);
 
-static void on_putchar(struct p_ctx *ctx, struct psycho_bios_call_tracer_frame *frame);
+static void on_putchar(struct psycho_ctx *ctx, struct psycho_bios_call_tracer_frame *frame);
 
 static const struct psycho_bios_call_tracer_func_entry call_tbl[3][0xFF] = {
 	// 0xA0
@@ -132,7 +132,7 @@ static const struct psycho_bios_call_tracer_func_entry call_tbl[3][0xFF] = {
 	},
 };
 
-P_NODISCARD P_NONNULL static const struct psycho_bios_call_tracer_func_entry *
+PSYCHO_NODISCARD PSYCHO_NONNULL static const struct psycho_bios_call_tracer_func_entry *
 func_get(const struct psycho_bios_call_tracer_func_entry *arr, size_t arr_elems, uint32_t func)
 {
 	if (func >= arr_elems)
@@ -141,8 +141,8 @@ func_get(const struct psycho_bios_call_tracer_func_entry *arr, size_t arr_elems,
 	return arr[func].prototype ? &arr[func] : NULL;
 }
 
-P_NONNULL static void frame_init(struct p_ctx *ctx, struct psycho_bios_call_tracer_frame *frame,
-				 const struct psycho_bios_call_tracer_func_entry *func)
+PSYCHO_NONNULL static void frame_init(struct psycho_ctx *ctx, struct psycho_bios_call_tracer_frame *frame,
+				      const struct psycho_bios_call_tracer_func_entry *func)
 {
 	frame->func    = func;
 	frame->arg_pos = 0;
@@ -155,10 +155,10 @@ P_NONNULL static void frame_init(struct p_ctx *ctx, struct psycho_bios_call_trac
 	frame->sp = ctx->cpu.gpr_get(ctx, PSYCHO_CPU_GPR_SP);
 	frame->ra = ctx->cpu.gpr_get(ctx, PSYCHO_CPU_GPR_RA);
 
-	p_str_init_fixed(&frame->result.str, frame->result.buf, sizeof(frame->result.buf));
+	psycho_fixed_string_init(&frame->result.str, frame->result.buf, sizeof(frame->result.buf));
 }
 
-P_NODISCARD P_NONNULL static struct psycho_bios_call_tracer_frame *stack_emplace(struct p_ctx *ctx)
+PSYCHO_NODISCARD PSYCHO_NONNULL static struct psycho_bios_call_tracer_frame *stack_emplace(struct psycho_ctx *ctx)
 {
 	if (unlikely(ctx->bios_call_tracer.stack.top >= ARRAY_SIZE(ctx->bios_call_tracer.stack.frames)))
 		return NULL;
@@ -166,7 +166,7 @@ P_NODISCARD P_NONNULL static struct psycho_bios_call_tracer_frame *stack_emplace
 	return &ctx->bios_call_tracer.stack.frames[ctx->bios_call_tracer.stack.top++];
 }
 
-P_NODISCARD P_NONNULL static struct psycho_bios_call_tracer_frame *stack_pop(struct p_ctx *ctx)
+PSYCHO_NODISCARD PSYCHO_NONNULL static struct psycho_bios_call_tracer_frame *stack_pop(struct psycho_ctx *ctx)
 {
 	if (!ctx->bios_call_tracer.stack.top)
 		return NULL;
@@ -174,7 +174,8 @@ P_NODISCARD P_NONNULL static struct psycho_bios_call_tracer_frame *stack_pop(str
 	return &ctx->bios_call_tracer.stack.frames[--ctx->bios_call_tracer.stack.top];
 }
 
-P_NODISCARD P_NONNULL static uint32_t get_arg(struct p_ctx *ctx, struct psycho_bios_call_tracer_frame *frame)
+PSYCHO_NODISCARD PSYCHO_NONNULL static uint32_t get_arg(struct psycho_ctx *ctx,
+							struct psycho_bios_call_tracer_frame *frame)
 {
 	if (frame->arg_pos <= PSYCHO_CPU_GPR_A3)
 		return (&frame->a0)[frame->arg_pos++];
@@ -183,16 +184,16 @@ P_NODISCARD P_NONNULL static uint32_t get_arg(struct p_ctx *ctx, struct psycho_b
 	return 0;
 }
 
-P_NONNULL static void reset_stdout_strs(struct p_ctx *ctx)
+PSYCHO_NONNULL static void reset_stdout_strs(struct psycho_ctx *ctx)
 {
-	p_str_init_fixed(&ctx->bios_call_tracer.tty_log.str, ctx->bios_call_tracer.tty_log.buf,
-			 sizeof(ctx->bios_call_tracer.tty_log.buf));
+	psycho_fixed_string_init(&ctx->bios_call_tracer.tty_log.str, ctx->bios_call_tracer.tty_log.buf,
+				 sizeof(ctx->bios_call_tracer.tty_log.buf));
 
-	p_str_init_fixed(&ctx->bios_call_tracer.tty_original.str, ctx->bios_call_tracer.tty_original.buf,
-			 sizeof(ctx->bios_call_tracer.tty_original.buf));
+	psycho_fixed_string_init(&ctx->bios_call_tracer.tty_original.str, ctx->bios_call_tracer.tty_original.buf,
+				 sizeof(ctx->bios_call_tracer.tty_original.buf));
 }
 
-P_NODISCARD static const char *esc_seq(char c)
+PSYCHO_NODISCARD static const char *esc_seq(char c)
 {
 	switch (c) {
 	case '\n':
@@ -223,24 +224,24 @@ P_NODISCARD static const char *esc_seq(char c)
 	}
 }
 
-P_NONNULL static void process_char(struct p_ctx *ctx, struct psycho_bios_call_tracer_frame *frame)
+PSYCHO_NONNULL static void process_char(struct psycho_ctx *ctx, struct psycho_bios_call_tracer_frame *frame)
 {
 	const char c = get_arg(ctx, frame);
 
 	const char *const seq = esc_seq(c);
 
 	if (seq)
-		p_str_append(&frame->result.str, NULL, "'%s'", seq);
+		psycho_fixed_string_append(&frame->result.str, "'%s'", seq);
 	else
-		p_str_append(&frame->result.str, NULL, "'%c'", c);
+		psycho_fixed_string_append(&frame->result.str, "'%c'", c);
 }
 
-P_NONNULL static void process_int(struct p_ctx *ctx, struct psycho_bios_call_tracer_frame *frame)
+PSYCHO_NONNULL static void process_int(struct psycho_ctx *ctx, struct psycho_bios_call_tracer_frame *frame)
 {
-	p_str_append(&frame->result.str, NULL, "%" PRIu32, get_arg(ctx, frame));
+	psycho_fixed_string_append(&frame->result.str, "%" PRIu32, get_arg(ctx, frame));
 }
 
-P_NONNULL static void process_str(struct p_ctx *ctx, struct psycho_bios_call_tracer_frame *frame)
+PSYCHO_NONNULL static void process_str(struct psycho_ctx *ctx, struct psycho_bios_call_tracer_frame *frame)
 {
 	const uint32_t ptr = get_arg(ctx, frame);
 
@@ -252,32 +253,32 @@ P_NONNULL static void process_str(struct p_ctx *ctx, struct psycho_bios_call_tra
 	if (!area)
 		goto end;
 
-	p_str_append(&frame->result.str, NULL, "\"%s\"", area);
+	psycho_fixed_string_append(&frame->result.str, "\"%s\"", area);
 	return;
 
 end:
-	p_str_append(&frame->result.str, NULL, "0x%08X", ptr);
+	psycho_fixed_string_append(&frame->result.str, "0x%08X", ptr);
 }
 
-P_NONNULL static void process_ptr(struct p_ctx *ctx, struct psycho_bios_call_tracer_frame *frame)
+PSYCHO_NONNULL static void process_ptr(struct psycho_ctx *ctx, struct psycho_bios_call_tracer_frame *frame)
 {
-	p_str_append(&frame->result.str, NULL, "0x%08X", get_arg(ctx, frame));
+	psycho_fixed_string_append(&frame->result.str, "0x%08X", get_arg(ctx, frame));
 }
 
-P_NONNULL static void on_putchar(struct p_ctx *ctx, struct psycho_bios_call_tracer_frame *frame)
+PSYCHO_NONNULL static void on_putchar(struct psycho_ctx *ctx, struct psycho_bios_call_tracer_frame *frame)
 {
 	const char c = frame->a0;
 
 	const char *seq = esc_seq(c);
 
-	p_str_append(&ctx->bios_call_tracer.tty_original.str, NULL, "%c", c);
+	psycho_fixed_string_append(&ctx->bios_call_tracer.tty_original.str, "%c", c);
 
 	if (!seq) {
-		p_str_append(&ctx->bios_call_tracer.tty_log.str, NULL, "%c", c);
+		psycho_fixed_string_append(&ctx->bios_call_tracer.tty_log.str, "%c", c);
 		return;
 	}
 
-	p_str_append(&ctx->bios_call_tracer.tty_log.str, NULL, "%s", seq);
+	psycho_fixed_string_append(&ctx->bios_call_tracer.tty_log.str, "%s", seq);
 
 	if (c == '\n') {
 		LOG_INFO(ctx, "[stdout] %s", ctx->bios_call_tracer.tty_log.buf);
@@ -289,13 +290,13 @@ P_NONNULL static void on_putchar(struct p_ctx *ctx, struct psycho_bios_call_trac
 	}
 }
 
-P_NONNULL static void process_prototype(struct p_ctx *ctx, struct psycho_bios_call_tracer_frame *frame)
+PSYCHO_NONNULL static void process_prototype(struct psycho_ctx *ctx, struct psycho_bios_call_tracer_frame *frame)
 {
 	const char *src = frame->func->prototype;
 
 	while (*src) {
 		if (*src != '%') {
-			p_str_append(&frame->result.str, NULL, "%c", *src++);
+			psycho_fixed_string_append(&frame->result.str, "%c", *src++);
 			continue;
 		}
 
@@ -319,19 +320,19 @@ P_NONNULL static void process_prototype(struct p_ctx *ctx, struct psycho_bios_ca
 			break;
 
 		default:
-			p_str_append(&frame->result.str, NULL, "%c", *src++);
+			psycho_fixed_string_append(&frame->result.str, "%c", *src++);
 			break;
 		}
 		src += (sizeof("%%") - 1);
 	}
 }
 
-void psycho_bios_call_tracer_init(struct p_ctx *ctx)
+void psycho_bios_call_tracer_init(struct psycho_ctx *ctx)
 {
 	reset_stdout_strs(ctx);
 }
 
-void psycho_bios_call_tracer_begin(struct p_ctx *ctx, uint32_t func, uint32_t table_offset)
+void psycho_bios_call_tracer_begin(struct psycho_ctx *ctx, uint32_t func, uint32_t table_offset)
 {
 	const struct psycho_bios_call_tracer_func_entry *entry = &call_tbl[table_offset][func];
 
@@ -355,7 +356,7 @@ void psycho_bios_call_tracer_begin(struct p_ctx *ctx, uint32_t func, uint32_t ta
 	process_prototype(ctx, frame);
 }
 
-void psycho_bios_call_tracer_end(struct p_ctx *ctx, uint32_t v0)
+void psycho_bios_call_tracer_end(struct psycho_ctx *ctx, uint32_t v0)
 {
 	struct psycho_bios_call_tracer_frame *frame = stack_pop(ctx);
 
@@ -377,6 +378,6 @@ void psycho_bios_call_tracer_end(struct p_ctx *ctx, uint32_t v0)
 		return;
 
 	default:
-		P_UNREACHABLE;
+		PSYCHO_UNREACHABLE;
 	}
 }

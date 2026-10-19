@@ -19,4 +19,4 @@
 
 #include "psycho/ctx.h"
 
-void p_cpu_int_init(struct p_ctx *ctx);
+void p_cpu_int_init(struct psycho_ctx *ctx);

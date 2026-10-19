@@ -24,26 +24,28 @@
 extern "C" {
 #endif // __cplusplus
 
-#define VRAM_HEIGHT (512)
-#define VRAM_WIDTH  (1024)
+enum {
+	PSYCHO_VRAM_HEIGHT = 512,
+	PSYCHO_VRAM_WIDTH  = 1024,
+};
 
-struct p_ctx;
+struct psycho_ctx;
 
-typedef uint16_t p_gpu_vram[VRAM_HEIGHT][VRAM_WIDTH];
+typedef uint16_t psycho_gpu_vram[PSYCHO_VRAM_HEIGHT][PSYCHO_VRAM_WIDTH];
 
-struct p_gpu_vertex {
+struct psycho_gpu_vertex {
 	int16_t x;
 	int16_t y;
 	unsigned int color;
 };
 
-struct p_gpu_render_ops {
-	void (*rect)(struct p_ctx *ctx, struct p_gpu_vertex *v0);
+struct psycho_gpu_render_ops {
+	void (*rect)(struct psycho_ctx *ctx, struct psycho_gpu_vertex *v0);
 };
 
-struct p_gpu {
+struct psycho_gpu {
 	struct {
-		void (*fn)(struct p_ctx *ctx);
+		void (*fn)(struct psycho_ctx *ctx);
 		size_t rem_params;
 		size_t params;
 		uint32_t data[64];
@@ -57,13 +59,13 @@ struct p_gpu {
 		unsigned int rem;
 	} copy;
 
-	struct p_gpu_vertex rect;
+	struct psycho_gpu_vertex rect;
 
-	struct p_gpu_render_ops render_ops;
+	struct psycho_gpu_render_ops render_ops;
 
-	p_gpu_vram vram;
+	psycho_gpu_vram vram;
 
-	void (*cmd_fn)(struct p_ctx *ctx, uint32_t packet);
+	void (*cmd_fn)(struct psycho_ctx *ctx, uint32_t packet);
 
 	struct psycho_sched_event vblank_event;
 

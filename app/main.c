@@ -60,8 +60,8 @@ static bool gfx_init(void)
 	else
 		SDL_Log("vsync enabled");
 
-	texture = SDL_CreateTexture(renderer, SDL_PIXELFORMAT_XBGR1555, SDL_TEXTUREACCESS_STREAMING, VRAM_WIDTH,
-				    VRAM_HEIGHT);
+	texture = SDL_CreateTexture(renderer, SDL_PIXELFORMAT_XBGR1555, SDL_TEXTUREACCESS_STREAMING, PSYCHO_VRAM_WIDTH,
+				    PSYCHO_VRAM_HEIGHT);
 
 	if (!texture) {
 		SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "SDL_CreateTexture() failed: %s", SDL_GetError());
@@ -96,15 +96,15 @@ static void render_frame(void)
 		return;
 	}
 
-	size_t row_bytes = VRAM_WIDTH * sizeof(uint16_t);
+	size_t row_bytes = PSYCHO_VRAM_WIDTH * sizeof(uint16_t);
 
 	if (pitch == (int)row_bytes)
-		memcpy(pixels, src, row_bytes * VRAM_HEIGHT);
+		memcpy(pixels, src, row_bytes * PSYCHO_VRAM_HEIGHT);
 	else {
 		uint8_t *src_bytes = (uint8_t *)src;
 		uint8_t *dst_bytes = (uint8_t *)pixels;
 
-		for (int y = 0; y < VRAM_HEIGHT; ++y)
+		for (int y = 0; y < PSYCHO_VRAM_HEIGHT; ++y)
 			memcpy(dst_bytes + y * pitch, src_bytes + y * row_bytes, row_bytes);
 	}
 
@@ -159,7 +159,8 @@ int main(int argc, char **argv)
 		render_frame_count++;
 
 		Uint64 now = SDL_GetTicksNS();
-		if (now - fps_window_start >= 1000000000ULL) {
+
+		if ((now - fps_window_start) >= UINT64_C(1000000000)) {
 			int current_emu_frame_count = SDL_GetAtomicInt(&emu.frame_count);
 			int emu_fps		    = current_emu_frame_count - last_emu_frame_count;
 
@@ -170,11 +171,11 @@ int main(int argc, char **argv)
 			fps_window_start     = now;
 		}
 
-		const Uint64 frame_end = SDL_GetTicksNS();
+		Uint64 frame_end = SDL_GetTicksNS();
 
 		if (!vsync_enabled) {
-			const Uint64 diff   = frame_end - frame_start;
-			const Uint64 target = 1000000000 / 60;
+			Uint64 diff   = frame_end - frame_start;
+			Uint64 target = 1000000000 / 60;
 
 			if (diff < target)
 				SDL_DelayNS(target - diff);

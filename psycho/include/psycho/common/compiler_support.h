@@ -24,13 +24,17 @@ extern "C" {
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wunused-macros"
 
-#define P_NODISCARD	__attribute__((warn_unused_result))
-#define P_CONST		__attribute__((const))
-#define P_PURE		__attribute__((pure))
-#define P_ALWAYS_INLINE __attribute__((always_inline)) static inline
-#define P_NONNULL	__attribute__((nonnull))
-#define P_UNREACHABLE	__builtin_unreachable()
-#define P_FALLTHROUGH	__attribute__((fallthrough))
+#define PSYCHO_NODISCARD	 __attribute__((warn_unused_result))
+#define PSYCHO_CONST		 __attribute__((const))
+#define PSYCHO_PURE		 __attribute__((pure))
+#define PSYCHO_ALWAYS_INLINE	 __attribute__((always_inline)) static inline
+#define PSYCHO_NONNULL		 __attribute__((nonnull))
+#define PSYCHO_UNREACHABLE	 __builtin_unreachable()
+#define PSYCHO_FALLTHROUGH	 __attribute__((fallthrough))
+#define PSYCHO_NONNULL_ARGS(...) __attribute__((nonnull(__VA_ARGS__)))
+#define PSYCHO_FORMAT(...)	 __attribute((format(__VA_ARGS__)))
+#define PSYCHO_PACKED		 __attribute__((packed))
+
 #pragma GCC diagnostic pop
 
 #ifdef __cplusplus

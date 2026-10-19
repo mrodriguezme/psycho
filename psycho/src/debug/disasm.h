@@ -19,5 +19,5 @@
 
 #include "psycho/ctx.h"
 
-void p_disasm_trace_begin(struct p_ctx *ctx, uint32_t pc) P_NONNULL;
-void p_disasm_trace_end(struct p_ctx *ctx) P_NONNULL;
+void psycho_disasm_trace_begin(struct psycho_ctx *ctx, uint32_t pc) PSYCHO_NONNULL;
+void psycho_disasm_trace_end(struct psycho_ctx *ctx) PSYCHO_NONNULL;

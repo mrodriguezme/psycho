@@ -27,17 +27,17 @@ enum {
 	SIO0_BR = 0x1F80104E,
 };
 
-void psycho_sio0_reset(struct p_ctx *ctx) P_NONNULL;
+void psycho_sio0_reset(struct psycho_ctx *ctx) PSYCHO_NONNULL;
 
-void psycho_sio0_dr_write_byte(struct p_ctx *ctx, uint8_t byte) P_NONNULL;
+void psycho_sio0_dr_write_byte(struct psycho_ctx *ctx, uint8_t byte) PSYCHO_NONNULL;
 
-void psycho_sio0_mr_write_halfword(struct p_ctx *ctx, uint16_t mr) P_NONNULL;
+void psycho_sio0_mr_write_halfword(struct psycho_ctx *ctx, uint16_t mr) PSYCHO_NONNULL;
 
-void psycho_sio0_cr_write_halfword(struct p_ctx *ctx, uint16_t cr) P_NONNULL;
+void psycho_sio0_cr_write_halfword(struct psycho_ctx *ctx, uint16_t cr) PSYCHO_NONNULL;
 
-void psycho_sio0_br_write_halfword(struct p_ctx *ctx, uint16_t baud) P_NONNULL;
+void psycho_sio0_br_write_halfword(struct psycho_ctx *ctx, uint16_t baud) PSYCHO_NONNULL;
 
-void psycho_sio0_dsr_assert(struct p_ctx *ctx, void *dev) P_NONNULL;
-void psycho_sio0_dsr_deassert(struct p_ctx *ctx, void *userdata) P_NONNULL;
+void psycho_sio0_dsr_assert(struct psycho_ctx *ctx, void *dev) PSYCHO_NONNULL;
+void psycho_sio0_dsr_deassert(struct psycho_ctx *ctx, void *userdata) PSYCHO_NONNULL;
 
-P_NODISCARD uint8_t psycho_sio0_dr_read_byte(struct p_ctx *ctx) P_NONNULL;
+PSYCHO_NODISCARD uint8_t psycho_sio0_dr_read_byte(struct psycho_ctx *ctx) PSYCHO_NONNULL;

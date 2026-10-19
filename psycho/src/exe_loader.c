@@ -41,7 +41,9 @@ struct exe_hdr {
 	const uint8_t ascii_marker;
 	const uint8_t ascii_or_zerofilled[1971];
 	const uint8_t code;
-} __attribute__((packed));
+};
+
+#define static_assert_offset(x, memb, off) _Static_assert(offsetof(x, memb) == (off), "Offset is not correct.")
 
 static_assert_offset(struct exe_hdr, id, 0x000);
 static_assert_offset(struct exe_hdr, zero, 0x008);
@@ -59,34 +61,33 @@ static_assert_offset(struct exe_hdr, resv_bios_fn, 0x38);
 static_assert_offset(struct exe_hdr, ascii_marker, 0x4C);
 static_assert_offset(struct exe_hdr, code, 0x800);
 
-P_NODISCARD enum p_ctx_ret p_run_exe(struct p_ctx *ctx, uint8_t *exe, size_t size)
+PSYCHO_NODISCARD enum psycho_ctx_ret psycho_ctx_run_exe(struct psycho_ctx *ctx, uint8_t *exe, size_t size)
 {
 	if (unlikely(size < sizeof(struct exe_hdr)))
-		return P_EXE_SIZE_INVALID;
+		return PSYCHO_CTX_EXE_SIZE_INVALID;
 
-	const struct exe_hdr *hdr = (const struct exe_hdr *)exe;
+	struct exe_hdr *hdr = (struct exe_hdr *)exe;
 
 	if (unlikely(memcmp(hdr->id, "PS-X EXE", sizeof("PS-X EXE") - 1) != 0))
-		return P_EXE_ID_INVALID;
+		return PSYCHO_CTX_EXE_ID_INVALID;
 
 	if (unlikely(hdr->file_size != (size - offsetof(struct exe_hdr, code))))
-		return P_EXE_FILE_SIZE_INVALID;
+		return PSYCHO_CTX_EXE_FILE_SIZE_INVALID;
 
 	ctx->exe.data = exe;
 	ctx->exe.size = size;
 
-	p_rst(ctx);
+	psycho_ctx_reset(ctx);
 	LOG_INFO(ctx, "will inject exe");
 
-	return P_OK;
+	return PSYCHO_CTX_OK;
 }
 
-void p_exe_inject(struct p_ctx *ctx)
+void psycho_ctx_exe_inject(struct psycho_ctx *ctx)
 {
 	const struct exe_hdr *exe = (const struct exe_hdr *)ctx->exe.data;
 
-	LOG_INFO(ctx, "injecting exe (dst=0x%08X, size=%u)", exe->dst_ram,
-		 exe->file_size);
+	LOG_INFO(ctx, "injecting exe (dst=0x%08X, size=%u)", exe->dst_ram, exe->file_size);
 
 	ctx->cpu.pc_set(ctx, exe->pc);
 	ctx->cpu.gpr_set(ctx, PSYCHO_CPU_GPR_GP, exe->gp);

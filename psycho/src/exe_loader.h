@@ -21,4 +21,4 @@
 
 #define KERNEL_INIT_PC (UINT32_C(0x80030000))
 
-void p_exe_inject(struct p_ctx *ctx) P_NONNULL;
+void psycho_ctx_exe_inject(struct psycho_ctx *ctx) PSYCHO_NONNULL;

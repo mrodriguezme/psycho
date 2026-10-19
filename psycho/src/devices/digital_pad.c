@@ -32,7 +32,7 @@ DECLARE_LOG_MODULE(PSYCHO_LOG_MODULE_DIGITAL_PAD);
 
 #define CTRL_ID	     (0x5A41)
 
-P_CONST static const char *button_name(enum psycho_digital_pad_button button)
+PSYCHO_CONST static const char *button_name(enum psycho_digital_pad_button button)
 {
 	switch (button) {
 	case PSYCHO_DIGITAL_PAD_BUTTON_SELECT:
@@ -78,7 +78,7 @@ P_CONST static const char *button_name(enum psycho_digital_pad_button button)
 		return "Square";
 
 	default:
-		P_UNREACHABLE;
+		PSYCHO_UNREACHABLE;
 	}
 }
 
@@ -163,7 +163,7 @@ static uint8_t transceive(void *dev, uint8_t mosi)
 		break;
 
 	default:
-		P_UNREACHABLE;
+		PSYCHO_UNREACHABLE;
 	}
 
 	if (ack)
@@ -179,7 +179,7 @@ static void reset(void *dev)
 	pad->state = PSYCHO_DIGITAL_PAD_STATE_HI_Z;
 }
 
-void psycho_digital_pad_init(struct p_ctx *ctx, struct psycho_digital_pad *pad)
+void psycho_digital_pad_init(struct psycho_ctx *ctx, struct psycho_digital_pad *pad)
 {
 	pad->dev.ctx	    = ctx;
 	pad->dev.handle	    = pad;

@@ -135,7 +135,7 @@ static void poll_pad(struct emu_runner *emu)
 	buttons_prev = mask;
 }
 
-static void on_vblank(struct p_ctx *ctx, void *userdata)
+static void on_vblank(struct psycho_ctx *ctx, void *userdata)
 {
 	struct emu_runner *emu = userdata;
 
@@ -166,7 +166,7 @@ static void on_vblank(struct p_ctx *ctx, void *userdata)
 		psycho_ctx_stop(ctx);
 }
 
-static void illegal_instr_cb(struct p_ctx *ctx, uint32_t instr)
+static void illegal_instr_cb(struct psycho_ctx *ctx, uint32_t instr)
 {
 	(void)instr;
 
@@ -176,7 +176,7 @@ static void illegal_instr_cb(struct p_ctx *ctx, uint32_t instr)
 	abort();
 }
 
-static void log_cb(struct p_ctx *ctx, struct psycho_log_msg *msg)
+static void log_cb(struct psycho_ctx *ctx, struct psycho_log_msg *msg)
 {
 	assert(ctx != NULL);
 	assert(msg != NULL);
@@ -199,10 +199,10 @@ static void log_cb(struct p_ctx *ctx, struct psycho_log_msg *msg)
 #pragma GCC diagnostic pop
 }
 
-static void on_stdout_line(struct p_ctx *ctx, struct p_str *str)
+static void on_stdout_line(struct psycho_ctx *ctx, struct psycho_fixed_string *str)
 {
 	(void)ctx;
-	(void)str;
+	printf("%s", str->ptr);
 }
 
 void emu_init(struct emu_runner *emu, const char *bios_file, const char *exe_file)
@@ -210,29 +210,28 @@ void emu_init(struct emu_runner *emu, const char *bios_file, const char *exe_fil
 	load_bios_file(emu, bios_file);
 	load_exe_file(exe_file);
 
-	struct psycho_ctx_cfg *cfg = p_cfg_get(&emu->ctx);
+	struct psycho_ctx_cfg *cfg = psycho_ctx_cfg_get(&emu->ctx);
 
 	cfg->cpu.illegal_instr = illegal_instr_cb;
+	cfg->disasm.tracing    = false;
 
 	cfg->log.log_cb = log_cb;
 
-	cfg->log.modules[PSYCHO_LOG_MODULE_BUS] = PSYCHO_LOG_LEVEL_TRACE;
+	cfg->bios_call_tracer.enabled	 = true;
+	cfg->bios_call_tracer.deref_ptrs = true;
+
 	//cfg->log.modules[PSYCHO_LOG_MODULE_SCHED] = PSYCHO_LOG_LEVEL_TRACE;
 
-	//cfg->log.modules[PSYCHO_LOG_MODULE_BIOS_CALL_TRACER] = PSYCHO_LOG_LEVEL_TRACE;
-
-	cfg->bios_call_tracer.stdout_line = on_stdout_line;
-	cfg->bios_call_tracer.deref_ptrs  = true;
+	cfg->log.modules[PSYCHO_LOG_MODULE_BIOS_CALL_TRACER] = PSYCHO_LOG_LEVEL_INFO;
 
 	cfg->on_vblank	     = on_vblank;
 	cfg->vblank_userdata = emu;
 
-	p_init(&emu->ctx);
-
+	psycho_ctx_init(&emu->ctx);
 	psycho_digital_pad_init(&emu->ctx, &emu->pad);
 	psycho_sio0_device_attach(&emu->pad.dev, PSYCHO_SIO0_SLOT_1);
 
-	if (!p_run_exe(&emu->ctx, exe_file_data, exe_file_size)) {
+	if (!psycho_ctx_run_exe(&emu->ctx, exe_file_data, exe_file_size)) {
 		fprintf(stderr, "exe not valid\n");
 		exit(EXIT_FAILURE);
 	}

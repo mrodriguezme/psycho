@@ -18,7 +18,7 @@
 #include "sw.h"
 #include "gpu.h"
 
-void p_gpu_sw_draw_rect(struct p_ctx *ctx, struct p_gpu_vertex *v0)
+void psycho_gpu_sw_draw_rect(struct psycho_ctx *ctx, struct psycho_gpu_vertex *v0)
 {
 	vram_px_set(ctx, v0->x, v0->y, color_to_15bit(v0->color));
 }

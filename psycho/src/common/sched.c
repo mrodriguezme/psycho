@@ -32,22 +32,22 @@ static const char *event_names[PSYCHO_SCHED_EVENT_TYPE_COUNT] = {
 	[PSYCHO_SCHED_EVENT_TYPE_SIO0_DEVICE_ACK_PULSE_DEASSERT] = "sio0 device ack deassert"
 };
 
-P_NODISCARD static size_t node_parent(size_t node)
+PSYCHO_NODISCARD static size_t node_parent(size_t node)
 {
 	return (node - 1) / 2;
 }
 
-P_NODISCARD static size_t node_left(size_t node)
+PSYCHO_NODISCARD static size_t node_left(size_t node)
 {
 	return (node * 2) + 1;
 }
 
-P_NODISCARD static size_t node_right(size_t node)
+PSYCHO_NODISCARD static size_t node_right(size_t node)
 {
 	return node_left(node) + 1;
 }
 
-P_NONNULL static void heap_swap(struct p_ctx *ctx, size_t a, size_t b)
+PSYCHO_NONNULL static void heap_swap(struct psycho_ctx *ctx, size_t a, size_t b)
 {
 	swap(&ctx->sched.events[a], &ctx->sched.events[b]);
 
@@ -55,7 +55,7 @@ P_NONNULL static void heap_swap(struct p_ctx *ctx, size_t a, size_t b)
 	ctx->sched.events[b]->idx = b;
 }
 
-P_NONNULL static void sift_up(struct p_ctx *ctx, size_t node)
+PSYCHO_NONNULL static void sift_up(struct psycho_ctx *ctx, size_t node)
 {
 	while (node) {
 		size_t parent = node_parent(node);
@@ -68,7 +68,7 @@ P_NONNULL static void sift_up(struct p_ctx *ctx, size_t node)
 	}
 }
 
-P_NONNULL static void sift_down(struct p_ctx *ctx, size_t node)
+PSYCHO_NONNULL static void sift_down(struct psycho_ctx *ctx, size_t node)
 {
 	for (;;) {
 		size_t smallest = node;
@@ -89,13 +89,13 @@ P_NONNULL static void sift_down(struct p_ctx *ctx, size_t node)
 	}
 }
 
-void p_sched_rst(struct p_ctx *ctx)
+void p_sched_rst(struct psycho_ctx *ctx)
 {
 	memset(&ctx->sched, 0, sizeof(ctx->sched));
 	LOG_INFO(ctx, "reset");
 }
 
-void p_sched_run(struct p_ctx *ctx)
+void p_sched_run(struct psycho_ctx *ctx)
 {
 	struct psycho_sched_event *event = ctx->sched.events[0];
 
@@ -110,7 +110,7 @@ void p_sched_run(struct p_ctx *ctx)
 	event->cb(ctx, event->userdata);
 }
 
-void p_sched_add(struct p_ctx *ctx, struct psycho_sched_event *event)
+void p_sched_add(struct psycho_ctx *ctx, struct psycho_sched_event *event)
 {
 	assert(ctx->sched.num_events < ARRAY_SIZE(ctx->sched.events));
 
@@ -142,7 +142,7 @@ void p_sched_add(struct p_ctx *ctx, struct psycho_sched_event *event)
 	sift_up(ctx, node);
 }
 
-void p_sched_del(struct p_ctx *ctx, struct psycho_sched_event *event)
+void p_sched_del(struct psycho_ctx *ctx, struct psycho_sched_event *event)
 {
 	if (unlikely(!event->valid))
 		return;

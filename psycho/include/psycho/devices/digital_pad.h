@@ -55,12 +55,13 @@ struct psycho_digital_pad {
 	uint16_t buttons;
 };
 
-void psycho_digital_pad_init(struct p_ctx *ctx, struct psycho_digital_pad *pad) P_NONNULL;
+void psycho_digital_pad_init(struct psycho_ctx *ctx, struct psycho_digital_pad *pad) PSYCHO_NONNULL;
 
-void psycho_digital_pad_buttons_press(struct psycho_digital_pad *pad, enum psycho_digital_pad_button buttons) P_NONNULL;
+void psycho_digital_pad_buttons_press(struct psycho_digital_pad *pad,
+				      enum psycho_digital_pad_button buttons) PSYCHO_NONNULL;
 
 void psycho_digital_pad_buttons_release(struct psycho_digital_pad *pad,
-					enum psycho_digital_pad_button buttons) P_NONNULL;
+					enum psycho_digital_pad_button buttons) PSYCHO_NONNULL;
 
 #ifdef __cplusplus
 }

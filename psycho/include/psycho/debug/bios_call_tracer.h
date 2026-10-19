@@ -21,18 +21,18 @@
 #include <stddef.h>
 #include <stdint.h>
 
-#include "str.h"
+#include "fixed_string.h"
 
 #ifdef __cplusplus
 extern "C" {
 #endif // __cplusplus
 
-struct p_ctx;
+struct psycho_ctx;
 struct psycho_bios_call_tracer_frame;
 
 enum {
-	PSYCHO_BIOS_CALL_TRACER_STACK_MAX	= 16,
-	PSYCHO_BIOS_CALL_TRACER_STDOUT_LEN_MAX	= 128,
+	PSYCHO_BIOS_CALL_TRACER_STACK_MAX      = 16,
+	PSYCHO_BIOS_CALL_TRACER_STDOUT_LEN_MAX = 128,
 };
 
 enum psycho_bios_call_tracer_func_ret {
@@ -44,13 +44,13 @@ enum psycho_bios_call_tracer_func_ret {
 
 struct psycho_bios_call_tracer_func_entry {
 	const char *prototype;
-	const enum psycho_bios_call_tracer_func_ret ret;
-	void (*hook_cb)(struct p_ctx *ctx, struct psycho_bios_call_tracer_frame *frame);
+	enum psycho_bios_call_tracer_func_ret ret;
+	void (*hook_cb)(struct psycho_ctx *ctx, struct psycho_bios_call_tracer_frame *frame);
 };
 
 struct psycho_bios_call_tracer_frame {
 	struct {
-		struct p_str str;
+		struct psycho_fixed_string str;
 		char buf[512];
 	} result;
 
@@ -66,13 +66,14 @@ struct psycho_bios_call_tracer_frame {
 };
 
 struct psycho_bios_call_trace_cfg {
-	void (*stdout_line)(struct p_ctx *ctx, struct p_str *str);
+	void (*stdout_line)(struct psycho_ctx *ctx, struct psycho_fixed_string *str);
 	bool deref_ptrs;
+	bool enabled;
 };
 
 struct psycho_bios_call_tracer_stdout {
 	char buf[PSYCHO_BIOS_CALL_TRACER_STDOUT_LEN_MAX];
-	struct p_str str;
+	struct psycho_fixed_string str;
 };
 
 struct psycho_bios_call_tracer {

@@ -41,12 +41,27 @@ enum {
 	SCRATCHPAD_MASK	 = 0x00000FFF
 };
 
-uint8_t *p_bios_data_get(struct p_ctx *ctx)
+enum {
+	DEV0_BASE_ADDR	= 0x1F801000,
+	DEV8_BASE_ADDR	= 0x1F801004,
+	DEV0_DELAY_SIZE = 0x1F801008,
+	DEV1_DELAY_SIZE = 0x1F80100C,
+	DEV2_DELAY_SIZE = 0x1F801010,
+	DEV4_DELAY_SIZE = 0x1F801014,
+	DEV5_DELAY_SIZE = 0x1F801018,
+	DEV8_DELAY_SIZE = 0x1F80101C,
+	COM_DELAY	= 0x1F801020,
+	DRAM_CTRL	= 0x1F801060
+};
+
+#define BIU_CACHE_CTRL_REG (UINT32_C(0xFFFE0130))
+
+uint8_t *p_bios_data_get(struct psycho_ctx *ctx)
 {
 	return ctx->bus.bios;
 }
 
-uint32_t psycho_bus_load_word(struct p_ctx *ctx, uint32_t paddr, bool *valid)
+uint32_t psycho_bus_load_word(struct psycho_ctx *ctx, uint32_t paddr, bool *valid)
 {
 	uint32_t ret;
 
@@ -85,7 +100,7 @@ uint32_t psycho_bus_load_word(struct p_ctx *ctx, uint32_t paddr, bool *valid)
 	}
 }
 
-uint16_t psycho_bus_load_halfword(struct p_ctx *ctx, uint32_t paddr, bool *valid)
+uint16_t psycho_bus_load_halfword(struct psycho_ctx *ctx, uint32_t paddr, bool *valid)
 {
 	uint16_t ret;
 
@@ -114,7 +129,7 @@ uint16_t psycho_bus_load_halfword(struct p_ctx *ctx, uint32_t paddr, bool *valid
 	}
 }
 
-uint8_t psycho_bus_load_byte(struct p_ctx *ctx, uint32_t paddr, bool *valid)
+uint8_t psycho_bus_load_byte(struct psycho_ctx *ctx, uint32_t paddr, bool *valid)
 {
 	*valid = true;
 
@@ -142,7 +157,7 @@ uint8_t psycho_bus_load_byte(struct p_ctx *ctx, uint32_t paddr, bool *valid)
 	}
 }
 
-bool psycho_bus_store_word(struct p_ctx *ctx, uint32_t paddr, uint32_t data)
+bool psycho_bus_store_word(struct psycho_ctx *ctx, uint32_t paddr, uint32_t data)
 {
 	bool valid = true;
 
@@ -171,17 +186,17 @@ bool psycho_bus_store_word(struct p_ctx *ctx, uint32_t paddr, uint32_t data)
 		p_gp1(ctx, data);
 		break;
 
-	case 0x1F801000:
-	case 0x1F801004:
-	case 0x1F801008:
-	case 0x1F80100C:
-	case 0x1F801010:
-	case 0x1F801014:
-	case 0x1F801018:
-	case 0x1F80101C:
-	case 0x1F801020:
-	case 0x1F801060:
-	case 0x1FFE0130:
+	case DEV0_BASE_ADDR:
+	case DEV8_BASE_ADDR:
+	case DEV0_DELAY_SIZE:
+	case DEV1_DELAY_SIZE:
+	case DEV2_DELAY_SIZE:
+	case DEV4_DELAY_SIZE:
+	case DEV5_DELAY_SIZE:
+	case DEV8_DELAY_SIZE:
+	case COM_DELAY:
+	case DRAM_CTRL:
+	case BIU_CACHE_CTRL_REG:
 		break;
 
 	default:
@@ -193,7 +208,7 @@ bool psycho_bus_store_word(struct p_ctx *ctx, uint32_t paddr, uint32_t data)
 	return valid;
 }
 
-bool psycho_bus_store_halfword(struct p_ctx *ctx, uint32_t paddr, uint16_t data)
+bool psycho_bus_store_halfword(struct psycho_ctx *ctx, uint32_t paddr, uint16_t data)
 {
 	bool valid = true;
 
@@ -242,7 +257,7 @@ bool psycho_bus_store_halfword(struct p_ctx *ctx, uint32_t paddr, uint16_t data)
 	return valid;
 }
 
-bool psycho_bus_store_byte(struct p_ctx *ctx, uint32_t paddr, uint8_t data)
+bool psycho_bus_store_byte(struct psycho_ctx *ctx, uint32_t paddr, uint8_t data)
 {
 	bool valid = true;
 
@@ -271,7 +286,7 @@ bool psycho_bus_store_byte(struct p_ctx *ctx, uint32_t paddr, uint8_t data)
 	return valid;
 }
 
-void *psycho_bus_get_mem_area_ptr(struct p_ctx *ctx, uint32_t paddr)
+void *psycho_bus_get_mem_area_ptr(struct psycho_ctx *ctx, uint32_t paddr)
 {
 	switch (paddr) {
 	case RAM_BEGIN ... RAM_END:

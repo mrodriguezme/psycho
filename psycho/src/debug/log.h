@@ -21,14 +21,15 @@
 
 #define DECLARE_LOG_MODULE(mod) static const enum psycho_log_module m_log_module = (mod)
 
-P_NODISCARD P_ALWAYS_INLINE P_NONNULL bool psycho_log_enabled(const struct p_ctx *ctx, enum psycho_log_module module,
-							      enum psycho_log_level level)
+PSYCHO_NODISCARD PSYCHO_ALWAYS_INLINE PSYCHO_NONNULL bool
+psycho_log_enabled(const struct psycho_ctx *ctx, enum psycho_log_module module, enum psycho_log_level level)
 {
 	return ctx->cfg.log.log_cb && ctx->cfg.log.modules[module] >= level;
 }
 
-__attribute__((format(printf, 4, 5))) P_NONNULL void psycho_log_msg(struct p_ctx *ctx, enum psycho_log_module module,
-								    enum psycho_log_level level, const char *fmt, ...);
+PSYCHO_FORMAT(printf, 4, 5)
+PSYCHO_NONNULL void psycho_log_msg(struct psycho_ctx *ctx, enum psycho_log_module module, enum psycho_log_level level,
+				   const char *fmt, ...);
 
 #define LOG_MODULE_LEVEL_ENABLED(ctx, lvl) psycho_log_enabled(ctx, m_log_module, PSYCHO_LOG_LEVEL_##lvl)
 

@@ -17,20 +17,20 @@
 
 #pragma once
 
+#include <stdarg.h>
 #include <stdbool.h>
-#include <stddef.h>
 
-#ifdef __cplusplus
-extern "C" {
-#endif // __cplusplus
+#include "psycho/common/compiler_support.h"
+#include "psycho/debug/fixed_string.h"
 
-struct p_str {
-	char *ptr;
-	size_t len;
-	size_t cap;
-	bool fixed;
-};
+void psycho_fixed_string_init(struct psycho_fixed_string *str, char *ptr, size_t capacity) PSYCHO_NONNULL;
 
-#ifdef __cplusplus
-}
-#endif // __cplusplus
+void psycho_fixed_string_reset(struct psycho_fixed_string *str) PSYCHO_NONNULL;
+
+void psycho_fixed_string_append(struct psycho_fixed_string *str, const char *fmt, ...) PSYCHO_NONNULL
+	PSYCHO_FORMAT(printf, 2, 3);
+
+void psycho_fixed_string_vappend(struct psycho_fixed_string *str, const char *fmt, va_list args)
+	PSYCHO_FORMAT(printf, 2, 0) PSYCHO_NONNULL_ARGS(1, 3);
+
+void psycho_fixed_string_pad(struct psycho_fixed_string *str, char c, size_t count) PSYCHO_NONNULL_ARGS(1);

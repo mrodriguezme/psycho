@@ -19,16 +19,16 @@
 
 #include "psycho/ctx.h"
 
-P_NODISCARD uint32_t psycho_bus_load_word(struct p_ctx *ctx, uint32_t paddr, bool *valid) P_NONNULL;
+PSYCHO_NODISCARD uint32_t psycho_bus_load_word(struct psycho_ctx *ctx, uint32_t paddr, bool *valid) PSYCHO_NONNULL;
 
-P_NODISCARD uint16_t psycho_bus_load_halfword(struct p_ctx *ctx, uint32_t paddr, bool *valid) P_NONNULL;
+PSYCHO_NODISCARD uint16_t psycho_bus_load_halfword(struct psycho_ctx *ctx, uint32_t paddr, bool *valid) PSYCHO_NONNULL;
 
-P_NODISCARD uint8_t psycho_bus_load_byte(struct p_ctx *ctx, const uint32_t paddr, bool *valid) P_NONNULL;
+PSYCHO_NODISCARD uint8_t psycho_bus_load_byte(struct psycho_ctx *ctx, const uint32_t paddr, bool *valid) PSYCHO_NONNULL;
 
-bool psycho_bus_store_word(struct p_ctx *ctx, uint32_t paddr, uint32_t word) P_NONNULL;
+bool psycho_bus_store_word(struct psycho_ctx *ctx, uint32_t paddr, uint32_t word) PSYCHO_NONNULL;
 
-bool psycho_bus_store_halfword(struct p_ctx *ctx, uint32_t paddr, uint16_t halfword) P_NONNULL;
+bool psycho_bus_store_halfword(struct psycho_ctx *ctx, uint32_t paddr, uint16_t halfword) PSYCHO_NONNULL;
 
-bool psycho_bus_store_byte(struct p_ctx *ctx, uint32_t paddr, uint8_t byte) P_NONNULL;
+bool psycho_bus_store_byte(struct psycho_ctx *ctx, uint32_t paddr, uint8_t byte) PSYCHO_NONNULL;
 
-P_CONST void *psycho_bus_get_mem_area_ptr(struct p_ctx *ctx, uint32_t paddr) P_NONNULL;
+PSYCHO_CONST void *psycho_bus_get_mem_area_ptr(struct psycho_ctx *ctx, uint32_t paddr) PSYCHO_NONNULL;

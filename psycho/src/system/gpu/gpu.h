@@ -31,24 +31,23 @@
 #define GP1_RST			 (0x00)
 #define GP1_GPU_INFO		 (0x10)
 
-void p_gpu_init(struct p_ctx *ctx) P_NONNULL;
-void p_gpu_rst(struct p_ctx *ctx) P_NONNULL;
+void p_gpu_init(struct psycho_ctx *ctx) PSYCHO_NONNULL;
+void p_gpu_rst(struct psycho_ctx *ctx) PSYCHO_NONNULL;
 
-void p_gp0(struct p_ctx *ctx, uint32_t packet) P_NONNULL;
-void p_gp1(struct p_ctx *ctx, uint32_t packet) P_NONNULL;
+void p_gp0(struct psycho_ctx *ctx, uint32_t packet) PSYCHO_NONNULL;
+void p_gp1(struct psycho_ctx *ctx, uint32_t packet) PSYCHO_NONNULL;
 
-P_NONNULL P_ALWAYS_INLINE void vram_px_set(struct p_ctx *ctx, size_t x,
-					   size_t y, uint16_t data)
+PSYCHO_NONNULL PSYCHO_ALWAYS_INLINE void vram_px_set(struct psycho_ctx *ctx, size_t x, size_t y, uint16_t data)
 {
 	ctx->gpu.vram[y][x] = data;
 }
 
-P_NONNULL P_ALWAYS_INLINE uint16_t vram_px_get(struct p_ctx *ctx, size_t x, size_t y)
+PSYCHO_NONNULL PSYCHO_ALWAYS_INLINE uint16_t vram_px_get(struct psycho_ctx *ctx, size_t x, size_t y)
 {
 	return ctx->gpu.vram[y][x];
 }
 
-P_NODISCARD P_ALWAYS_INLINE uint16_t color_to_15bit(uint32_t px)
+PSYCHO_NODISCARD PSYCHO_ALWAYS_INLINE uint16_t color_to_15bit(uint32_t px)
 {
 	const unsigned int r = (px & UINT8_MAX) >> 3;
 	const unsigned int g = ((px >> 8) & UINT8_MAX) >> 3;
@@ -57,4 +56,4 @@ P_NODISCARD P_ALWAYS_INLINE uint16_t color_to_15bit(uint32_t px)
 	return (b << 10) | (g << 5) | r;
 }
 
-P_NODISCARD uint32_t p_gpuread(struct p_ctx *ctx) P_NONNULL;
+PSYCHO_NODISCARD uint32_t p_gpuread(struct psycho_ctx *ctx) PSYCHO_NONNULL;

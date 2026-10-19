@@ -26,23 +26,23 @@
 
 DECLARE_LOG_MODULE(PSYCHO_LOG_MODULE_CTX);
 
-struct psycho_ctx_cfg *p_cfg_get(struct p_ctx *ctx)
+struct psycho_ctx_cfg *psycho_ctx_cfg_get(struct psycho_ctx *ctx)
 {
 	return &ctx->cfg;
 }
 
-void p_init(struct p_ctx *ctx)
+void psycho_ctx_init(struct psycho_ctx *ctx)
 {
 	psycho_bios_call_tracer_init(ctx);
 	p_gpu_init(ctx);
 
 	p_cpu_int_init(ctx);
-	p_rst(ctx);
+	psycho_ctx_reset(ctx);
 
 	LOG_INFO(ctx, "initialized");
 }
 
-void p_rst(struct p_ctx *ctx)
+void psycho_ctx_reset(struct psycho_ctx *ctx)
 {
 	p_sched_rst(ctx);
 	p_gpu_rst(ctx);
@@ -52,17 +52,13 @@ void p_rst(struct p_ctx *ctx)
 	LOG_INFO(ctx, "reset");
 }
 
-void p_step(struct p_ctx *ctx)
-{
-}
-
-void psycho_ctx_run(struct p_ctx *ctx)
+void psycho_ctx_run(struct psycho_ctx *ctx)
 {
 	ctx->running = true;
 	ctx->cpu.run(ctx, false);
 }
 
-void psycho_ctx_stop(struct p_ctx *ctx)
+void psycho_ctx_stop(struct psycho_ctx *ctx)
 {
 	ctx->running = false;
 }

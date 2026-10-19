@@ -26,7 +26,7 @@
 extern "C" {
 #endif // __cplusplus
 
-struct p_ctx;
+struct psycho_ctx;
 
 struct p_cpu_dly_slot {
 	uint32_t dst;

@@ -18,7 +18,7 @@
 #pragma once
 
 #include <stddef.h>
-#include "str.h"
+#include "fixed_string.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -43,7 +43,7 @@ extern "C" {
 	X(SIO0, "sio0")                         \
 	X(DIGITAL_PAD, "digital pad")
 
-struct p_ctx;
+struct psycho_ctx;
 
 enum psycho_log_level {
 // clang-format off
@@ -68,13 +68,13 @@ enum psycho_log_module {
 };
 
 struct psycho_log_msg {
-	struct p_str str;
+	struct psycho_fixed_string str;
 	enum psycho_log_module module;
 	enum psycho_log_level level;
 };
 
 struct psycho_log_cfg {
-	void (*log_cb)(struct p_ctx *ctx, struct psycho_log_msg *msg);
+	void (*log_cb)(struct psycho_ctx *ctx, struct psycho_log_msg *msg);
 	enum psycho_log_level modules[PSYCHO_LOG_MODULE_COUNT];
 };
 

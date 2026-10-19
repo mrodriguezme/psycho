@@ -24,30 +24,30 @@
 extern "C" {
 #endif // __cplusplus
 
-struct p_ctx;
+struct psycho_ctx;
 
 struct psycho_cpu_cfg {
-	void (*illegal_instr)(struct p_ctx *ctx, uint32_t instr);
+	void (*illegal_instr)(struct psycho_ctx *ctx, uint32_t instr);
 };
 
 struct psycho_cpu_ops {
-	void (*irq_mux_assert)(struct p_ctx *ctx, bool state);
+	void (*irq_mux_assert)(struct psycho_ctx *ctx, bool state);
 
-	void (*gpr_set)(struct p_ctx *ctx, enum psycho_cpu_gpr gpr, uint32_t val);
-	uint32_t (*gpr_get)(struct p_ctx *ctx, enum psycho_cpu_gpr gpr);
+	void (*gpr_set)(struct psycho_ctx *ctx, enum psycho_cpu_gpr gpr, uint32_t val);
+	uint32_t (*gpr_get)(struct psycho_ctx *ctx, enum psycho_cpu_gpr gpr);
 
-	uint32_t (*reg_lo_get)(struct p_ctx *ctx);
-	uint32_t (*reg_hi_get)(struct p_ctx *ctx);
+	uint32_t (*reg_lo_get)(struct psycho_ctx *ctx);
+	uint32_t (*reg_hi_get)(struct psycho_ctx *ctx);
 
-	void (*pc_set)(struct p_ctx *ctx, uint32_t pc);
-	uint32_t (*pc_get)(struct p_ctx *ctx);
+	void (*pc_set)(struct psycho_ctx *ctx, uint32_t pc);
+	uint32_t (*pc_get)(struct psycho_ctx *ctx);
 
-	void (*run)(struct p_ctx *ctx, bool single_step);
-	void (*stop)(struct p_ctx *ctx);
+	void (*run)(struct psycho_ctx *ctx, bool single_step);
+	void (*stop)(struct psycho_ctx *ctx);
 
-	uint32_t (*instr_get)(struct p_ctx *ctx);
+	uint32_t (*instr_get)(struct psycho_ctx *ctx);
 
-	void (*reset)(struct p_ctx *ctx);
+	void (*reset)(struct psycho_ctx *ctx);
 };
 
 #ifdef __cplusplus

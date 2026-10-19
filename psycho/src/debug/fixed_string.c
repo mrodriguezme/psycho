@@ -15,82 +15,71 @@
 // COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR
 // OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
-#include <assert.h>
 #include <stdarg.h>
 #include <stdio.h>
 #include <string.h>
 
-#include "str.h"
+#include "fixed_string.h"
 
-void p_str_init_fixed(struct p_str *str, char *ptr, size_t cap)
+void psycho_fixed_string_init(struct psycho_fixed_string *str, char *ptr, size_t capacity)
 {
-	memset(str, 0, sizeof(*str));
+	str->ptr      = ptr;
+	str->capacity = capacity;
 
-	str->ptr    = ptr;
-	str->ptr[0] = '\0';
+	psycho_fixed_string_reset(str);
+}
 
-	str->cap = cap;
+void psycho_fixed_string_reset(struct psycho_fixed_string *str)
+{
+	memset(str->ptr, 0, str->capacity);
 	str->len = 0;
 }
 
-void p_str_append(struct p_str *str, bool *truncated, const char *fmt, ...)
+void psycho_fixed_string_append(struct psycho_fixed_string *str, const char *fmt, ...)
 {
 	va_list args;
 	va_start(args, fmt);
-	p_str_vappend(str, truncated, fmt, args);
+	psycho_fixed_string_vappend(str, fmt, args);
 	va_end(args);
 }
 
-void p_str_vappend(struct p_str *str, bool *truncated, const char *fmt,
-		   va_list args)
+void psycho_fixed_string_vappend(struct psycho_fixed_string *str, const char *fmt, va_list args)
 {
-	const size_t rem = str->cap - str->len;
+	size_t rem = str->capacity - str->len;
 
 	va_list args_copy;
 	va_copy(args_copy, args);
 
-	const int ret = vsnprintf(&str->ptr[str->len], rem, fmt, args_copy);
+	int ret = vsnprintf(&str->ptr[str->len], rem, fmt, args_copy);
 
 	va_end(args_copy);
 
-	assert(ret >= 0);
-
-	if (ret < 0)
-		return;
-
 	if ((size_t)ret >= rem) {
-		str->len = str->cap - 1;
-
-		if (truncated)
-			*truncated = true;
+		str->len       = str->capacity - 1;
+		str->truncated = true;
 
 		return;
 	}
 
 	str->len += (size_t)ret;
-
-	if (truncated)
-		*truncated = false;
+	str->truncated = false;
 }
 
-void p_str_pad(struct p_str *str, char c, size_t count, bool *truncated)
+void psycho_fixed_string_pad(struct psycho_fixed_string *str, char c, size_t count)
 {
 	if (str->len >= count) {
-		if (truncated)
-			*truncated = false;
-
+		str->truncated = true;
 		return;
 	}
 
-	const size_t needed = count - str->len;
-	const size_t rem    = str->cap - str->len - 1;
+	size_t needed	 = count - str->len;
+	size_t remaining = str->capacity - str->len - 1;
+	size_t written	 = (needed > remaining) ? remaining : needed;
 
-	const size_t written = (needed > rem) ? rem : needed;
 	memset(&str->ptr[str->len], c, written);
 
 	str->len += written;
 	str->ptr[str->len] = '\0';
 
-	if (truncated)
-		*truncated = (written != needed);
+	str->truncated = written != needed;
 }
