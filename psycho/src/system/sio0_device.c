@@ -40,8 +40,8 @@ void psycho_sio0_device_ack(struct psycho_sio0_device *dev, unsigned int delay_u
 	dev->ack_pulse_deassert_event.ts   = us_to_cycles(delay_us + pulse_us);
 	dev->ack_pulse_deassert_event.type = PSYCHO_SCHED_EVENT_TYPE_SIO0_DEVICE_ACK_PULSE_DEASSERT;
 
-	p_sched_add(dev->ctx, &dev->ack_pulse_assert_event);
-	p_sched_add(dev->ctx, &dev->ack_pulse_deassert_event);
+	psycho_sched_add(dev->ctx, &dev->ack_pulse_assert_event);
+	psycho_sched_add(dev->ctx, &dev->ack_pulse_deassert_event);
 }
 
 void psycho_sio0_device_attach(struct psycho_sio0_device *dev, enum psycho_sio0_slot slot)

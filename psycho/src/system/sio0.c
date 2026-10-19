@@ -157,8 +157,8 @@ PSYCHO_NONNULL static void devices_reset(struct psycho_ctx *ctx)
 
 		device->reset(device);
 
-		p_sched_del(ctx, &device->ack_pulse_assert_event);
-		p_sched_del(ctx, &device->ack_pulse_deassert_event);
+		psycho_sched_del(ctx, &device->ack_pulse_assert_event);
+		psycho_sched_del(ctx, &device->ack_pulse_deassert_event);
 
 		LOG_DEBUG(ctx, "device \"%s\" reset in slot %u", device->name, slot + 1);
 	}
@@ -242,7 +242,7 @@ PSYCHO_NONNULL static void do_tx(struct psycho_ctx *ctx)
 	ctx->sio0.tx_event.type	     = PSYCHO_SCHED_EVENT_TYPE_SIO0_TX;
 	ctx->sio0.tx_event.permanent = false;
 
-	p_sched_add(ctx, &ctx->sio0.tx_event);
+	psycho_sched_add(ctx, &ctx->sio0.tx_event);
 	ctx->sio0.sr &= ~SR_TXU;
 }
 
@@ -277,7 +277,7 @@ void psycho_sio0_dsr_deassert(struct psycho_ctx *ctx, void *userdata)
 
 void psycho_sio0_reset(struct psycho_ctx *ctx)
 {
-	p_sched_del(ctx, &ctx->sio0.tx_event);
+	psycho_sched_del(ctx, &ctx->sio0.tx_event);
 
 	memset(&ctx->sio0.rxfifo, 0, sizeof(ctx->sio0.rxfifo));
 	memset(&ctx->sio0.txfifo, 0, sizeof(ctx->sio0.txfifo));

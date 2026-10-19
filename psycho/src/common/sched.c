@@ -47,7 +47,7 @@ PSYCHO_NODISCARD static size_t node_right(size_t node)
 	return node_left(node) + 1;
 }
 
-PSYCHO_NONNULL static void heap_swap(struct psycho_ctx *ctx, size_t a, size_t b)
+PSYCHO_NONNULL static void heapsycho_swap(struct psycho_ctx *ctx, size_t a, size_t b)
 {
 	swap(&ctx->sched.events[a], &ctx->sched.events[b]);
 
@@ -63,7 +63,7 @@ PSYCHO_NONNULL static void sift_up(struct psycho_ctx *ctx, size_t node)
 		if (ctx->sched.events[parent]->ts <= ctx->sched.events[node]->ts)
 			break;
 
-		heap_swap(ctx, parent, node);
+		heapsycho_swap(ctx, parent, node);
 		node = parent;
 	}
 }
@@ -84,18 +84,18 @@ PSYCHO_NONNULL static void sift_down(struct psycho_ctx *ctx, size_t node)
 		if (smallest == node)
 			break;
 
-		heap_swap(ctx, node, smallest);
+		heapsycho_swap(ctx, node, smallest);
 		node = smallest;
 	}
 }
 
-void p_sched_rst(struct psycho_ctx *ctx)
+void psycho_sched_rst(struct psycho_ctx *ctx)
 {
 	memset(&ctx->sched, 0, sizeof(ctx->sched));
 	LOG_INFO(ctx, "reset");
 }
 
-void p_sched_run(struct psycho_ctx *ctx)
+void psycho_sched_run(struct psycho_ctx *ctx)
 {
 	struct psycho_sched_event *event = ctx->sched.events[0];
 
@@ -105,12 +105,12 @@ void p_sched_run(struct psycho_ctx *ctx)
 		event->ts += event->period;
 		sift_down(ctx, event->idx);
 	} else
-		p_sched_del(ctx, event);
+		psycho_sched_del(ctx, event);
 
 	event->cb(ctx, event->userdata);
 }
 
-void p_sched_add(struct psycho_ctx *ctx, struct psycho_sched_event *event)
+void psycho_sched_add(struct psycho_ctx *ctx, struct psycho_sched_event *event)
 {
 	assert(ctx->sched.num_events < ARRAY_SIZE(ctx->sched.events));
 
@@ -142,7 +142,7 @@ void p_sched_add(struct psycho_ctx *ctx, struct psycho_sched_event *event)
 	sift_up(ctx, node);
 }
 
-void p_sched_del(struct psycho_ctx *ctx, struct psycho_sched_event *event)
+void psycho_sched_del(struct psycho_ctx *ctx, struct psycho_sched_event *event)
 {
 	if (unlikely(!event->valid))
 		return;

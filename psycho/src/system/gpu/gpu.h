@@ -31,11 +31,11 @@
 #define GP1_RST			 (0x00)
 #define GP1_GPU_INFO		 (0x10)
 
-void p_gpu_init(struct psycho_ctx *ctx) PSYCHO_NONNULL;
-void p_gpu_rst(struct psycho_ctx *ctx) PSYCHO_NONNULL;
+void psycho_gpu_init(struct psycho_ctx *ctx) PSYCHO_NONNULL;
+void psycho_gpu_rst(struct psycho_ctx *ctx) PSYCHO_NONNULL;
 
-void p_gp0(struct psycho_ctx *ctx, uint32_t packet) PSYCHO_NONNULL;
-void p_gp1(struct psycho_ctx *ctx, uint32_t packet) PSYCHO_NONNULL;
+void psycho_gp0(struct psycho_ctx *ctx, uint32_t packet) PSYCHO_NONNULL;
+void psycho_gp1(struct psycho_ctx *ctx, uint32_t packet) PSYCHO_NONNULL;
 
 PSYCHO_NONNULL PSYCHO_ALWAYS_INLINE void vram_px_set(struct psycho_ctx *ctx, size_t x, size_t y, uint16_t data)
 {
@@ -56,4 +56,4 @@ PSYCHO_NODISCARD PSYCHO_ALWAYS_INLINE uint16_t color_to_15bit(uint32_t px)
 	return (b << 10) | (g << 5) | r;
 }
 
-PSYCHO_NODISCARD uint32_t p_gpuread(struct psycho_ctx *ctx) PSYCHO_NONNULL;
+PSYCHO_NODISCARD uint32_t psycho_gpuread(struct psycho_ctx *ctx) PSYCHO_NONNULL;

@@ -39,7 +39,7 @@ struct psycho_bus {
 	uint8_t spad[PSYCHO_BUS_SPAD_SIZE_BYTES];
 };
 
-PSYCHO_NODISCARD PSYCHO_CONST uint8_t *p_bios_data_get(struct psycho_ctx *ctx) PSYCHO_NONNULL;
+PSYCHO_NODISCARD PSYCHO_CONST uint8_t *psycho_bios_data_get(struct psycho_ctx *ctx) PSYCHO_NONNULL;
 
 #ifdef __cplusplus
 }

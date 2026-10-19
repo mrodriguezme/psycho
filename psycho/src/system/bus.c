@@ -56,7 +56,7 @@ enum {
 
 #define BIU_CACHE_CTRL_REG (UINT32_C(0xFFFE0130))
 
-uint8_t *p_bios_data_get(struct psycho_ctx *ctx)
+uint8_t *psycho_bios_data_get(struct psycho_ctx *ctx)
 {
 	return ctx->bus.bios;
 }
@@ -86,7 +86,7 @@ uint32_t psycho_bus_load_word(struct psycho_ctx *ctx, uint32_t paddr, bool *vali
 		return ctx->gpu.gpustat;
 
 	case GPU_GPUREAD:
-		return p_gpuread(ctx);
+		return psycho_gpuread(ctx);
 
 	case BIOS_BEGIN ... BIOS_END:
 		memcpy(&ret, &ctx->bus.bios[paddr & BIOS_MASK], sizeof(uint32_t));
@@ -179,11 +179,11 @@ bool psycho_bus_store_word(struct psycho_ctx *ctx, uint32_t paddr, uint32_t data
 		break;
 
 	case GPU_GP0:
-		p_gp0(ctx, data);
+		psycho_gp0(ctx, data);
 		break;
 
 	case GPU_GP1:
-		p_gp1(ctx, data);
+		psycho_gp1(ctx, data);
 		break;
 
 	case DEV0_BASE_ADDR:

@@ -66,8 +66,8 @@ struct psycho_disasm {
 	struct psycho_disasm_traces traces;
 };
 
-PSYCHO_NODISCARD PSYCHO_CONST const char *p_gpr_get(enum psycho_cpu_gpr reg);
-PSYCHO_NODISCARD PSYCHO_CONST const char *p_cop0_get(enum psycho_cpu_cop0_cpr reg);
+PSYCHO_NODISCARD PSYCHO_CONST const char *psycho_gpr_get(enum psycho_cpu_gpr reg);
+PSYCHO_NODISCARD PSYCHO_CONST const char *psycho_cop0_get(enum psycho_cpu_cop0_cpr reg);
 
 bool psycho_disasm_instr(struct psycho_ctx *ctx, uint32_t pc, struct psycho_disasm_traces *traces)
 	PSYCHO_NONNULL_ARGS(1);

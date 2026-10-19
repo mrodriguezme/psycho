@@ -67,7 +67,7 @@ static void load_bios_file(struct emu_runner *emu, const char *bios_file)
 		goto cleanup;
 	}
 
-	uint8_t *dst = p_bios_data_get(&emu->ctx);
+	uint8_t *dst = psycho_bios_data_get(&emu->ctx);
 
 	size_t bytes_read = SDL_ReadIO(file, dst, size);
 
@@ -215,9 +215,9 @@ void emu_init(struct emu_runner *emu, const char *bios_file, const char *exe_fil
 	cfg->cpu.illegal_instr = illegal_instr_cb;
 	cfg->disasm.tracing    = false;
 
-	cfg->log.log_cb = log_cb;
+	cfg->log.log_cb = NULL;
 
-	cfg->bios_call_tracer.enabled	 = true;
+	cfg->bios_call_tracer.enabled = false;
 	cfg->bios_call_tracer.deref_ptrs = true;
 
 	//cfg->log.modules[PSYCHO_LOG_MODULE_SCHED] = PSYCHO_LOG_LEVEL_TRACE;

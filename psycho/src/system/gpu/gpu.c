@@ -192,22 +192,22 @@ PSYCHO_NONNULL static void handle_gpu_info(struct psycho_ctx *ctx, unsigned int 
 	}
 }
 
-void p_gpu_init(struct psycho_ctx *ctx)
+void psycho_gpu_init(struct psycho_ctx *ctx)
 {
 	ctx->gpu.render_ops.rect = psycho_gpu_sw_draw_rect;
 }
 
-void p_gpu_rst(struct psycho_ctx *ctx)
+void psycho_gpu_rst(struct psycho_ctx *ctx)
 {
 	ctx->gpu.vblank_event.type	= PSYCHO_SCHED_EVENT_TYPE_VBLANK;
 	ctx->gpu.vblank_event.cb	= on_vblank;
 	ctx->gpu.vblank_event.ts	= PSYCHO_CPU_CLKFREQ_HZ / 60;
 	ctx->gpu.vblank_event.permanent = true;
 
-	p_sched_add(ctx, &ctx->gpu.vblank_event);
+	psycho_sched_add(ctx, &ctx->gpu.vblank_event);
 }
 
-void p_gp0(struct psycho_ctx *ctx, uint32_t packet)
+void psycho_gp0(struct psycho_ctx *ctx, uint32_t packet)
 {
 	LOG_TRACE(ctx, "GP0 <- 0x%08X", packet);
 
@@ -228,7 +228,7 @@ void p_gp0(struct psycho_ctx *ctx, uint32_t packet)
 		ctx->gpu.cmd_fn(ctx, packet);
 }
 
-void p_gp1(struct psycho_ctx *ctx, uint32_t packet)
+void psycho_gp1(struct psycho_ctx *ctx, uint32_t packet)
 {
 	LOG_TRACE(ctx, "GP1 <- 0x%08X", packet);
 
@@ -251,7 +251,7 @@ void p_gp1(struct psycho_ctx *ctx, uint32_t packet)
 	}
 }
 
-uint32_t p_gpuread(struct psycho_ctx *ctx)
+uint32_t psycho_gpuread(struct psycho_ctx *ctx)
 {
 	if (ctx->gpu.gpustat & GPUSTAT_FIFO_DATA_AVAIL_BIT) {
 		const uint16_t px0 = cpy_pixel_to_cpu(ctx);

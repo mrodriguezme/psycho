@@ -203,13 +203,13 @@ static void trace_add(struct psycho_disasm_traces *traces, enum psycho_disasm_tr
 	}
 }
 
-PSYCHO_NODISCARD const char *p_gpr_get(enum psycho_cpu_gpr reg)
+PSYCHO_NODISCARD const char *psycho_gpr_get(enum psycho_cpu_gpr reg)
 {
 	assert(reg < PSYCHO_CPU_GPR_COUNT);
 	return gpr[reg];
 }
 
-PSYCHO_NODISCARD const char *p_cop0_get(enum psycho_cpu_cop0_cpr reg)
+PSYCHO_NODISCARD const char *psycho_cop0_get(enum psycho_cpu_cop0_cpr reg)
 {
 	assert(reg < PSYCHO_CPU_COP0_CPR_COUNT);
 	return cop0_cpr[reg];
@@ -428,11 +428,11 @@ bool psycho_disasm_instr(struct psycho_ctx *ctx, uint32_t pc, struct psycho_disa
 	}
 
 	case J:
-		fmt("j 0x%08X", jmp_addr(pc, instr));
+		fmt("j 0x%08X", jmpsycho_addr(pc, instr));
 		break;
 
 	case JAL:
-		fmt("jal 0x%08X", jmp_addr(pc, instr));
+		fmt("jal 0x%08X", jmpsycho_addr(pc, instr));
 		break;
 
 	case BEQ:

@@ -28,7 +28,7 @@ extern "C" {
 
 struct psycho_ctx;
 
-struct p_cpu_dly_slot {
+struct psycho_cpu_dly_slot {
 	uint32_t dst;
 	uint32_t val;
 };
@@ -49,8 +49,8 @@ struct psycho_cpu_interpreter {
 	uint32_t lo;
 	uint32_t hi;
 
-	struct p_cpu_dly_slot ld_pend;
-	struct p_cpu_dly_slot ld_next;
+	struct psycho_cpu_dly_slot ld_pend;
+	struct psycho_cpu_dly_slot ld_next;
 
 	bool in_bd;
 	bool next_in_bd;

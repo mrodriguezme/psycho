@@ -35,8 +35,8 @@ struct exe_hdr {
 	const uint32_t data_sect_size;
 	const uint32_t bss_sect_addr;
 	const uint32_t bss_sect_size;
-	const uint32_t sp_fp_base;
-	const uint32_t sp_fp_offs;
+	const uint32_t spsycho_fpsycho_base;
+	const uint32_t spsycho_fpsycho_offs;
 	const uint8_t resv_bios_fn[0x4C - 0x38];
 	const uint8_t ascii_marker;
 	const uint8_t ascii_or_zerofilled[1971];
@@ -55,8 +55,8 @@ static_assert_offset(struct exe_hdr, data_sect_addr, 0x20);
 static_assert_offset(struct exe_hdr, data_sect_size, 0x24);
 static_assert_offset(struct exe_hdr, bss_sect_addr, 0x28);
 static_assert_offset(struct exe_hdr, bss_sect_size, 0x2C);
-static_assert_offset(struct exe_hdr, sp_fp_base, 0x30);
-static_assert_offset(struct exe_hdr, sp_fp_offs, 0x34);
+static_assert_offset(struct exe_hdr, spsycho_fpsycho_base, 0x30);
+static_assert_offset(struct exe_hdr, spsycho_fpsycho_offs, 0x34);
 static_assert_offset(struct exe_hdr, resv_bios_fn, 0x38);
 static_assert_offset(struct exe_hdr, ascii_marker, 0x4C);
 static_assert_offset(struct exe_hdr, code, 0x800);
@@ -92,8 +92,8 @@ void psycho_ctx_exe_inject(struct psycho_ctx *ctx)
 	ctx->cpu.pc_set(ctx, exe->pc);
 	ctx->cpu.gpr_set(ctx, PSYCHO_CPU_GPR_GP, exe->gp);
 
-	if (exe->sp_fp_base) {
-		const uint32_t val = exe->sp_fp_base + exe->sp_fp_offs;
+	if (exe->spsycho_fpsycho_base) {
+		const uint32_t val = exe->spsycho_fpsycho_base + exe->spsycho_fpsycho_offs;
 
 		ctx->cpu.gpr_set(ctx, PSYCHO_CPU_GPR_SP, val);
 		ctx->cpu.gpr_set(ctx, PSYCHO_CPU_GPR_FP, val);

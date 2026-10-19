@@ -34,9 +34,9 @@ struct psycho_ctx_cfg *psycho_ctx_cfg_get(struct psycho_ctx *ctx)
 void psycho_ctx_init(struct psycho_ctx *ctx)
 {
 	psycho_bios_call_tracer_init(ctx);
-	p_gpu_init(ctx);
+	psycho_gpu_init(ctx);
 
-	p_cpu_int_init(ctx);
+	psycho_cpu_int_init(ctx);
 	psycho_ctx_reset(ctx);
 
 	LOG_INFO(ctx, "initialized");
@@ -44,8 +44,8 @@ void psycho_ctx_init(struct psycho_ctx *ctx)
 
 void psycho_ctx_reset(struct psycho_ctx *ctx)
 {
-	p_sched_rst(ctx);
-	p_gpu_rst(ctx);
+	psycho_sched_rst(ctx);
+	psycho_gpu_rst(ctx);
 	psycho_sio0_reset(ctx);
 
 	ctx->cpu.reset(ctx);

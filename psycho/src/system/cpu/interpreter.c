@@ -127,7 +127,7 @@ PSYCHO_NONNULL static void stop(struct psycho_ctx *ctx)
 
 PSYCHO_NODISCARD PSYCHO_NONNULL static uint32_t load_word(struct psycho_ctx *ctx, uint32_t vaddr, bool *valid)
 {
-	p_sched_adv_ts(ctx, 1);
+	psycho_sched_adv_ts(ctx, 1);
 
 	vaddr = vaddr_to_paddr(vaddr);
 	return psycho_bus_load_word(ctx, vaddr, valid);
@@ -135,7 +135,7 @@ PSYCHO_NODISCARD PSYCHO_NONNULL static uint32_t load_word(struct psycho_ctx *ctx
 
 PSYCHO_NODISCARD PSYCHO_NONNULL static uint16_t load_halfword(struct psycho_ctx *ctx, uint32_t vaddr, bool *valid)
 {
-	p_sched_adv_ts(ctx, 1);
+	psycho_sched_adv_ts(ctx, 1);
 
 	vaddr = vaddr_to_paddr(vaddr);
 	return psycho_bus_load_halfword(ctx, vaddr, valid);
@@ -143,7 +143,7 @@ PSYCHO_NODISCARD PSYCHO_NONNULL static uint16_t load_halfword(struct psycho_ctx 
 
 PSYCHO_NODISCARD PSYCHO_NONNULL static uint8_t load_byte(struct psycho_ctx *ctx, uint32_t vaddr, bool *valid)
 {
-	p_sched_adv_ts(ctx, 1);
+	psycho_sched_adv_ts(ctx, 1);
 
 	vaddr = vaddr_to_paddr(vaddr);
 	return psycho_bus_load_byte(ctx, vaddr, valid);
@@ -151,7 +151,7 @@ PSYCHO_NODISCARD PSYCHO_NONNULL static uint8_t load_byte(struct psycho_ctx *ctx,
 
 PSYCHO_NONNULL static bool store_word(struct psycho_ctx *ctx, uint32_t vaddr, uint32_t data)
 {
-	p_sched_adv_ts(ctx, 1);
+	psycho_sched_adv_ts(ctx, 1);
 
 	vaddr = vaddr_to_paddr(vaddr);
 	return psycho_bus_store_word(ctx, vaddr, data);
@@ -159,7 +159,7 @@ PSYCHO_NONNULL static bool store_word(struct psycho_ctx *ctx, uint32_t vaddr, ui
 
 PSYCHO_NONNULL static bool store_halfword(struct psycho_ctx *ctx, uint32_t vaddr, uint16_t data)
 {
-	p_sched_adv_ts(ctx, 1);
+	psycho_sched_adv_ts(ctx, 1);
 
 	vaddr = vaddr_to_paddr(vaddr);
 	return psycho_bus_store_halfword(ctx, vaddr, data);
@@ -167,7 +167,7 @@ PSYCHO_NONNULL static bool store_halfword(struct psycho_ctx *ctx, uint32_t vaddr
 
 PSYCHO_NONNULL static bool store_byte(struct psycho_ctx *ctx, uint32_t vaddr, uint8_t data)
 {
-	p_sched_adv_ts(ctx, 1);
+	psycho_sched_adv_ts(ctx, 1);
 
 	vaddr = vaddr_to_paddr(vaddr);
 	return psycho_bus_store_byte(ctx, vaddr, data);
@@ -244,7 +244,7 @@ PSYCHO_NONNULL static void raise_debug_exception(struct psycho_ctx *ctx)
 	do_exception(ctx, EXCEPTION_BP, DBG_VECTOR);
 }
 
-PSYCHO_NONNULL static void dbg_bp_write(struct psycho_ctx *ctx, uint32_t vaddr)
+PSYCHO_NONNULL static void dbg_bpsycho_write(struct psycho_ctx *ctx, uint32_t vaddr)
 {
 #define BDA  (ctx->cpu_interpreter.cop0_cpr[PSYCHO_CPU_COP0_CPR_BDA])
 #define BDAM (ctx->cpu_interpreter.cop0_cpr[PSYCHO_CPU_COP0_CPR_BDAM])
@@ -1507,7 +1507,7 @@ PSYCHO_NONNULL static void do_sw(struct psycho_ctx *ctx, size_t base, size_t off
 		return;
 	}
 
-	dbg_bp_write(ctx, vaddr);
+	dbg_bpsycho_write(ctx, vaddr);
 
 	if (unlikely(!store_word(ctx, vaddr, gpr[rt])))
 		raise_exception(ctx, EXCEPTION_DBE);
@@ -1697,7 +1697,7 @@ PSYCHO_NONNULL static void run(struct psycho_ctx *ctx, bool single_step)
 		[SLTU]		= &&op_sltu,
 		[0x2C ... 0x3F]	= &&illegal,
 		[64]		= &&illegal,
-		OP(GRP_REGIMM)	= &&grp_regimm,
+		OP(GRP_REGIMM)	= &&grpsycho_regimm,
 		OP(J)		= &&op_j,
 		OP(JAL)		= &&op_jal,
 		OP(BEQ)		= &&op_beq,
@@ -1712,9 +1712,9 @@ PSYCHO_NONNULL static void run(struct psycho_ctx *ctx, bool single_step)
 		OP(ORI)		= &&op_ori,
 		OP(XORI)	= &&op_xori,
 		OP(LUI)		= &&op_lui,
-		OP(GRP_COP0)	= &&grp_cop0,
+		OP(GRP_COP0)	= &&grpsycho_cop0,
 		OP(0x11)	= &&illegal,
-		OP(GRP_COP2)	= &&grp_cop2,
+		OP(GRP_COP2)	= &&grpsycho_cop2,
 		OPR(0x13, 0x1F)	= &&illegal,
 		OP(LB)		= &&op_lb,
 		OP(LH)		= &&op_lh,
@@ -1835,7 +1835,7 @@ slow:
 
 loop:
 	while (unlikely(ctx->sched.ts_now >= ctx->sched.events[0]->ts))
-		p_sched_run(ctx);
+		psycho_sched_run(ctx);
 
 	if (unlikely((!ctx->running) || stepped))
 		goto done;
@@ -1974,17 +1974,17 @@ op_sltu:
 	gpr_set(ctx, rd, gpr[rs] < gpr[rt]);
 	DISPATCH();
 
-grp_regimm:
+grpsycho_regimm:
 	regimm(ctx, rs, rt);
 	DISPATCH();
 
 op_j:
-	branch(ctx, jmp_addr(pc, instr));
+	branch(ctx, jmpsycho_addr(pc, instr));
 	DISPATCH();
 
 op_jal:
 	gpr_set(ctx, PSYCHO_CPU_GPR_RA, pc + (sizeof(instr) * 2));
-	branch(ctx, jmp_addr(pc, instr));
+	branch(ctx, jmpsycho_addr(pc, instr));
 
 	DISPATCH();
 
@@ -2036,7 +2036,7 @@ op_lui:
 	gpr_set(ctx, rt, zextimm << 16);
 	DISPATCH();
 
-grp_cop0:
+grpsycho_cop0:
 	goto *cop0_tbl[rs];
 
 cop0_mfc:
@@ -2054,7 +2054,7 @@ op_rfe:
 	SR = (SR & ~0x0F) | ((SR >> 2) & 0x0F);
 	DISPATCH();
 
-grp_cop2:
+grpsycho_cop2:
 	goto *cop2_tbl[rs];
 
 cop2_mfc:
@@ -2308,7 +2308,7 @@ done:
 	return;
 }
 
-void p_cpu_int_init(struct psycho_ctx *ctx)
+void psycho_cpu_int_init(struct psycho_ctx *ctx)
 {
 	ctx->cpu.irq_mux_assert = irq_mux_assert;
 	ctx->cpu.gpr_set	= gpr_write_direct;
