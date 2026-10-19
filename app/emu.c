@@ -26,69 +26,147 @@
 
 #include <SDL3/SDL.h>
 
+#include "ansi_color_codes.h"
 #include "emu.h"
-#include "ansi-color-codes.h"
 
-static struct emu_runner *m_emu;
-u16 btns_prev = 0;
+#include "psycho/ctx.h"
+#include "psycho/devices/digital_pad.h"
 
-static void emu_poll_ctrl(struct emu_runner *emu)
+static uint8_t *exe_file_data;
+static size_t exe_file_size;
+static uint16_t buttons_prev;
+
+static void load_exe_file(const char *exe_file)
 {
-	const bool *keys	      = SDL_GetKeyboardState(NULL);
-	enum p_digital_ctrl_btns mask = 0;
+	if (!(exe_file_data = SDL_LoadFile(exe_file, &exe_file_size))) {
+		SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "Failed to load EXE: %s", SDL_GetError());
+		exit(EXIT_FAILURE);
+	}
+}
+
+static void load_bios_file(struct emu_runner *emu, const char *bios_file)
+{
+	SDL_IOStream *file = SDL_IOFromFile(bios_file, "rb");
+
+	if (!file) {
+		SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "Loading BIOS file failed: %s", SDL_GetError());
+		exit(EXIT_FAILURE);
+	}
+
+	Sint64 size = SDL_GetIOSize(file);
+
+	if (size < 0) {
+		SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "Getting BIOS size failed: %s", SDL_GetError());
+		goto cleanup;
+	}
+
+	if (size != PSYCHO_BUS_BIOS_SIZE_BYTES) {
+		SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "BIOS file size is wrong (expected exactly %d, got %ld)",
+			     PSYCHO_BUS_BIOS_SIZE_BYTES, size);
+
+		goto cleanup;
+	}
+
+	uint8_t *dst = psycho_bios_data_get(&emu->ctx);
+
+	size_t bytes_read = SDL_ReadIO(file, dst, size);
+
+	if (bytes_read != (size_t)size) {
+		SDL_LogError(SDL_LOG_CATEGORY_APPLICATION,
+			     "Not all bytes were read from BIOS file (expected exactly %d, got %zu)",
+			     PSYCHO_BUS_BIOS_SIZE_BYTES, bytes_read);
+
+		goto cleanup;
+	}
+
+	SDL_CloseIO(file);
+	return;
+
+cleanup:
+	SDL_CloseIO(file);
+	exit(EXIT_FAILURE);
+}
+
+static void poll_pad(struct emu_runner *emu)
+{
+	const bool *keys = SDL_GetKeyboardState(NULL);
+
+	enum psycho_digital_pad_button mask = 0;
 
 	if (keys[SDL_SCANCODE_DOWN])
-		mask |= P_DIGITAL_CTRL_DN;
+		mask |= PSYCHO_DIGITAL_PAD_BUTTON_DOWN;
 
 	if (keys[SDL_SCANCODE_UP])
-		mask |= P_DIGITAL_CTRL_UP;
+		mask |= PSYCHO_DIGITAL_PAD_BUTTON_UP;
 
 	if (keys[SDL_SCANCODE_LEFT])
-		mask |= P_DIGITAL_CTRL_LT;
+		mask |= PSYCHO_DIGITAL_PAD_BUTTON_LEFT;
 
 	if (keys[SDL_SCANCODE_RIGHT])
-		mask |= P_DIGITAL_CTRL_RT;
+		mask |= PSYCHO_DIGITAL_PAD_BUTTON_RIGHT;
 
 	if (keys[SDL_SCANCODE_X])
-		mask |= P_DIGITAL_CTRL_CROSS;
+		mask |= PSYCHO_DIGITAL_PAD_BUTTON_CROSS;
 
 	if (keys[SDL_SCANCODE_O])
-		mask |= P_DIGITAL_CTRL_CIR;
+		mask |= PSYCHO_DIGITAL_PAD_BUTTON_CIRCLE;
 
 	if (keys[SDL_SCANCODE_S])
-		mask |= P_DIGITAL_CTRL_SQR;
+		mask |= PSYCHO_DIGITAL_PAD_BUTTON_SQUARE;
 
 	if (keys[SDL_SCANCODE_T])
-		mask |= P_DIGITAL_CTRL_TRI;
+		mask |= PSYCHO_DIGITAL_PAD_BUTTON_TRIANGLE;
 
 	if (keys[SDL_SCANCODE_RETURN])
-		mask |= P_DIGITAL_CTRL_START;
+		mask |= PSYCHO_DIGITAL_PAD_BUTTON_START;
 
 	if (keys[SDL_SCANCODE_SPACE])
-		mask |= P_DIGITAL_CTRL_SEL;
+		mask |= PSYCHO_DIGITAL_PAD_BUTTON_SELECT;
 
-	enum p_digital_ctrl_btns pressed  = mask & ~btns_prev;
-	enum p_digital_ctrl_btns released = btns_prev & ~mask;
+	enum psycho_digital_pad_button pressed	= mask & ~buttons_prev;
+	enum psycho_digital_pad_button released = buttons_prev & ~mask;
 
 	if (pressed)
-		p_digital_ctrl_btn_press(&emu->ctrl, pressed);
+		psycho_digital_pad_buttons_press(&emu->pad, pressed);
 
 	if (released)
-		p_digital_ctrl_btn_rel(&emu->ctrl, released);
+		psycho_digital_pad_buttons_release(&emu->pad, released);
 
-	btns_prev = mask;
+	buttons_prev = mask;
 }
 
-static void on_vblank(struct p_ctx *ctx)
+static void on_vblank(struct psycho_ctx *ctx, void *userdata)
 {
-	int idx = SDL_GetAtomicInt(&m_emu->write_idx);
-	memcpy(m_emu->fbufs[idx], ctx->gpu.vram, sizeof(m_emu->fbufs[idx]));
-	SDL_SetAtomicInt(&m_emu->write_idx, idx ^ 1);
+	struct emu_runner *emu = userdata;
 
-	SDL_AddAtomicInt(&m_emu->frame_count, 1);
+	poll_pad(emu);
+
+	int idx = SDL_GetAtomicInt(&emu->write_idx);
+	memcpy(emu->fbufs[idx], ctx->gpu.vram, sizeof(emu->fbufs[idx]));
+
+	SDL_SetAtomicInt(&emu->write_idx, idx ^ 1);
+	SDL_AddAtomicInt(&emu->frame_count, 1);
+
+#if 0
+	Uint64 frame_ns = UINT64_C(1000000000) / 60;
+	Uint64 now      = SDL_GetTicksNS();
+
+	if (!emu->next_frame_ns)
+		emu->next_frame_ns = now;
+
+	emu->next_frame_ns += frame_ns;
+
+	if (now < emu->next_frame_ns)
+		SDL_DelayPrecise(emu->next_frame_ns - now);
+	else if ((now - emu->next_frame_ns) > (frame_ns * 4))
+		emu->next_frame_ns = now;
+#endif
+
+	if (!SDL_GetAtomicInt(&emu->running))
+		psycho_ctx_stop(ctx);
 }
 
-static void illegal_instr_cb(struct p_ctx *ctx, u32 instr)
+static void illegal_instr_cb(struct psycho_ctx *ctx, uint32_t instr)
 {
 	(void)instr;
 
@@ -98,103 +176,83 @@ static void illegal_instr_cb(struct p_ctx *ctx, u32 instr)
 	abort();
 }
 
-static void log_cb(struct p_ctx *ctx, struct p_log_msg *msg)
+static void log_cb(struct psycho_ctx *ctx, struct psycho_log_msg *msg)
 {
 	assert(ctx != NULL);
 	assert(msg != NULL);
 
-	static const char *color_str[P_LOG_COUNT] = {
-		[P_LOG_INFO]  = BHWHT "%s\n" CRESET,
-		[P_LOG_WARN]  = BHYEL "%s\n" CRESET,
-		[P_LOG_ERR]   = BHRED "%s\n" CRESET,
-		[P_LOG_DBG]   = BHCYN "%s\n" CRESET,
-		[P_LOG_TRACE] = BHMAG "%s\n" CRESET
+	static const char *color_str[PSYCHO_LOG_LEVEL_COUNT] = {
+		// clang-format off
+
+		[PSYCHO_LOG_LEVEL_INFO]		= BHWHT "%s\n" CRESET,
+		[PSYCHO_LOG_LEVEL_WARN]		= BHYEL "%s\n" CRESET,
+		[PSYCHO_LOG_LEVEL_ERROR]	= BHRED "%s\n" CRESET,
+		[PSYCHO_LOG_LEVEL_DEBUG]	= BHCYN "%s\n" CRESET,
+		[PSYCHO_LOG_LEVEL_TRACE]	= BHMAG "%s\n" CRESET
+
+		// clang-format on
 	};
 
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wformat-nonliteral"
-	printf(color_str[msg->lvl], msg->str.ptr);
+	printf(color_str[msg->level], msg->str.ptr);
 #pragma GCC diagnostic pop
 }
 
-static void on_stdout_line(struct p_ctx *ctx, struct p_str *str)
+static void on_stdout_line(struct psycho_ctx *ctx, struct psycho_fixed_string *str)
 {
 	(void)ctx;
-	(void)str;
+	printf("%s", str->ptr);
 }
 
-void emu_init(struct emu_runner *emu, u8 *bios_data, u8 *exe_data,
-	      size_t exe_size)
+void emu_init(struct emu_runner *emu, const char *bios_file, const char *exe_file)
 {
-	m_emu = emu;
+	load_bios_file(emu, bios_file);
+	load_exe_file(exe_file);
 
-	struct p_ctx_cfg *const cfg = p_cfg_get(&emu->ctx);
+	struct psycho_ctx_cfg *cfg = psycho_ctx_cfg_get(&emu->ctx);
 
 	cfg->cpu.illegal_instr = illegal_instr_cb;
+	cfg->disasm.tracing    = false;
 
-	cfg->log.log_cb = log_cb;
+	cfg->log.log_cb = NULL;
 
-	cfg->log.mod[P_LOG_CTX]		 = P_LOG_TRACE;
-	cfg->log.mod[P_LOG_BIOS]	 = P_LOG_INFO;
-	cfg->log.mod[P_LOG_DIGITAL_CTRL] = P_LOG_TRACE;
-	cfg->log.mod[P_LOG_SIO0]	 = P_LOG_TRACE;
-	cfg->log.mod[P_LOG_SCHED]	 = P_LOG_TRACE;
+	cfg->bios_call_tracer.enabled = false;
+	cfg->bios_call_tracer.deref_ptrs = true;
 
-	cfg->bios_trace.stdout_line = on_stdout_line;
-	cfg->bios_trace.deref_ptrs  = true;
+	//cfg->log.modules[PSYCHO_LOG_MODULE_SCHED] = PSYCHO_LOG_LEVEL_TRACE;
 
-	cfg->on_vblank = on_vblank;
+	cfg->log.modules[PSYCHO_LOG_MODULE_BIOS_CALL_TRACER] = PSYCHO_LOG_LEVEL_INFO;
 
-	// I'm lazy.
-	u8 *data = p_bios_data_get(&emu->ctx);
-	memcpy(data, bios_data, P_BUS_BIOS_SIZE_BYTES);
+	cfg->on_vblank	     = on_vblank;
+	cfg->vblank_userdata = emu;
 
-	p_init(&emu->ctx);
+	psycho_ctx_init(&emu->ctx);
+	psycho_digital_pad_init(&emu->ctx, &emu->pad);
+	psycho_sio0_device_attach(&emu->pad.dev, PSYCHO_SIO0_SLOT_1);
 
-	p_digital_ctrl_init(&emu->ctx, &emu->ctrl);
-	p_attach_dev_to_sio0(&emu->ctx, &emu->ctrl.dev, 0);
-
-	if (!p_run_exe(&emu->ctx, exe_data, exe_size)) {
+	if (!psycho_ctx_run_exe(&emu->ctx, exe_file_data, exe_file_size)) {
 		fprintf(stderr, "exe not valid\n");
 		exit(EXIT_FAILURE);
 	}
 }
 
-static int emu_thread_func(void *data)
+static int run_loop(void *data)
 {
-	u32 last_frame_count = SDL_GetAtomicInt(&m_emu->frame_count);
+	struct emu_runner *emu = data;
 
-	while (SDL_GetAtomicInt(&m_emu->running)) {
-		emu_poll_ctrl(m_emu);
+	SDL_SetAtomicInt(&emu->running, 1);
+	psycho_ctx_run(&emu->ctx);
 
-		const Uint64 start_ns = SDL_GetTicksNS();
-		p_run_until_ev(&m_emu->ctx);
-
-		u32 current_frame_count = SDL_GetAtomicInt(&m_emu->frame_count);
-
-		if (current_frame_count == last_frame_count)
-			continue;
-
-		const Uint64 end_ns = SDL_GetTicksNS();
-		const Uint64 diff   = end_ns - start_ns;
-		const Uint64 target = 1000000000 / 60;
-
-#if 0
-		if (diff < target)
-			SDL_DelayNS(target - diff);
-#endif
-		last_frame_count = current_frame_count;
-	}
 	return 0;
 }
 
 void emu_run(struct emu_runner *emu)
 {
-	emu->thread = SDL_CreateThread(emu_thread_func, "Emulator", emu);
+	emu->thread = SDL_CreateThread(run_loop, "Emulator", emu);
 
 	if (!emu->thread) {
-		SDL_LogError(SDL_LOG_CATEGORY_APPLICATION,
-			     "SDL_CreateThread() failed: %s", SDL_GetError());
+		SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "SDL_CreateThread() failed: %s", SDL_GetError());
 		abort();
 	}
 }

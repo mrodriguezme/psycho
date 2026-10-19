@@ -1,0 +1,271 @@
+// SPDX-License-Identifier: MIT
+//
+// Copyright 2026 Michael Rodriguez
+//
+// Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated
+// documentation files (the "Software"), to deal in the Software without restriction, including without limitation the
+// rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to
+// permit persons to whom the Software is furnished to do so, subject to the following conditions:
+//
+// The above copyright notice and this permission notice shall be included in all copies or substantial portions of the
+// Software.
+//
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE
+// WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR
+// COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR
+// OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+
+#include <stdlib.h>
+#include <string.h>
+
+#include "sw.h"
+#include "gpu.h"
+#include "system/intc.h"
+#include "debug/log.h"
+#include "common/sched.h"
+
+DECLARE_LOG_MODULE(PSYCHO_LOG_MODULE_GPU);
+
+#define GPUSTAT_RDY_CMD_WORD_BIT    (1 << 26)
+#define GPUSTAT_FIFO_DATA_AVAIL_BIT (1 << 27)
+
+struct vram_xfer {
+	union {
+		struct {
+			uint16_t x;
+			uint16_t y;
+			uint16_t w;
+			uint16_t h;
+		};
+		uint32_t raw[2];
+	};
+};
+
+PSYCHO_NODISCARD static unsigned int xpos_mask_cpy(uint16_t xpos)
+{
+	return xpos & 0x3FF;
+}
+
+PSYCHO_NODISCARD static unsigned int ypos_mask_cpy(uint16_t ypos)
+{
+	return ypos & 0x1FF;
+}
+
+PSYCHO_NODISCARD static unsigned int xsiz_mask_cpy(uint16_t xsiz)
+{
+	return ((xsiz - 1) & 0x3FF) + 1;
+}
+
+PSYCHO_NODISCARD static unsigned int ysiz_mask_cpy(uint16_t ysiz)
+{
+	return ((ysiz - 1) & 0x1FF) + 1;
+}
+
+PSYCHO_NONNULL static void on_vblank(struct psycho_ctx *ctx, void *userdata)
+{
+	(void)userdata;
+
+	if (ctx->cfg.on_vblank)
+		ctx->cfg.on_vblank(ctx, ctx->cfg.vblank_userdata);
+
+	psycho_intc_irqs_pending_set(ctx, IRQ_VBLANK);
+}
+
+PSYCHO_NONNULL static void copy_adv(struct psycho_ctx *ctx)
+{
+	ctx->gpu.copy.x++;
+
+	if (ctx->gpu.copy.x >= ctx->gpu.copy.x_max) {
+		ctx->gpu.copy.y++;
+		ctx->gpu.copy.x = ctx->gpu.copy.x_orig;
+	}
+}
+
+PSYCHO_NONNULL static void cpy_pixel_to_vram(struct psycho_ctx *ctx, uint16_t px)
+{
+	vram_px_set(ctx, ctx->gpu.copy.x, ctx->gpu.copy.y, px);
+	copy_adv(ctx);
+}
+
+PSYCHO_NONNULL static uint16_t cpy_pixel_to_cpu(struct psycho_ctx *ctx)
+{
+	const uint16_t px = vram_px_get(ctx, ctx->gpu.copy.x, ctx->gpu.copy.y);
+	copy_adv(ctx);
+
+	return px;
+}
+
+PSYCHO_NONNULL static void vram_xfer_init(struct psycho_ctx *ctx)
+{
+	struct vram_xfer *params = (struct vram_xfer *)ctx->gpu.init.data;
+
+	params->y = ypos_mask_cpy(params->y);
+	params->x = xpos_mask_cpy(params->x);
+	params->w = xsiz_mask_cpy(params->w);
+	params->h = ysiz_mask_cpy(params->h);
+
+	ctx->gpu.copy.x	     = params->x;
+	ctx->gpu.copy.x_orig = params->x;
+	ctx->gpu.copy.x_max  = ctx->gpu.copy.x + params->w;
+
+	ctx->gpu.copy.y	  = params->y;
+	ctx->gpu.copy.rem = (params->w * params->h) / sizeof(uint16_t);
+}
+
+PSYCHO_NONNULL static void cpy_rect_cpu_to_vram_exec(struct psycho_ctx *ctx, uint32_t data)
+{
+	cpy_pixel_to_vram(ctx, data & UINT16_MAX);
+	cpy_pixel_to_vram(ctx, data >> 16);
+
+	ctx->gpu.copy.rem--;
+
+	if (!ctx->gpu.copy.rem) {
+		memset(&ctx->gpu.copy, 0, sizeof(ctx->gpu.copy));
+		ctx->gpu.gpustat |= GPUSTAT_RDY_CMD_WORD_BIT;
+
+		LOG_TRACE(ctx, "GP0(A0h) complete");
+	}
+}
+
+PSYCHO_NONNULL static void draw_rect_init(struct psycho_ctx *ctx)
+{
+	ctx->gpu.rect.x = ctx->gpu.init.data[0] & UINT16_MAX;
+	ctx->gpu.rect.y = ctx->gpu.init.data[0] >> 16;
+
+	ctx->gpu.render_ops.rect(ctx, &ctx->gpu.rect);
+	ctx->gpu.gpustat |= GPUSTAT_RDY_CMD_WORD_BIT;
+}
+
+PSYCHO_NONNULL static void cpy_rect_cpu_to_vram_init(struct psycho_ctx *ctx)
+{
+	vram_xfer_init(ctx);
+	ctx->gpu.cmd_fn = cpy_rect_cpu_to_vram_exec;
+}
+
+PSYCHO_NONNULL static void cpy_rect_vram_to_cpu_init(struct psycho_ctx *ctx)
+{
+	vram_xfer_init(ctx);
+	ctx->gpu.gpustat |= GPUSTAT_FIFO_DATA_AVAIL_BIT;
+}
+
+PSYCHO_NONNULL static void gp0(struct psycho_ctx *ctx, uint8_t cmd, uint32_t param)
+{
+	switch (cmd) {
+	case GP0_MONO_RECT_1X1_OPAQUE:
+		ctx->gpu.init.fn	 = draw_rect_init;
+		ctx->gpu.init.rem_params = 1;
+		ctx->gpu.rect.color	 = param;
+
+		ctx->gpu.gpustat &= ~GPUSTAT_RDY_CMD_WORD_BIT;
+		return;
+
+	case GP0_CPY_RECT_CPU_TO_VRAM:
+		ctx->gpu.init.fn	 = cpy_rect_cpu_to_vram_init;
+		ctx->gpu.init.rem_params = 2;
+
+		ctx->gpu.gpustat &= ~GPUSTAT_RDY_CMD_WORD_BIT;
+		return;
+
+	case GP0_CPY_RECT_VRAM_TO_CPU:
+		ctx->gpu.init.fn	 = cpy_rect_vram_to_cpu_init;
+		ctx->gpu.init.rem_params = 2;
+
+		ctx->gpu.gpustat &= ~GPUSTAT_RDY_CMD_WORD_BIT;
+		return;
+
+	default:
+		LOG_WARN(ctx, "unknown GP0 command 0x%02X", cmd);
+		return;
+	}
+}
+
+PSYCHO_NONNULL static void handle_gpu_info(struct psycho_ctx *ctx, unsigned int data)
+{
+	switch (data & 0x07) {
+	case 0x07:
+		ctx->gpu.gpuread = 0x00000002;
+		break;
+
+	default:
+		asm("nop");
+		break;
+	}
+}
+
+void psycho_gpu_init(struct psycho_ctx *ctx)
+{
+	ctx->gpu.render_ops.rect = psycho_gpu_sw_draw_rect;
+}
+
+void psycho_gpu_rst(struct psycho_ctx *ctx)
+{
+	ctx->gpu.vblank_event.type	= PSYCHO_SCHED_EVENT_TYPE_VBLANK;
+	ctx->gpu.vblank_event.cb	= on_vblank;
+	ctx->gpu.vblank_event.ts	= PSYCHO_CPU_CLKFREQ_HZ / 60;
+	ctx->gpu.vblank_event.permanent = true;
+
+	psycho_sched_add(ctx, &ctx->gpu.vblank_event);
+}
+
+void psycho_gp0(struct psycho_ctx *ctx, uint32_t packet)
+{
+	LOG_TRACE(ctx, "GP0 <- 0x%08X", packet);
+
+	if (ctx->gpu.gpustat & GPUSTAT_RDY_CMD_WORD_BIT) {
+		gp0(ctx, packet >> 24, packet & 0x00FFFFFF);
+		return;
+	}
+
+	if (ctx->gpu.init.fn) {
+		ctx->gpu.init.data[ctx->gpu.init.params++] = packet;
+		ctx->gpu.init.rem_params--;
+
+		if (!ctx->gpu.init.rem_params) {
+			ctx->gpu.init.fn(ctx);
+			memset(&ctx->gpu.init, 0, sizeof(ctx->gpu.init));
+		}
+	} else
+		ctx->gpu.cmd_fn(ctx, packet);
+}
+
+void psycho_gp1(struct psycho_ctx *ctx, uint32_t packet)
+{
+	LOG_TRACE(ctx, "GP1 <- 0x%08X", packet);
+
+	const uint8_t cmd = packet >> 24;
+
+	switch (cmd) {
+	case GP1_RST:
+		ctx->gpu.gpustat = 0x14802000;
+
+		LOG_TRACE(ctx, "command reset");
+		return;
+
+	case GP1_GPU_INFO:
+		handle_gpu_info(ctx, packet & 0x00FFFFFF);
+		return;
+
+	default:
+		LOG_WARN(ctx, "unknown GP1 command 0x%02X", cmd);
+		return;
+	}
+}
+
+uint32_t psycho_gpuread(struct psycho_ctx *ctx)
+{
+	if (ctx->gpu.gpustat & GPUSTAT_FIFO_DATA_AVAIL_BIT) {
+		const uint16_t px0 = cpy_pixel_to_cpu(ctx);
+		const uint16_t px1 = cpy_pixel_to_cpu(ctx);
+		ctx->gpu.gpuread   = ((uint32_t)px0 << 16) | px1;
+
+		ctx->gpu.copy.rem--;
+
+		if (!ctx->gpu.copy.rem) {
+			ctx->gpu.gpustat &= ~GPUSTAT_FIFO_DATA_AVAIL_BIT;
+			ctx->gpu.gpustat |= GPUSTAT_RDY_CMD_WORD_BIT;
+
+			memset(&ctx->gpu.copy, 0, sizeof(ctx->gpu.copy));
+		}
+	}
+	return ctx->gpu.gpuread;
+}

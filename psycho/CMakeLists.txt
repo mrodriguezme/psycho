@@ -25,48 +25,58 @@ target_link_libraries(psycho PRIVATE psycho_cfg_base_c)
 
 target_sources(
 	psycho PRIVATE
-	include/psycho/bios_trace.h
-	include/psycho/bus.h
-	include/psycho/compiler.h
-	include/psycho/cpu_defs.h
-	include/psycho/cpu_int.h
-	include/psycho/cpu_ops.h
+	include/psycho/common/compiler_support.h
+	include/psycho/common/sched.h
+	include/psycho/debug/bios_call_tracer.h
+	include/psycho/debug/disasm.h
+	include/psycho/debug/fixed_string.h
+	include/psycho/debug/log.h
+	include/psycho/devices/digital_pad.h
+	include/psycho/system/cpu/defs.h
+	include/psycho/system/cpu/interpreter.h
+	include/psycho/system/cpu/ops.h
+	include/psycho/system/bus.h
+	include/psycho/system/gpu.h
+	include/psycho/system/intc.h
+	include/psycho/system/sio0_device.h
+	include/psycho/system/sio0.h
 	include/psycho/ctx.h
-	include/psycho/disasm.h
-	include/psycho/gpu.h
-	include/psycho/intctrl.h
-	include/psycho/log.h
-	include/psycho/sched.h
-	include/psycho/str.h
-	include/psycho/types.h
-	src/bios_trace.c
-	src/bios_trace.h
-	src/bus.c
-	src/bus.h
-	src/cpu_defs.c
-	src/cpu_defs.h
-	src/cpu_int.c
-	src/cpu_int.h
+	src/common/sched.c
+	src/common/sched.h
+	src/common/util.h
+	src/debug/bios_call_tracer.c
+	src/debug/bios_call_tracer.h
+	src/debug/disasm.c
+	src/debug/disasm.h
+	src/debug/fixed_string.c
+	src/debug/fixed_string.h
+	src/debug/log.c
+	src/debug/log.h
+	src/devices/digital_pad.c
+	src/system/cpu/defs.c
+	src/system/cpu/defs.h
+	src/system/cpu/interpreter.c
+	src/system/cpu/interpreter.h
+	src/system/gpu/gpu.c
+	src/system/gpu/gpu.h
+	src/system/gpu/sw.c
+	src/system/gpu/sw.h
+	src/system/bus.c
+	src/system/bus.h
+	src/system/intc.c
+	src/system/intc.h
+	src/system/sio0_device.c
+	src/system/sio0.c
+	src/system/sio0.h
 	src/ctx.c
-	src/digital_ctrl.c
-	src/disasm.c
 	src/exe_loader.c
 	src/exe_loader.h
-	src/gpu_sw.c
-	src/gpu_sw.h
-	src/gpu.c
-	src/gpu.h
-	src/intctrl.c
-	src/intctrl.h
-	src/log.c
-	src/log.h
-	src/sched.c
-	src/sio0_dev.c
-	src/sched.h
-	src/sio0.c
-	src/str.c
-	src/str.h
-	src/util.h
 )
 
 target_include_directories(psycho PUBLIC include)
+target_include_directories(psycho PRIVATE src)
+
+set_source_files_properties(
+	src/cpu/interpreter.c PROPERTIES
+	COMPILE_OPTIONS "-fno-gcse;-fno-crossjumping"
+)

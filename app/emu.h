@@ -25,31 +25,25 @@
 #include <SDL3/SDL.h>
 
 #include "psycho/ctx.h"
-#include "psycho/digital_ctrl.h"
+#include "psycho/devices/digital_pad.h"
 
 struct emu_runner {
-	struct p_ctx ctx;
-	struct p_digital_ctrl ctrl;
+	struct psycho_ctx ctx;
+	struct psycho_digital_pad pad;
 
-	p_gpu_vram fbufs[2];
+	psycho_gpu_vram fbufs[2];
 	SDL_AtomicInt write_idx;
 	SDL_AtomicInt running;
-	SDL_AtomicInt frame_pend;
 	SDL_AtomicInt frame_count;
 	SDL_Thread *thread;
+	Uint64 next_frame_ns;
 };
 
-void emu_init(struct emu_runner *emu, u8 *bios_data, u8 *exe_data,
-	      size_t exe_size);
-
+void emu_init(struct emu_runner *emu, const char *bios_file, const char *exe_file);
 void emu_run(struct emu_runner *emu);
-
 void emu_stop(struct emu_runner *emu);
 
-P_NONNULL P_ALWAYS_INLINE u16 *emu_front_buffer_get(struct emu_runner *emu)
+PSYCHO_NONNULL PSYCHO_ALWAYS_INLINE uint16_t *emu_front_buffer_get(struct emu_runner *emu)
 {
-	return (u16 *)emu->fbufs[SDL_GetAtomicInt(&emu->write_idx) ^ 1];
+	return (uint16_t *)emu->fbufs[SDL_GetAtomicInt(&emu->write_idx) ^ 1];
 }
-
-void emu_btn_press(struct emu_runner *emu, SDL_Event *ev);
-void emu_btn_rel(struct emu_runner *emu, SDL_Event *ev);
