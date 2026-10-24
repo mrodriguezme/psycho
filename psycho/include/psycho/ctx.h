@@ -21,40 +21,44 @@
 extern "C" {
 #endif // __cplusplus
 
-#include "common/sched.h"
-
 #include "debug/bios_call_tracer.h"
 #include "debug/disasm.h"
 #include "debug/log.h"
 
+#include "system/cpu/backend/interpreter.h"
+#include "system/gpu/backend/software.h"
+#include "system/gpu/backend/backend.h"
+#include "system/sio0/sio0.h"
 #include "system/bus.h"
-#include "system/cpu/interpreter.h"
-#include "system/cpu/ops.h"
-#include "system/gpu.h"
 #include "system/intc.h"
-#include "system/sio0.h"
 
 struct psycho_ctx_cfg {
 	struct psycho_log_cfg log;
 	struct psycho_bios_call_trace_cfg bios_call_tracer;
 	struct psycho_cpu_cfg cpu;
-
-	void (*on_vblank)(struct psycho_ctx *ctx, void *userdata);
-	void *vblank_userdata;
-
+	struct psycho_gpu_cfg gpu;
 	struct psycho_disasm_cfg disasm;
 };
 
 struct psycho_ctx {
 	struct psycho_bus bus;
-	struct psycho_gpu gpu;
 	struct psycho_bios_call_tracer bios_call_tracer;
 	struct psycho_disasm disasm;
-	struct psycho_cpu_interpreter cpu_interpreter;
 	struct psycho_sched sched;
 	struct psycho_sio0 sio0;
 	struct psycho_ctx_cfg cfg;
-	struct psycho_cpu_ops cpu;
+
+	struct {
+		struct psycho_gpu_backend_software sw;
+		struct psycho_gpu base;
+		struct psycho_gpu_backend_ops backend;
+	} gpu;
+
+	struct {
+		struct psycho_cpu base;
+		struct psycho_cpu_interpreter interpreter;
+		struct psycho_cpu_backend_ops backend;
+	} cpu;
 
 	struct {
 		const uint8_t *data;
@@ -78,11 +82,11 @@ void psycho_ctx_init(struct psycho_ctx *ctx) PSYCHO_NONNULL;
 
 void psycho_ctx_reset(struct psycho_ctx *ctx) PSYCHO_NONNULL;
 
+void psycho_ctx_run(struct psycho_ctx *ctx) PSYCHO_NONNULL;
+void psycho_ctx_pause(struct psycho_ctx *ctx) PSYCHO_NONNULL;
+
 PSYCHO_NODISCARD enum psycho_ctx_ret psycho_ctx_run_exe(struct psycho_ctx *ctx, uint8_t *exe,
 							size_t size) PSYCHO_NONNULL;
-
-void psycho_ctx_run(struct psycho_ctx *ctx) PSYCHO_NONNULL;
-void psycho_ctx_stop(struct psycho_ctx *ctx) PSYCHO_NONNULL;
 
 #ifdef __cplusplus
 }

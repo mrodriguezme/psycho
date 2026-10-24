@@ -35,13 +35,15 @@ extern "C" {
 #define PSYCHO_LOG_MODULE_LIST(X)               \
 	X(CTX, "ctx")                           \
 	X(CPU, "cpu")                           \
+	X(CPU_INTERPRETER, "cpu interpreter")   \
 	X(BUS, "bus")                           \
 	X(BIOS_CALL_TRACER, "bios call tracer") \
 	X(SCHED, "sched")                       \
 	X(GPU, "gpu")                           \
 	X(INTC, "intc")                         \
 	X(SIO0, "sio0")                         \
-	X(DIGITAL_PAD, "digital pad")
+	X(DIGITAL_PAD, "digital pad")           \
+	X(SW_RASTER, "software rasterizer")
 
 struct psycho_ctx;
 

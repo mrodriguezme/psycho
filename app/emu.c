@@ -93,6 +93,13 @@ static void poll_pad(struct emu_runner *emu)
 
 	enum psycho_digital_pad_button mask = 0;
 
+	if (keys[SDL_SCANCODE_TAB]) {
+		emu->ctx.cfg.log.modules[PSYCHO_LOG_MODULE_CPU]		     = PSYCHO_LOG_LEVEL_TRACE;
+		emu->ctx.cfg.log.modules[PSYCHO_LOG_MODULE_BIOS_CALL_TRACER] = PSYCHO_LOG_LEVEL_TRACE;
+		emu->ctx.cfg.bios_call_tracer.enabled			     = true;
+		emu->ctx.cfg.disasm.tracing				     = !emu->ctx.cfg.disasm.tracing;
+	}
+
 	if (keys[SDL_SCANCODE_DOWN])
 		mask |= PSYCHO_DIGITAL_PAD_BUTTON_DOWN;
 
@@ -212,16 +219,18 @@ void emu_init(struct emu_runner *emu, const char *bios_file, const char *exe_fil
 
 	struct psycho_ctx_cfg *cfg = psycho_ctx_cfg_get(&emu->ctx);
 
+	cfg->cpu.backend       = PSYCHO_CPU_BACKEND_INTERPRETER;
 	cfg->cpu.illegal_instr = illegal_instr_cb;
 	cfg->disasm.tracing    = false;
 
-	cfg->log.log_cb = NULL;
+	cfg->log.log_cb = log_cb;
 
-	cfg->bios_call_tracer.enabled = false;
+	cfg->bios_call_tracer.enabled	 = true;
 	cfg->bios_call_tracer.deref_ptrs = true;
 
-	//cfg->log.modules[PSYCHO_LOG_MODULE_SCHED] = PSYCHO_LOG_LEVEL_TRACE;
-
+	cfg->log.modules[PSYCHO_LOG_MODULE_CTX]		     = PSYCHO_LOG_LEVEL_INFO;
+	cfg->log.modules[PSYCHO_LOG_MODULE_BUS]		     = PSYCHO_LOG_LEVEL_ERROR;
+	cfg->log.modules[PSYCHO_LOG_MODULE_GPU]		     = PSYCHO_LOG_LEVEL_TRACE;
 	cfg->log.modules[PSYCHO_LOG_MODULE_BIOS_CALL_TRACER] = PSYCHO_LOG_LEVEL_INFO;
 
 	cfg->on_vblank	     = on_vblank;

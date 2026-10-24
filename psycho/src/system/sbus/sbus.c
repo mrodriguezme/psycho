@@ -1,0 +1,300 @@
+// SPDX-License-Identifier: MIT
+//
+// Copyright 2026 Michael Rodriguez
+//
+// Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated
+// documentation files (the "Software"), to deal in the Software without restriction, including without limitation the
+// rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to
+// permit persons to whom the Software is furnished to do so, subject to the following conditions:
+//
+// The above copyright notice and this permission notice shall be included in all copies or substantial portions of the
+// Software.
+//
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE
+// WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR
+// COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR
+// OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+
+#include <string.h>
+
+#include "debug/log.h"
+
+#include "system/gpu/gpu.h"
+#include "system/gpu/defs.h"
+
+#include "defs.h"
+
+#include "sbus.h"
+#include "system/intc/intc.h"
+#include "system/sio0/sio0.h"
+#include "system/sio1/sio1.h"
+
+DECLARE_LOG_MODULE(PSYCHO_LOG_MODULE_BUS);
+
+uint8_t *psycho_bios_data_get(struct psycho_ctx *ctx)
+{
+	return ctx->bus.bios;
+}
+
+uint32_t psycho_bus_load_word(struct psycho_ctx *ctx, uint32_t paddr, bool *valid)
+{
+	uint32_t ret;
+
+	*valid = true;
+
+	switch (paddr) {
+	case RAM_BEGIN ... RAM_END:
+		memcpy(&ret, &ctx->bus.ram[paddr & RAM_MASK], sizeof(uint32_t));
+		return ret;
+
+	case SCRATCHPAD_BEGIN ... SCRATCHPAD_END:
+		memcpy(&ret, &ctx->bus.spad[paddr & SCRATCHPAD_MASK], sizeof(uint32_t));
+		return ret;
+
+	case I_STAT:
+		return ctx->intc.i_stat;
+
+	case I_MASK:
+		return ctx->intc.i_mask;
+
+	case GPU_GP1:
+		return ctx->gpu.base.stat;
+
+	case GPU_GPUREAD:
+		return psycho_gpuread(ctx);
+
+	case 0x1F8010F0:
+	case 0x1F8010A8:
+		return UINT32_MAX;
+
+	case BIOS_BEGIN ... BIOS_END:
+		memcpy(&ret, &ctx->bus.bios[paddr & BIOS_MASK], sizeof(uint32_t));
+		return ret;
+
+	default:
+		LOG_ERR(ctx, "bad word load from unknown physical address 0x%08X", paddr);
+		*valid = true;
+
+		return UINT32_MAX;
+	}
+}
+
+uint16_t psycho_bus_load_halfword(struct psycho_ctx *ctx, uint32_t paddr, bool *valid)
+{
+	uint16_t ret;
+
+	*valid = true;
+
+	switch (paddr) {
+	case RAM_BEGIN ... RAM_END:
+		memcpy(&ret, &ctx->bus.ram[paddr & RAM_MASK], sizeof(uint16_t));
+		return ret;
+
+	case SCRATCHPAD_BEGIN ... SCRATCHPAD_END:
+		memcpy(&ret, &ctx->bus.spad[paddr & SCRATCHPAD_MASK], sizeof(uint16_t));
+		return ret;
+
+	case SIO0_CR:
+		return ctx->sio0.cr;
+
+	case 0x1F801120:
+	case 0x1F801054:
+	case 0x1F801DAE:
+		return UINT16_MAX;
+
+	case I_MASK:
+		return ctx->intc.i_mask;
+
+	default:
+		LOG_ERR(ctx, "bad halfword load from unknown physical address 0x%08X", paddr);
+		*valid = true;
+
+		return UINT16_MAX;
+	}
+}
+
+uint8_t psycho_bus_load_byte(struct psycho_ctx *ctx, uint32_t paddr, bool *valid)
+{
+	*valid = true;
+
+	switch (paddr) {
+	case RAM_BEGIN ... RAM_END:
+		return ctx->bus.ram[paddr & RAM_MASK];
+
+	case SCRATCHPAD_BEGIN ... SCRATCHPAD_END:
+		return ctx->bus.spad[paddr & SCRATCHPAD_MASK];
+
+	case BIOS_BEGIN ... BIOS_END:
+		return ctx->bus.bios[paddr & BIOS_MASK];
+
+	case SIO0_DR:
+		return psycho_sio0_dr_read_byte(ctx);
+
+	case 0x1F000084:
+		return UINT8_MAX;
+
+	default:
+		LOG_ERR(ctx, "bad byte load from unknown physical address 0x%08X", paddr);
+		*valid = false;
+
+		return UINT8_MAX;
+	}
+}
+
+bool psycho_bus_store_word(struct psycho_ctx *ctx, uint32_t paddr, uint32_t data)
+{
+	bool valid = true;
+
+	switch (paddr) {
+	case RAM_BEGIN ... RAM_END:
+		memcpy(&ctx->bus.ram[paddr & RAM_MASK], &data, sizeof(uint32_t));
+		break;
+
+	case SCRATCHPAD_BEGIN ... SCRATCHPAD_END:
+		memcpy(&ctx->bus.spad[paddr & SCRATCHPAD_MASK], &data, sizeof(uint32_t));
+		break;
+
+	case I_STAT:
+		psycho_intc_irqs_ack(ctx, data);
+		break;
+
+	case I_MASK:
+		psycho_intc_mask_set(ctx, data);
+		break;
+
+	case GPU_GP0:
+		psycho_gpu_gp0_write_word(ctx, data);
+		break;
+
+	case GPU_GP1:
+		psycho_gpu_gp1_write_word(ctx, data);
+		break;
+
+	case DEV0_BASE_ADDR:
+	case DEV8_BASE_ADDR:
+	case DEV0_DELAY_SIZE:
+	case DEV1_DELAY_SIZE:
+	case DEV2_DELAY_SIZE:
+	case DEV4_DELAY_SIZE:
+	case DEV5_DELAY_SIZE:
+	case DEV8_DELAY_SIZE:
+	case COM_DELAY:
+	case DRAM_CTRL:
+	case BIU_CACHE_CTRL_REG:
+	case 0x1F8010F0:
+	case 0x1F8010A8:
+		break;
+
+	default:
+		LOG_ERR(ctx, "bad word store to unknown physical address 0x%08X (data=0x%08X)", paddr, data);
+		valid = true;
+
+		break;
+	}
+	return valid;
+}
+
+bool psycho_bus_store_halfword(struct psycho_ctx *ctx, uint32_t paddr, uint16_t data)
+{
+	bool valid = true;
+
+	switch (paddr) {
+	case RAM_BEGIN ... RAM_END:
+		memcpy(&ctx->bus.ram[paddr & RAM_MASK], &data, sizeof(uint16_t));
+		break;
+
+	case SCRATCHPAD_BEGIN ... SCRATCHPAD_END:
+		memcpy(&ctx->bus.spad[paddr & SCRATCHPAD_MASK], &data, sizeof(uint16_t));
+		break;
+
+	case SIO0_MR:
+		psycho_sio0_mr_write_halfword(ctx, data);
+		break;
+
+	case SIO0_CR:
+		psycho_sio0_cr_write_halfword(ctx, data);
+		break;
+
+	case SIO0_BR:
+		psycho_sio0_br_write_halfword(ctx, data);
+		break;
+
+	case 0x1F801D80:
+	case 0x1F801D82:
+	case 0x1F801D84:
+	case 0x1F801D86:
+	case 0x1F801104:
+	case 0x1F801108:
+	case 0x1F801100:
+	case 0x1F801114:
+	case 0x1F801118:
+	case 0x1F801110:
+	case 0x1F801124:
+	case 0x1F801128:
+	case 0x1F801120:
+	case SIO1_MR:
+	case SIO1_CR:
+	case SIO1_BR:
+	case 0x1F801DAA:
+	case 0x1F801D8E:
+	case 0x1F801D8C:
+	case 0x1F801D90:
+	case 0x1F801D92:
+		break;
+
+	case I_MASK:
+		ctx->intc.i_mask = data;
+		break;
+
+	default:
+		LOG_ERR(ctx, "bad halfword store to unknown physical address 0x%08X (data=0x%04X)", paddr, data);
+		valid = true;
+
+		break;
+	}
+	return valid;
+}
+
+bool psycho_bus_store_byte(struct psycho_ctx *ctx, uint32_t paddr, uint8_t data)
+{
+	bool valid = true;
+
+	switch (paddr) {
+	case RAM_BEGIN ... RAM_END:
+		ctx->bus.ram[paddr & RAM_MASK] = data;
+		break;
+
+	case SCRATCHPAD_BEGIN ... SCRATCHPAD_END:
+		ctx->bus.spad[paddr & SCRATCHPAD_MASK] = data;
+		break;
+
+	case SIO0_DR:
+		psycho_sio0_dr_write_byte(ctx, data);
+		break;
+
+	case 0x1F802041:
+	case 0x1F801050:
+		break;
+
+	default:
+		LOG_ERR(ctx, "bad byte store to unknown physical address 0x%08X (data=0x%02X)", paddr, data);
+		valid = true;
+
+		break;
+	}
+	return valid;
+}
+
+void *psycho_bus_get_mem_area_ptr(struct psycho_ctx *ctx, uint32_t paddr)
+{
+	switch (paddr) {
+	case RAM_BEGIN ... RAM_END:
+		return &ctx->bus.ram[paddr & RAM_MASK];
+
+	case BIOS_BEGIN ... BIOS_END:
+		return &ctx->bus.bios[paddr & BIOS_MASK];
+
+	default:
+		return NULL;
+	}
+}

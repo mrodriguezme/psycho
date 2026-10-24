@@ -21,16 +21,21 @@
 #include <stddef.h>
 #include <stdint.h>
 
-#include "psycho/system/cpu/defs.h"
+#include "psycho/system/cpu/cpu.h"
 #include "psycho/common/compiler_support.h"
 
-#define likely(x)		    __builtin_expect(!!(x), 1)
-#define unlikely(x)		    __builtin_expect(!!(x), 0)
+#define likely(x)		       __builtin_expect(!!(x), 1)
+#define unlikely(x)		       __builtin_expect(!!(x), 0)
 
-#define ARRAY_SIZE(x)		    (sizeof(x) / sizeof((x)[0]))
+#define ARRAY_SIZE(x)		       (sizeof(x) / sizeof((x)[0]))
 
-#define bits_became_set(a, b, bits) ((!((a) & (bits))) && ((b) & (bits)))
-#define bits_became_clr(a, b, bits) (((a) & (bits)) && !((b) & (bits)))
+#define bits_became_set(a, b, bits)    ((!((a) & (bits))) && ((b) & (bits)))
+#define bits_became_clr(a, b, bits)    (((a) & (bits)) && !((b) & (bits)))
+
+#define GENMASK32(hi, lo)	       (((UINT32_C(1) << ((hi) - (lo) + 1)) - 1) << (lo))
+
+#define PLURALIZE(n, singular, plural) (((n) == 1) ? (singular) : (plural))
+#define PLURAL_S(n)		       (((n) == 1) ? "" : "s")
 
 #define max(a, b)                       \
 	({                              \
@@ -64,6 +69,21 @@
 PSYCHO_ALWAYS_INLINE uint64_t us_to_cycles(uint64_t us)
 {
 	return (us * PSYCHO_CPU_CLKFREQ_HZ) / UINT64_C(1000000);
+}
+
+PSYCHO_ALWAYS_INLINE uint32_t field_get32(uint32_t mask, uint32_t reg)
+{
+	return (reg & mask) >> __builtin_ctz(mask);
+}
+
+PSYCHO_ALWAYS_INLINE uint32_t field_prep32(uint32_t mask, uint32_t val)
+{
+	return (val << __builtin_ctz(mask)) & mask;
+}
+
+PSYCHO_ALWAYS_INLINE uint32_t field_set32(uint32_t src, uint32_t mask, uint32_t val)
+{
+	return (src & ~mask) | field_prep32(mask, val);
 }
 
 #define ZERO_EXTEND_FUNC(from, to)                                                                       \

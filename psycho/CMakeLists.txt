@@ -25,24 +25,6 @@ target_link_libraries(psycho PRIVATE psycho_cfg_base_c)
 
 target_sources(
 	psycho PRIVATE
-	include/psycho/common/compiler_support.h
-	include/psycho/common/sched.h
-	include/psycho/debug/bios_call_tracer.h
-	include/psycho/debug/disasm.h
-	include/psycho/debug/fixed_string.h
-	include/psycho/debug/log.h
-	include/psycho/devices/digital_pad.h
-	include/psycho/system/cpu/defs.h
-	include/psycho/system/cpu/interpreter.h
-	include/psycho/system/cpu/ops.h
-	include/psycho/system/bus.h
-	include/psycho/system/gpu.h
-	include/psycho/system/intc.h
-	include/psycho/system/sio0_device.h
-	include/psycho/system/sio0.h
-	include/psycho/ctx.h
-	src/common/sched.c
-	src/common/sched.h
 	src/common/util.h
 	src/debug/bios_call_tracer.c
 	src/debug/bios_call_tracer.h
@@ -52,22 +34,46 @@ target_sources(
 	src/debug/fixed_string.h
 	src/debug/log.c
 	src/debug/log.h
-	src/devices/digital_pad.c
+	src/lib/lifo.h
+	src/lib/ring_buffer.h
+	src/peripherals/input/digital_pad.c
+	src/peripherals/storage/memory_card.c
+	src/system/cdrom_drive/cdrom_drive.c
+	src/system/cdrom_drive/cdrom_drive.h
+	src/system/cdrom_drive/defs.h
+	src/system/cpu/backend/interpreter.c
+	src/system/cpu/backend/interpreter.h
 	src/system/cpu/defs.c
 	src/system/cpu/defs.h
-	src/system/cpu/interpreter.c
-	src/system/cpu/interpreter.h
+	src/system/dmac/defs.h
+	src/system/dmac/dmac.c
+	src/system/dmac/dmac.h
+	src/system/gpu/backend/software/software.c
+	src/system/gpu/backend/software/software.h
+	src/system/gpu/defs.h
 	src/system/gpu/gpu.c
 	src/system/gpu/gpu.h
-	src/system/gpu/sw.c
-	src/system/gpu/sw.h
-	src/system/bus.c
-	src/system/bus.h
-	src/system/intc.c
-	src/system/intc.h
-	src/system/sio0_device.c
-	src/system/sio0.c
-	src/system/sio0.h
+	src/system/intc/defs.h
+	src/system/intc/intc.c
+	src/system/intc/intc.h
+	src/system/sbus/defs.h
+	src/system/sbus/sbus.c
+	src/system/sbus/sbus.h
+	src/system/sio0/defs.h
+	src/system/sio0/peripheral.c
+	src/system/sio0/sio0.c
+	src/system/sio0/sio0.h
+	src/system/sio1/defs.h
+	src/system/sio1/sio1.c
+	src/system/sio1/sio1.h
+	src/system/spu/defs.h
+	src/system/spu/spu.c
+	src/system/spu/spu.h
+	src/system/timers/defs.h
+	src/system/timers/timers.c
+	src/system/timers/timers.h
+	src/system/sched.c
+	src/system/sched.h
 	src/ctx.c
 	src/exe_loader.c
 	src/exe_loader.h

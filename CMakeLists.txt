@@ -65,7 +65,7 @@ function(add_compiler_flags)
 endfunction()
 
 add_compiler_flags(
-	-std=gnu17
+	-std=gnu23
 	-Walloc-zero
 	-Walloca
 	-Wbad-function-cast
