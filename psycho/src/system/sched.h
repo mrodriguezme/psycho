@@ -24,9 +24,9 @@ PSYCHO_ALWAYS_INLINE void psycho_sched_adv_ts(struct psycho_ctx *ctx, uint64_t t
 	ctx->sched.ts_now += ts;
 }
 
-void psycho_sched_rst(struct psycho_ctx *ctx) PSYCHO_NONNULL;
+void psycho_sched_reset(struct psycho_ctx *ctx) PSYCHO_NONNULL;
 
 void psycho_sched_run(struct psycho_ctx *ctx) PSYCHO_NONNULL;
 
-void psycho_sched_add(struct psycho_ctx *ctx, struct psycho_sched_event *ev) PSYCHO_NONNULL;
-void psycho_sched_del(struct psycho_ctx *ctx, struct psycho_sched_event *ev) PSYCHO_NONNULL;
+void psycho_sched_event_add(struct psycho_ctx *ctx, struct psycho_sched_event *ev) PSYCHO_NONNULL;
+void psycho_sched_event_delete(struct psycho_ctx *ctx, struct psycho_sched_event *ev) PSYCHO_NONNULL;

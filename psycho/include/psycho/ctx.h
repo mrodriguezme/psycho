@@ -21,13 +21,11 @@
 extern "C" {
 #endif // __cplusplus
 
-#include "common/sched.h"
-
 #include "debug/bios_call_tracer.h"
 #include "debug/disasm.h"
 #include "debug/log.h"
 
-#include "system/bus.h"
+#include "system/sbus.h"
 #include "system/cpu/backend/interpreter.h"
 #include "system/gpu.h"
 #include "system/intc.h"

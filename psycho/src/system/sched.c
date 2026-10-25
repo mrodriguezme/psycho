@@ -21,7 +21,7 @@
 
 #include "sched.h"
 #include "debug/log.h"
-#include "util.h"
+#include "common/util.h"
 
 DECLARE_LOG_MODULE(PSYCHO_LOG_MODULE_SCHED);
 
@@ -89,7 +89,7 @@ PSYCHO_NONNULL static void sift_down(struct psycho_ctx *ctx, size_t node)
 	}
 }
 
-void psycho_sched_rst(struct psycho_ctx *ctx)
+void psycho_sched_reset(struct psycho_ctx *ctx)
 {
 	memset(&ctx->sched, 0, sizeof(ctx->sched));
 	LOG_INFO(ctx, "reset");
@@ -105,12 +105,12 @@ void psycho_sched_run(struct psycho_ctx *ctx)
 		event->ts += event->period;
 		sift_down(ctx, event->idx);
 	} else
-		psycho_sched_del(ctx, event);
+		psycho_sched_event_delete(ctx, event);
 
 	event->cb(ctx, event->userdata);
 }
 
-void psycho_sched_add(struct psycho_ctx *ctx, struct psycho_sched_event *event)
+void psycho_sched_event_add(struct psycho_ctx *ctx, struct psycho_sched_event *event)
 {
 	assert(ctx->sched.num_events < ARRAY_SIZE(ctx->sched.events));
 
@@ -142,7 +142,7 @@ void psycho_sched_add(struct psycho_ctx *ctx, struct psycho_sched_event *event)
 	sift_up(ctx, node);
 }
 
-void psycho_sched_del(struct psycho_ctx *ctx, struct psycho_sched_event *event)
+void psycho_sched_event_delete(struct psycho_ctx *ctx, struct psycho_sched_event *event)
 {
 	if (unlikely(!event->valid))
 		return;

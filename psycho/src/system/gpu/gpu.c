@@ -22,7 +22,7 @@
 #include "gpu.h"
 #include "system/intc.h"
 #include "debug/log.h"
-#include "common/sched.h"
+#include "system/sched.h"
 
 DECLARE_LOG_MODULE(PSYCHO_LOG_MODULE_GPU);
 
@@ -204,7 +204,7 @@ void psycho_gpu_rst(struct psycho_ctx *ctx)
 	ctx->gpu.vblank_event.ts	= PSYCHO_CPU_CLKFREQ_HZ / 60;
 	ctx->gpu.vblank_event.permanent = true;
 
-	psycho_sched_add(ctx, &ctx->gpu.vblank_event);
+	psycho_sched_event_add(ctx, &ctx->gpu.vblank_event);
 }
 
 void psycho_gp0(struct psycho_ctx *ctx, uint32_t packet)

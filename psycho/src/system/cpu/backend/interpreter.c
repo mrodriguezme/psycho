@@ -19,13 +19,13 @@
 #include <string.h>
 
 #include "common/util.h"
-#include "common/sched.h"
+#include "system/sched.h"
 
 #include "debug/bios_call_tracer.h"
 #include "debug/disasm.h"
 #include "debug/log.h"
 
-#include "system/bus.h"
+#include "system/sbus/sbus.h"
 
 #include "system/cpu/cpu.h"
 #include "system/cpu/defs.h"

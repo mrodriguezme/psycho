@@ -19,40 +19,14 @@
 
 #include "debug/log.h"
 
-#include "gpu/gpu.h"
+#include "system/gpu/gpu.h"
 
-#include "bus.h"
-#include "intc.h"
-#include "sio0/sio0.h"
+#include "sbus.h"
+#include "defs.h"
+#include "system/intc.h"
+#include "system/sio0/sio0.h"
 
 DECLARE_LOG_MODULE(PSYCHO_LOG_MODULE_BUS);
-
-enum {
-	BIOS_BEGIN = 0x1FC00000,
-	BIOS_END   = 0x1FC7FFFF,
-	BIOS_MASK  = 0x000FFFFF,
-
-	RAM_BEGIN = 0x00000000,
-	RAM_END	  = PSYCHO_BUS_RAM_SIZE_MAX_BYTES,
-	RAM_MASK  = 0x001FFFFF,
-
-	SCRATCHPAD_BEGIN = 0x1F800000,
-	SCRATCHPAD_END	 = 0x1F8003FF,
-	SCRATCHPAD_MASK	 = 0x00000FFF
-};
-
-enum {
-	DEV0_BASE_ADDR	= 0x1F801000,
-	DEV8_BASE_ADDR	= 0x1F801004,
-	DEV0_DELAY_SIZE = 0x1F801008,
-	DEV1_DELAY_SIZE = 0x1F80100C,
-	DEV2_DELAY_SIZE = 0x1F801010,
-	DEV4_DELAY_SIZE = 0x1F801014,
-	DEV5_DELAY_SIZE = 0x1F801018,
-	DEV8_DELAY_SIZE = 0x1F80101C,
-	COM_DELAY	= 0x1F801020,
-	DRAM_CTRL	= 0x1F801060
-};
 
 #define BIU_CACHE_CTRL_REG (UINT32_C(0xFFFE0130))
 

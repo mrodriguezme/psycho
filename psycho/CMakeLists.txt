@@ -26,7 +26,6 @@ target_link_libraries(psycho PRIVATE psycho_cfg_base_c)
 target_sources(
 	psycho PRIVATE
 	include/psycho/common/compiler_support.h
-	include/psycho/common/sched.h
 	include/psycho/debug/bios_call_tracer.h
 	include/psycho/debug/disasm.h
 	include/psycho/debug/fixed_string.h
@@ -35,14 +34,13 @@ target_sources(
 	include/psycho/system/cpu/backend/backend.h
 	include/psycho/system/cpu/backend/interpreter.h
 	include/psycho/system/cpu/cpu.h
-	include/psycho/system/bus.h
 	include/psycho/system/gpu.h
 	include/psycho/system/intc.h
+	include/psycho/system/sbus.h
+	include/psycho/system/sched.h
 	include/psycho/system/sio0_device.h
 	include/psycho/system/sio0.h
 	include/psycho/ctx.h
-	src/common/sched.c
-	src/common/sched.h
 	src/common/util.h
 	src/debug/bios_call_tracer.c
 	src/debug/bios_call_tracer.h
@@ -63,14 +61,17 @@ target_sources(
 	src/system/gpu/gpu.h
 	src/system/gpu/sw.c
 	src/system/gpu/sw.h
+	src/system/sbus/defs.h
+	src/system/sbus/sbus.c
+	src/system/sbus/sbus.h
 	src/system/sio0/defs.h
 	src/system/sio0/sio0_device.c
 	src/system/sio0/sio0.c
 	src/system/sio0/sio0.h
-	src/system/bus.c
-	src/system/bus.h
 	src/system/intc.c
 	src/system/intc.h
+	src/system/sched.c
+	src/system/sched.h
 	src/ctx.c
 	src/exe_loader.c
 	src/exe_loader.h

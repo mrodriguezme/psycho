@@ -18,7 +18,7 @@
 #pragma once
 
 #include <stddef.h>
-#include "psycho/common/sched.h"
+#include "psycho/system/sched.h"
 
 #ifdef __cplusplus
 extern "C" {

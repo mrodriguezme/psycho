@@ -15,7 +15,7 @@
 // COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR
 // OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
-#include "common/sched.h"
+#include "system/sched.h"
 #include "common/util.h"
 
 #include "debug/bios_call_tracer.h"
@@ -80,7 +80,7 @@ enum psycho_ctx_ret psycho_ctx_init(struct psycho_ctx *ctx)
 
 void psycho_ctx_reset(struct psycho_ctx *ctx)
 {
-	psycho_sched_rst(ctx);
+	psycho_sched_reset(ctx);
 	psycho_gpu_rst(ctx);
 	psycho_sio0_reset(ctx);
 

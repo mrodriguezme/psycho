@@ -23,7 +23,7 @@
 #include "psycho/common/compiler_support.h"
 #include "psycho/ctx.h"
 
-#include "system/bus.h"
+#include "system/sbus/sbus.h"
 #include "system/cpu/defs.h"
 
 #include "disasm.h"

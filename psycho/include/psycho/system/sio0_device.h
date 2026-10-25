@@ -20,7 +20,7 @@
 #include <stdbool.h>
 
 #include "psycho/common/compiler_support.h"
-#include "psycho/common/sched.h"
+#include "psycho/system/sched.h"
 
 struct psycho_ctx;
 

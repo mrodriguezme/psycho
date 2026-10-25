@@ -17,6 +17,7 @@
 
 #pragma once
 
+#include <stddef.h>
 #include <stdint.h>
 
 #include "psycho/common/compiler_support.h"
@@ -27,11 +28,9 @@ extern "C" {
 
 struct psycho_ctx;
 
-enum {
-	PSYCHO_BUS_BIOS_SIZE_BYTES    = 524288,
-	PSYCHO_BUS_SPAD_SIZE_BYTES    = 1024,
-	PSYCHO_BUS_RAM_SIZE_MAX_BYTES = 0x00FFFFFF
-};
+constexpr size_t PSYCHO_BUS_BIOS_SIZE_BYTES    = 524288;
+constexpr size_t PSYCHO_BUS_SPAD_SIZE_BYTES    = 1024;
+constexpr size_t PSYCHO_BUS_RAM_SIZE_MAX_BYTES = 0x00FFFFFF;
 
 struct psycho_bus {
 	uint8_t ram[PSYCHO_BUS_RAM_SIZE_MAX_BYTES];

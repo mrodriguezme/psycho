@@ -61,7 +61,7 @@ static void load_bios_file(struct emu_runner *emu, const char *bios_file)
 	}
 
 	if (size != PSYCHO_BUS_BIOS_SIZE_BYTES) {
-		SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "BIOS file size is wrong (expected exactly %d, got %ld)",
+		SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "BIOS file size is wrong (expected exactly %zu, got %ld)",
 			     PSYCHO_BUS_BIOS_SIZE_BYTES, size);
 
 		goto cleanup;
@@ -73,7 +73,7 @@ static void load_bios_file(struct emu_runner *emu, const char *bios_file)
 
 	if (bytes_read != (size_t)size) {
 		SDL_LogError(SDL_LOG_CATEGORY_APPLICATION,
-			     "Not all bytes were read from BIOS file (expected exactly %d, got %zu)",
+			     "Not all bytes were read from BIOS file (expected exactly %zu, got %zu)",
 			     PSYCHO_BUS_BIOS_SIZE_BYTES, bytes_read);
 
 		goto cleanup;

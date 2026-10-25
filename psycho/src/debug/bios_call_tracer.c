@@ -23,7 +23,7 @@
 
 #include "fixed_string.h"
 
-#include "system/bus.h"
+#include "system/sbus/sbus.h"
 #include "system/cpu/defs.h"
 
 DECLARE_LOG_MODULE(PSYCHO_LOG_MODULE_BIOS_CALL_TRACER);
