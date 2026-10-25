@@ -27,7 +27,7 @@ DECLARE_LOG_MODULE(PSYCHO_LOG_MODULE_CPU);
 void psycho_cpu_reset(struct psycho_ctx *ctx)
 {
 	memset(&ctx->cpu.base, 0, sizeof(ctx->cpu.base));
-	psycho_cpu_pc_set(ctx, RST_VECTOR);
+	psycho_cpu_pc_set(ctx, VECTOR_RESET);
 }
 
 PSYCHO_NONNULL void psycho_cpu_pc_set(struct psycho_ctx *ctx, uint32_t pc)

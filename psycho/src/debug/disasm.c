@@ -232,13 +232,13 @@ bool psycho_disasm_instr(struct psycho_ctx *ctx, uint32_t pc, struct psycho_disa
 
 #define fmt(args...) psycho_fixed_string_append(&ctx->disasm.res.str, args);
 
-#define op	     (instr_op(instr))
-#define rt	     (instr_rt(instr))
-#define rs	     (instr_rs(instr))
-#define rd	     (instr_rd(instr))
-#define shamt	     (instr_shamt(instr))
-#define funct	     (instr_funct(instr))
-#define imm	     (instr_imm(instr))
+#define op	     (field_get32(INSTR_OP, instr))
+#define rt	     (field_get32(INSTR_RT, instr))
+#define rs	     (field_get32(INSTR_RS, instr))
+#define rd	     (field_get32(INSTR_RD, instr))
+#define shamt	     (field_get32(INSTR_SHAMT, instr))
+#define funct	     (field_get32(INSTR_FUNCT, instr))
+#define imm	     (field_get16(INSTR_IMMEDIATE, instr))
 #define simm	     ((int16_t)imm)
 #define offset	     (simm)
 #define base	     (rs)
@@ -657,9 +657,9 @@ void psycho_disasm_trace_begin(struct psycho_ctx *ctx, uint32_t pc)
 
 void psycho_disasm_trace_end(struct psycho_ctx *ctx)
 {
-#define rt (instr_rt(ctx->disasm.res.instr))
-#define rd (instr_rd(ctx->disasm.res.instr))
-#define rs (instr_rs(ctx->disasm.res.instr))
+#define rt (field_get32(INSTR_RT, ctx->disasm.res.instr))
+#define rd (field_get32(INSTR_RD, ctx->disasm.res.instr))
+#define rs (field_get32(INSTR_RS, ctx->disasm.res.instr))
 
 	for (size_t trace = 0; trace < ctx->disasm.traces.count; ++trace) {
 		if (trace)
@@ -692,7 +692,7 @@ void psycho_disasm_trace_end(struct psycho_ctx *ctx)
 			uint32_t instr = ctx->cpu.base.instr;
 			uint32_t vaddr = ctx->cpu.base.gpr[rs];
 
-			uint32_t val = instr_imm(instr) + (vaddr & 0x1FFFFFFF);
+			uint32_t val = field_get32(INSTR_IMMEDIATE, instr) + (vaddr & 0x1FFFFFFF);
 
 			psycho_fixed_string_append(&ctx->disasm.res.str, "paddr=0x%08X", val);
 			break;

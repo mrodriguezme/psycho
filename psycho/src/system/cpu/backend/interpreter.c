@@ -177,12 +177,12 @@ PSYCHO_NONNULL static void do_exception(struct psycho_ctx *ctx, enum cpu_excepti
 
 PSYCHO_NONNULL static void raise_exception(struct psycho_ctx *ctx, enum cpu_exception exc)
 {
-	do_exception(ctx, exc, EXC_VECTOR);
+	do_exception(ctx, exc, VECTOR_EXCEPTION);
 }
 
 PSYCHO_NONNULL static void raise_debug_exception(struct psycho_ctx *ctx)
 {
-	do_exception(ctx, EXCEPTION_BP, DBG_VECTOR);
+	do_exception(ctx, EXCEPTION_BP, VECTOR_DEBUG);
 }
 
 PSYCHO_NONNULL static void dbg_bp_write(struct psycho_ctx *ctx, uint32_t vaddr)
@@ -301,9 +301,9 @@ PSYCHO_NONNULL static int64_t mac123_chk(struct psycho_ctx *ctx, int64_t sum, in
 PSYCHO_NONNULL static int64_t mac0_add(struct psycho_ctx *ctx, int64_t res)
 {
 	if (res > INT32_MAX)
-		flag_set(ctx, MAC0_POS_OVF);
+		flag_set(ctx, MAC0_OVERFLOW_POS);
 	else if (res < INT32_MIN)
-		flag_set(ctx, MAC0_NEG_OVF);
+		flag_set(ctx, MAC0_OVERFLOW_NEG);
 
 	return res;
 }
@@ -312,13 +312,13 @@ PSYCHO_NONNULL static int64_t mac123_add(struct psycho_ctx *ctx, size_t mac, int
 {
 	switch (mac) {
 	case 1:
-		return mac123_chk(ctx, sum, addend, MAC1_OVF_NEG, MAC1_OVF_POS);
+		return mac123_chk(ctx, sum, addend, MAC1_OVERFLOW_NEG, MAC1_OVERFLOW_POS);
 
 	case 2:
-		return mac123_chk(ctx, sum, addend, MAC2_OVF_NEG, MAC2_OVF_POS);
+		return mac123_chk(ctx, sum, addend, MAC2_OVERFLOW_NEG, MAC2_OVERFLOW_POS);
 
 	case 3:
-		return mac123_chk(ctx, sum, addend, MAC3_OVF_NEG, MAC3_OVF_POS);
+		return mac123_chk(ctx, sum, addend, MAC3_OVERFLOW_NEG, MAC3_OVERFLOW_POS);
 
 	default:
 		unreachable();
@@ -327,7 +327,7 @@ PSYCHO_NONNULL static int64_t mac123_add(struct psycho_ctx *ctx, size_t mac, int
 
 PSYCHO_NONNULL PSYCHO_NODISCARD static int16_t ir0_sat(struct psycho_ctx *ctx, int64_t val)
 {
-	return gte_clamp(ctx, val, IR0_MIN, IR0_MAX, IR0_SAT);
+	return gte_clamp(ctx, val, IR0_MIN, IR0_MAX, IR0_SATURATED);
 }
 
 PSYCHO_NONNULL static int16_t ir123_sat(struct psycho_ctx *ctx, unsigned int ir, int32_t val, bool lm)
@@ -336,13 +336,13 @@ PSYCHO_NONNULL static int16_t ir123_sat(struct psycho_ctx *ctx, unsigned int ir,
 
 	switch (ir) {
 	case 1:
-		return gte_clamp(ctx, val, min, IR123_MAX, IR1_SAT);
+		return gte_clamp(ctx, val, min, IR123_MAX, IR1_SATURATED);
 
 	case 2:
-		return gte_clamp(ctx, val, min, IR123_MAX, IR2_SAT);
+		return gte_clamp(ctx, val, min, IR123_MAX, IR2_SATURATED);
 
 	case 3:
-		return gte_clamp(ctx, val, min, IR123_MAX, IR3_SAT);
+		return gte_clamp(ctx, val, min, IR123_MAX, IR3_SATURATED);
 
 	default:
 		unreachable();
@@ -356,7 +356,7 @@ PSYCHO_NONNULL static void sx_push(struct psycho_ctx *ctx, int64_t val)
 	for (size_t i = 0; i < ARRAY_SIZE(SXY) - 1; ++i)
 		SXY[i].x = SXY[i + 1].x;
 
-	SXY[2].x = gte_clamp(ctx, val, SXY_MIN, SXY_MAX, SX2_SAT);
+	SXY[2].x = gte_clamp(ctx, val, SXY_MIN, SXY_MAX, SX2_SATURATED);
 
 #undef SXY
 }
@@ -368,7 +368,7 @@ PSYCHO_NONNULL static void sy_push(struct psycho_ctx *ctx, int64_t val)
 	for (size_t i = 0; i < ARRAY_SIZE(SXY) - 1; ++i)
 		SXY[i].y = SXY[i + 1].y;
 
-	SXY[2].y = gte_clamp(ctx, val, SXY_MIN, SXY_MAX, SY2_SAT);
+	SXY[2].y = gte_clamp(ctx, val, SXY_MIN, SXY_MAX, SY2_SATURATED);
 
 #undef SXY
 }
@@ -380,27 +380,27 @@ PSYCHO_NONNULL static void sz_push(struct psycho_ctx *ctx, int64_t val)
 	for (size_t i = 0; i < ARRAY_SIZE(SZ) - 1; ++i)
 		SZ[i].val = SZ[i + 1].val;
 
-	SZ[3].val = gte_clamp(ctx, val, SZ_OTZ_MIN, SZ_OTZ_MAX, SZ3_OTZ_SAT);
+	SZ[3].val = gte_clamp(ctx, val, SZ_OTZ_MIN, SZ_OTZ_MAX, SZ3_OTZ_SATURATED);
 
 #undef SZ
 }
 
 PSYCHO_NONNULL static uint16_t otz_set(struct psycho_ctx *ctx, int64_t val)
 {
-	return gte_clamp(ctx, val, SZ_OTZ_MIN, SZ_OTZ_MAX, SZ3_OTZ_SAT);
+	return gte_clamp(ctx, val, SZ_OTZ_MIN, SZ_OTZ_MAX, SZ3_OTZ_SATURATED);
 }
 
 PSYCHO_NONNULL static uint32_t rgb_set(struct psycho_ctx *ctx, unsigned int color, int32_t val)
 {
 	switch (color) {
 	case 0:
-		return gte_clamp(ctx, val, RGB_MIN, RGB_MAX, RGB_R_SAT);
+		return gte_clamp(ctx, val, RGB_MIN, RGB_MAX, RGB_R_SATURATED);
 
 	case 1:
-		return gte_clamp(ctx, val, RGB_MIN, RGB_MAX, RGB_G_SAT);
+		return gte_clamp(ctx, val, RGB_MIN, RGB_MAX, RGB_G_SATURATED);
 
 	case 2:
-		return gte_clamp(ctx, val, RGB_MIN, RGB_MAX, RGB_B_SAT);
+		return gte_clamp(ctx, val, RGB_MIN, RGB_MAX, RGB_B_SATURATED);
 
 	default:
 		unreachable();
@@ -413,7 +413,7 @@ PSYCHO_NONNULL PSYCHO_NODISCARD static int64_t gte_div(struct psycho_ctx *ctx)
 	uint32_t sz3 = ctx->cpu.base.cop2.cpr.sz[3].val;
 
 	if (unlikely(h >= (sz3 * 2))) {
-		flag_set(ctx, DIV_OVF);
+		flag_set(ctx, DIV_OVERFLOW);
 		return 0x1FFFF;
 	}
 
@@ -466,7 +466,7 @@ PSYCHO_NONNULL static void rtp(struct psycho_ctx *ctx, struct psycho_gte_vector 
 
 	for (size_t i = 1, j = 0; i < ARRAY_SIZE(MAC); ++i, ++j) {
 		sum = 0;
-		sum = mac123_add(ctx, i, sum, (uint64_t)TR[j] << 12);
+		sum = mac123_add(ctx, i, sum, (uint64_t)TR[j] << SHIFT_FRAC);
 		sum = mac123_add(ctx, i, sum, RT[j][0] * vec->x);
 		sum = mac123_add(ctx, i, sum, RT[j][1] * vec->y);
 		sum = mac123_add(ctx, i, sum, RT[j][2] * vec->z);
@@ -496,7 +496,7 @@ PSYCHO_NONNULL static void rtp(struct psycho_ctx *ctx, struct psycho_gte_vector 
 
 	if (dq) {
 		sum   = mac0_add(ctx, (quot * DQA) + DQB);
-		IR[0] = ir0_sat(ctx, sum >> 12);
+		IR[0] = ir0_sat(ctx, sum >> SHIFT_FRAC);
 	}
 	MAC[0] = sum;
 
@@ -546,7 +546,7 @@ PSYCHO_NONNULL static void intpl_bk_lcm(struct psycho_ctx *ctx)
 
 	for (size_t i = 1, j = 0; i < ARRAY_SIZE(MAC); ++i, ++j) {
 		int64_t sum = 0;
-		sum	    = mac123_add(ctx, i, sum, (uint64_t)BK[j] << 12);
+		sum	    = mac123_add(ctx, i, sum, (uint64_t)BK[j] << SHIFT_FRAC);
 		sum	    = mac123_add(ctx, i, sum, LCM[j][0] * IR[1]);
 		sum	    = mac123_add(ctx, i, sum, LCM[j][1] * IR[2]);
 		sum	    = mac123_add(ctx, i, sum, LCM[j][2] * IR[3]);
@@ -594,7 +594,7 @@ PSYCHO_NONNULL static void intpl_fc(struct psycho_ctx *ctx, int64_t *sums)
 	for (size_t i = 1, j = 0; i < ARRAY_SIZE(MAC); ++i, ++j) {
 		int64_t sum = 0;
 
-		sum = mac123_add(ctx, i, 0, ((uint64_t)FC[j] << 12) - sums[j]);
+		sum = mac123_add(ctx, i, 0, ((uint64_t)FC[j] << SHIFT_FRAC) - sums[j]);
 
 		MAC[i] = sum >> sf;
 		IR[i]  = ir123_sat(ctx, i, MAC[i], false);
@@ -675,7 +675,7 @@ PSYCHO_NONNULL static void avsz(struct psycho_ctx *ctx, int16_t scale, size_t sz
 	sum *= scale;
 
 	MAC0 = mac0_add(ctx, sum);
-	OTZ  = otz_set(ctx, sum >> 12);
+	OTZ  = otz_set(ctx, sum >> SHIFT_FRAC);
 
 	update_flag(ctx);
 
@@ -839,7 +839,7 @@ static void mvmva(struct psycho_ctx *ctx, int16_t (*Mx)[3], int16_t *Vx, int32_t
 
 	for (size_t i = 1, j = 0; i < ARRAY_SIZE(MAC); ++i, ++j) {
 		int64_t sum = 0;
-		sum	    = mac123_add(ctx, i, sum, (uint64_t)Tx[j] << 12);
+		sum	    = mac123_add(ctx, i, sum, (uint64_t)Tx[j] << SHIFT_FRAC);
 		sum	    = mac123_add(ctx, i, sum, Mx[j][0] * Vx[0]);
 		sum	    = mac123_add(ctx, i, sum, Mx[j][1] * Vx[1]);
 		sum	    = mac123_add(ctx, i, sum, Mx[j][2] * Vx[2]);
@@ -863,7 +863,7 @@ static void mvmva_bugged(struct psycho_ctx *ctx, int16_t (*Mx)[3], int16_t *Vx)
 
 	for (size_t i = 1, j = 0; i < ARRAY_SIZE(MAC); ++i, ++j) {
 		int64_t sum = 0;
-		sum	    = mac123_add(ctx, i, sum, (uint64_t)FC[j] << 12);
+		sum	    = mac123_add(ctx, i, sum, (uint64_t)FC[j] << SHIFT_FRAC);
 		sum	    = mac123_add(ctx, i, sum, Mx[j][0] * Vx[0]);
 
 		MAC[i] = sum >> sf;
@@ -991,7 +991,7 @@ PSYCHO_NONNULL static void do_addi(struct psycho_ctx *ctx, size_t rs, size_t rt)
 	int sum;
 
 	uint32_t a0 = gpr[rs];
-	uint32_t a1 = sign_extend_16_32(instr_imm(ctx->cpu.base.instr));
+	uint32_t a1 = sign_extend_16_32(field_get16(INSTR_IMMEDIATE, ctx->cpu.base.instr));
 
 	if (unlikely(__builtin_sadd_overflow(a0, a1, &sum)))
 		raise_exception(ctx, EXCEPTION_OV);
@@ -1044,7 +1044,7 @@ PSYCHO_NONNULL static void do_intpl(struct psycho_ctx *ctx)
 	int64_t sums[3];
 
 	for (size_t i = 0, j = 1; i < ARRAY_SIZE(sums); ++i, ++j)
-		sums[i] = (uint64_t)IR[j] << 12;
+		sums[i] = (uint64_t)IR[j] << SHIFT_FRAC;
 
 	intpl_fc(ctx, sums);
 	color_fifo_push(ctx);
@@ -1085,7 +1085,7 @@ PSYCHO_NONNULL static void do_mvmva(struct psycho_ctx *ctx)
 		// clang-format on
 	};
 
-	unsigned int mx_sel = mvmva_mx(ctx->cpu.base.instr);
+	unsigned int mx_sel = field_get32(INSTR_MVMVA_MX, ctx->cpu.base.instr);
 
 	int16_t (*mx)[3];
 	int16_t mx_bugged[3][3];
@@ -1106,10 +1106,10 @@ PSYCHO_NONNULL static void do_mvmva(struct psycho_ctx *ctx)
 		mx = mx_bugged;
 	}
 
-	unsigned int tx_sel = mvmva_tx(ctx->cpu.base.instr);
+	unsigned int tx_sel = field_get32(INSTR_MVMVA_TX, ctx->cpu.base.instr);
 	int32_t *tx	    = tx_lut[tx_sel];
 
-	unsigned int vx_sel = mvmva_vx(ctx->cpu.base.instr);
+	unsigned int vx_sel = field_get32(INSTR_MVMVA_VX, ctx->cpu.base.instr);
 
 	int16_t vx_tmp[3];
 	int16_t *vx;
@@ -1533,15 +1533,15 @@ PSYCHO_NONNULL static void run(struct psycho_ctx *ctx, bool single_step)
 #define hi		  (ctx->cpu.base.hi)
 #define lo		  (ctx->cpu.base.lo)
 
-#define op		  (instr_op(instr))
-#define rt		  (instr_rt(instr))
-#define rs		  (instr_rs(instr))
-#define rd		  (instr_rd(instr))
-#define shamt		  (instr_shamt(instr))
-#define funct		  (instr_funct(instr))
+#define op		  (field_get32(INSTR_OP, instr))
+#define rt		  (field_get32(INSTR_RT, instr))
+#define rs		  (field_get32(INSTR_RS, instr))
+#define rd		  (field_get32(INSTR_RD, instr))
+#define shamt		  (field_get32(INSTR_SHAMT, instr))
+#define funct		  (field_get32(INSTR_FUNCT, instr))
 #define m_base		  (rs)
-#define zextimm		  (zero_extend_16_32(instr_imm(instr)))
-#define sextimm		  (sign_extend_16_32(instr_imm(instr)))
+#define zextimm		  (zero_extend_16_32(field_get16(INSTR_IMMEDIATE, instr)))
+#define sextimm		  (sign_extend_16_32(field_get16(INSTR_IMMEDIATE, instr)))
 #define offset		  (sextimm)
 
 #define SR		  (ctx->cpu.base.cop0_cpr[PSYCHO_CPU_COP0_CPR_SR])

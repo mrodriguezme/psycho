@@ -77,6 +77,21 @@ PSYCHO_ALWAYS_INLINE uint32_t field_set32(uint32_t src, uint32_t mask, uint32_t 
 	return (src & ~mask) | field_prep32(mask, val);
 }
 
+PSYCHO_ALWAYS_INLINE uint16_t field_get16(uint16_t mask, uint16_t reg)
+{
+    return (uint16_t)((reg & mask) >> __builtin_ctz(mask));
+}
+
+PSYCHO_ALWAYS_INLINE uint16_t field_prep16(uint16_t mask, uint16_t val)
+{
+    return (uint16_t)((uint32_t)val << __builtin_ctz(mask)) & mask;
+}
+
+PSYCHO_ALWAYS_INLINE uint16_t field_set16(uint16_t src, uint16_t mask, uint16_t val)
+{
+    return (uint16_t)((src & ~mask) | field_prep16(mask, val));
+}
+
 PSYCHO_ALWAYS_INLINE uint64_t us_to_cycles(uint64_t us)
 {
 	return (us * PSYCHO_CPU_CLKFREQ_HZ) / UINT64_C(1000000);

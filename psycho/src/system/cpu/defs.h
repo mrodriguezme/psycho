@@ -17,105 +17,205 @@
 
 #pragma once
 
-#include <stdint.h>
-#include "psycho/common/compiler_support.h"
+#include <assert.h>
 #include "common/util.h"
 
-#define DBG_VECTOR   (UINT32_C(0x80000040))
-#define EXC_VECTOR   (UINT32_C(0x80000080))
-#define RST_VECTOR   (UINT32_C(0xBFC00000))
+// ---------------------------------------------------------------------------
+// Instruction/opcode bit fields
+// ---------------------------------------------------------------------------
+constexpr uint32_t INSTR_OP	   = GENMASK32(31, 26);
+constexpr uint32_t INSTR_RS	   = GENMASK32(25, 21);
+constexpr uint32_t INSTR_RT	   = GENMASK32(20, 16);
+constexpr uint32_t INSTR_RD	   = GENMASK32(15, 11);
+constexpr uint32_t INSTR_SHAMT	   = GENMASK32(10, 6);
+constexpr uint32_t INSTR_FUNCT	   = GENMASK32(5, 0);
+constexpr uint32_t INSTR_TARGET	   = GENMASK32(25, 0);
+constexpr uint32_t INSTR_IMMEDIATE = GENMASK32(15, 0);
 
-#define SR_ISC	     (1 << 16)
+constexpr uint32_t INSTR_SF	  = 1 << 19;
+constexpr uint32_t INSTR_MVMVA_MX = GENMASK32(18, 17);
+constexpr uint32_t INSTR_MVMVA_VX = GENMASK32(16, 15);
+constexpr uint32_t INSTR_MVMVA_TX = GENMASK32(14, 13);
+constexpr uint32_t INSTR_LM	  = 1 << 10;
 
-#define FLAG_ERR     (UINT32_C(1) << 31)
-#define MAC1_OVF_POS (1 << 30)
-#define MAC2_OVF_POS (1 << 29)
-#define MAC3_OVF_POS (1 << 28)
-#define MAC1_OVF_NEG (1 << 27)
-#define MAC2_OVF_NEG (1 << 26)
-#define MAC3_OVF_NEG (1 << 25)
-#define IR1_SAT	     (1 << 24)
-#define IR2_SAT	     (1 << 23)
-#define IR3_SAT	     (1 << 22)
-#define RGB_R_SAT    (1 << 21)
-#define RGB_G_SAT    (1 << 20)
-#define RGB_B_SAT    (1 << 19)
-#define SZ3_OTZ_SAT  (1 << 18)
-#define DIV_OVF	     (1 << 17)
-#define MAC0_POS_OVF (1 << 16)
-#define MAC0_NEG_OVF (1 << 15)
-#define SX2_SAT	     (1 << 14)
-#define SY2_SAT	     (1 << 13)
-#define IR0_SAT	     (1 << 12)
+// ---------------------------------------------------------------------------
+// Exception codes
+// ---------------------------------------------------------------------------
 
-#define FLAG_MASK                                                                                                      \
-	(MAC1_OVF_POS | MAC2_OVF_POS | MAC3_OVF_POS | MAC1_OVF_NEG | MAC2_OVF_NEG | MAC3_OVF_NEG | IR1_SAT | IR2_SAT | \
-	 IR3_SAT | RGB_R_SAT | RGB_G_SAT | RGB_B_SAT | SZ3_OTZ_SAT | DIV_OVF | MAC0_POS_OVF | MAC0_NEG_OVF | SX2_SAT | \
-	 SY2_SAT | IR0_SAT)
+// clang-format off
 
-#define FLAG_ERR_MASK                                                                                                  \
-	(MAC1_OVF_POS | MAC2_OVF_POS | MAC3_OVF_POS | MAC1_OVF_NEG | MAC2_OVF_NEG | MAC3_OVF_NEG | IR1_SAT | IR2_SAT | \
-	 SZ3_OTZ_SAT | DIV_OVF | MAC0_POS_OVF | MAC0_NEG_OVF | SX2_SAT | SY2_SAT)
+#define EXCEPTIONS(X)										\
+	X(EXCEPTION_INT,	0,	"Int",		"external interrupt")			\
+	X(EXCEPTION_ADEL,	4,	"AdEL",		"address error on load/fetch")		\
+	X(EXCEPTION_ADES,	5,	"AdES",		"address error on store")		\
+	X(EXCEPTION_IBE,	6,	"IBE",		"bus error on instruction fetch")	\
+	X(EXCEPTION_DBE,	7,	"DBE",		"bus error on data load/store")		\
+	X(EXCEPTION_SYSCALL,	8,	"Syscall",	"syscall instruction")			\
+	X(EXCEPTION_BP,		9,	"BP",		"breakpoint instruction")		\
+	X(EXCEPTION_RI,		10,	"RI",		"reserved instruction")			\
+	X(EXCEPTION_CPU,	11,	"CpU",		"coprocessor unusable")			\
+	X(EXCEPTION_OV,		12,	"Ov",		"arithmetic overflow")
 
-#define MAC123_MAX	      ((INT64_C(1) << 43) - 1)
-#define MAC123_MIN	      (-(INT64_C(1) << 43))
-
-#define IR0_MIN		      (0x0000)
-#define IR0_MAX		      (0x1000)
-
-#define IR123_MIN	      (-(INT16_C(1) << 15))
-#define IR123_MAX	      ((INT16_C(1) << 15) - 1)
-#define IR123_LM_MIN	      (0x0000)
-
-#define SXY_MIN		      (-0x0400)
-#define SXY_MAX		      (+0x03FF)
-
-#define SZ_OTZ_MIN	      (0x0000)
-#define SZ_OTZ_MAX	      (UINT16_MAX)
-
-#define RGB_MIN		      (0x00)
-#define RGB_MAX		      (UINT8_MAX)
-
-#define MVMVA_MX_SHIFT	      (17)
-#define MVMVA_VX_SHIFT	      (15)
-#define MVMVA_TX_SHIFT	      (13)
-
-#define MVMVA_PARAM_MASK      (0x3)
-
-#define INSTR_SF	      (1 << 19)
-#define INSTR_LM	      (1 << 10)
-
-#define SR_IM2		      (1 << 10)
-
-#define DCIC_TR		      (UINT32_C(1) << 31)
-#define DCIC_UD		      (1 << 30)
-#define DCIC_KD		      (1 << 29)
-#define DCIC_TE		      (1 << 28)
-#define DCIC_DW		      (1 << 27)
-#define DCIC_DR		      (1 << 26)
-#define DCIC_DAE	      (1 << 25)
-#define DCIC_PCE	      (1 << 24)
-#define DCIC_DE		      (1 << 23)
-#define DCIC_T		      (1 << 5)
-#define DCIC_W		      (1 << 4)
-#define DCIC_R		      (1 << 3)
-#define DCIC_DA		      (1 << 2)
-#define DCIC_PC		      (1 << 1)
-#define DCIC_DB		      (1 << 0)
-
-#define DCIC_BP_WRITE_EN_MASK (DCIC_TR | DCIC_UD | DCIC_DW | DCIC_DAE | DCIC_DE)
+// clang-format on
 
 enum cpu_exception {
-	EXCEPTION_ADEL	  = 4,
-	EXCEPTION_ADES	  = 5,
-	EXCEPTION_IBE	  = 6,
-	EXCEPTION_DBE	  = 7,
-	EXCEPTION_SYSCALL = 8,
-	EXCEPTION_BP	  = 9,
-	EXCEPTION_OV	  = 12
+#define X(name, val, mnemonic, desc) name = val,
+	EXCEPTIONS(X)
+#undef X
 };
 
-enum instr_grp_op {
+struct cpu_exception_info {
+	const char *mnemonic;
+	const char *desc;
+};
+
+PSYCHO_NODISCARD PSYCHO_ALWAYS_INLINE const struct cpu_exception_info *exception_info(unsigned int code)
+{
+	static const struct cpu_exception_info infos[32] = {
+#define X(name, val, mnemonic, desc) [name] = { mnemonic, desc },
+		EXCEPTIONS(X)
+#undef X
+	};
+
+	assert((code < ARRAY_SIZE(infos)) && (infos[code].mnemonic));
+	return &infos[code];
+}
+
+PSYCHO_NODISCARD PSYCHO_ALWAYS_INLINE const char *exception_mnemonic(unsigned int code)
+{
+	return exception_info(code)->mnemonic;
+}
+
+PSYCHO_NODISCARD PSYCHO_ALWAYS_INLINE const char *exception_desc(unsigned int code)
+{
+	return exception_info(code)->desc;
+}
+
+// ---------------------------------------------------------------------------
+// Exception vectors
+// ---------------------------------------------------------------------------
+enum {
+	VECTOR_DEBUG	 = 0x80000040,
+	VECTOR_EXCEPTION = 0x80000080,
+	VECTOR_RESET	 = 0xBFC00000,
+};
+
+// ---------------------------------------------------------------------------
+// "DCIC - Debug and Cache Invalidate Control" register layout
+// ---------------------------------------------------------------------------
+constexpr uint32_t DCIC_TR  = UINT32_C(1) << 31;
+constexpr uint32_t DCIC_UD  = 1 << 30;
+constexpr uint32_t DCIC_KD  = 1 << 29;
+constexpr uint32_t DCIC_TE  = 1 << 28;
+constexpr uint32_t DCIC_DW  = 1 << 27;
+constexpr uint32_t DCIC_DR  = 1 << 26;
+constexpr uint32_t DCIC_DAE = 1 << 25;
+constexpr uint32_t DCIC_PCE = 1 << 24;
+constexpr uint32_t DCIC_DE  = 1 << 23;
+constexpr uint32_t DCIC_T   = 1 << 5;
+constexpr uint32_t DCIC_W   = 1 << 4;
+constexpr uint32_t DCIC_R   = 1 << 3;
+constexpr uint32_t DCIC_DA  = 1 << 2;
+constexpr uint32_t DCIC_PC  = 1 << 1;
+constexpr uint32_t DCIC_DB  = 1 << 0;
+
+constexpr uint32_t DCIC_BP_WRITE_EN_MASK = DCIC_TR | DCIC_UD | DCIC_DW | DCIC_DAE | DCIC_DE;
+
+// ---------------------------------------------------------------------------
+// "SR - Status Register" register layout
+// ---------------------------------------------------------------------------
+constexpr uint32_t SR_CU3     = UINT32_C(1) << 31;
+constexpr uint32_t SR_CU2     = 1 << 30;
+constexpr uint32_t SR_CU1     = 1 << 29;
+constexpr uint32_t SR_CU0     = 1 << 28;
+constexpr uint32_t SR_RE      = 1 << 25;
+constexpr uint32_t SR_BEV     = 1 << 22;
+constexpr uint32_t SR_TS      = 1 << 21;
+constexpr uint32_t SR_PE      = 1 << 20;
+constexpr uint32_t SR_CM      = 1 << 19;
+constexpr uint32_t SR_PZ      = 1 << 18;
+constexpr uint32_t SR_SWC     = 1 << 17;
+constexpr uint32_t SR_ISC     = 1 << 16;
+constexpr uint32_t SR_IM_MASK = GENMASK32(15, 8);
+constexpr uint32_t SR_IM7     = 1 << 15;
+constexpr uint32_t SR_IM6     = 1 << 14;
+constexpr uint32_t SR_IM5     = 1 << 13;
+constexpr uint32_t SR_IM4     = 1 << 12;
+constexpr uint32_t SR_IM3     = 1 << 11;
+constexpr uint32_t SR_IM2     = 1 << 10;
+constexpr uint32_t SR_IM1     = 1 << 9;
+constexpr uint32_t SR_IM0     = 1 << 8;
+constexpr uint32_t SR_KUO     = 1 << 5;
+constexpr uint32_t SR_IEO     = 1 << 4;
+constexpr uint32_t SR_KUP     = 1 << 3;
+constexpr uint32_t SR_IEP     = 1 << 2;
+constexpr uint32_t SR_KUC     = 1 << 1;
+constexpr uint32_t SR_IEC     = 1 << 0;
+
+// ---------------------------------------------------------------------------
+// Geometry Transformation Engine (GTE/COP2) "FLAG" control register layout
+// ---------------------------------------------------------------------------
+constexpr uint32_t FLAG_ERR	     = UINT32_C(1) << 31;
+constexpr uint32_t MAC1_OVERFLOW_POS = 1 << 30;
+constexpr uint32_t MAC2_OVERFLOW_POS = 1 << 29;
+constexpr uint32_t MAC3_OVERFLOW_POS = 1 << 28;
+constexpr uint32_t MAC1_OVERFLOW_NEG = 1 << 27;
+constexpr uint32_t MAC2_OVERFLOW_NEG = 1 << 26;
+constexpr uint32_t MAC3_OVERFLOW_NEG = 1 << 25;
+constexpr uint32_t IR1_SATURATED     = 1 << 24;
+constexpr uint32_t IR2_SATURATED     = 1 << 23;
+constexpr uint32_t IR3_SATURATED     = 1 << 22;
+constexpr uint32_t RGB_R_SATURATED   = 1 << 21;
+constexpr uint32_t RGB_G_SATURATED   = 1 << 20;
+constexpr uint32_t RGB_B_SATURATED   = 1 << 19;
+constexpr uint32_t SZ3_OTZ_SATURATED = 1 << 18;
+constexpr uint32_t DIV_OVERFLOW	     = 1 << 17;
+constexpr uint32_t MAC0_OVERFLOW_POS = 1 << 16;
+constexpr uint32_t MAC0_OVERFLOW_NEG = 1 << 15;
+constexpr uint32_t SX2_SATURATED     = 1 << 14;
+constexpr uint32_t SY2_SATURATED     = 1 << 13;
+constexpr uint32_t IR0_SATURATED     = 1 << 12;
+
+constexpr uint32_t FLAG_MASK = MAC1_OVERFLOW_POS | MAC2_OVERFLOW_POS | MAC3_OVERFLOW_POS | MAC1_OVERFLOW_NEG |
+			       MAC2_OVERFLOW_NEG | MAC3_OVERFLOW_NEG | IR1_SATURATED | IR2_SATURATED | IR3_SATURATED |
+			       RGB_R_SATURATED | RGB_G_SATURATED | RGB_B_SATURATED | SZ3_OTZ_SATURATED | DIV_OVERFLOW |
+			       MAC0_OVERFLOW_POS | MAC0_OVERFLOW_NEG | SX2_SATURATED | SY2_SATURATED | IR0_SATURATED;
+
+constexpr uint32_t FLAG_ERR_MASK = MAC1_OVERFLOW_POS | MAC2_OVERFLOW_POS | MAC3_OVERFLOW_POS | MAC1_OVERFLOW_NEG |
+				   MAC2_OVERFLOW_NEG | MAC3_OVERFLOW_NEG | IR1_SATURATED | IR2_SATURATED |
+				   SZ3_OTZ_SATURATED | DIV_OVERFLOW | MAC0_OVERFLOW_POS | MAC0_OVERFLOW_NEG |
+				   SX2_SATURATED | SY2_SATURATED;
+
+// ---------------------------------------------------------------------------
+// Geometry Transformation Engine (GTE/COP2) fixed-point arithmetic
+// ---------------------------------------------------------------------------
+constexpr unsigned int SHIFT_FRAC = 12;
+
+// ---------------------------------------------------------------------------
+// Geometry Transformation Engine (GTE/COP2) register limits
+// ---------------------------------------------------------------------------
+constexpr int64_t MAC123_MIN = -(INT64_C(1) << 43);
+constexpr int64_t MAC123_MAX = (INT64_C(1) << 43) - 1;
+
+constexpr int32_t SXY_MIN = -0x0400;
+constexpr int32_t SXY_MAX = 0x03FF;
+
+constexpr int16_t IR0_MIN      = 0x0000;
+constexpr int16_t IR0_MAX      = 0x1000;
+constexpr int16_t IR123_MIN    = INT16_MIN;
+constexpr int16_t IR123_MAX    = INT16_MAX;
+constexpr int16_t IR123_LM_MIN = 0x0000;
+
+constexpr uint16_t SZ_OTZ_MIN = 0x0000;
+constexpr uint16_t SZ_OTZ_MAX = UINT16_MAX;
+
+constexpr uint8_t RGB_MIN = 0x00;
+constexpr uint8_t RGB_MAX = UINT8_MAX;
+
+// ---------------------------------------------------------------------------
+// OP group instructions
+// ---------------------------------------------------------------------------
+enum {
 	GRP_SPECIAL = 0x00,
 	GRP_REGIMM  = 0x01,
 	J	    = 0x02,
@@ -148,7 +248,10 @@ enum instr_grp_op {
 	SWR	    = 0x2E,
 };
 
-enum instr_grp_special {
+// ---------------------------------------------------------------------------
+// SPECIAL group instructions
+// ---------------------------------------------------------------------------
+enum {
 	SLL	= 0x00,
 	SRL	= 0x02,
 	SRA	= 0x03,
@@ -179,18 +282,27 @@ enum instr_grp_special {
 	SLTU	= 0x2B
 };
 
-enum instr_grp_cop {
+// ---------------------------------------------------------------------------
+// COP group instructions
+// ---------------------------------------------------------------------------
+enum {
 	MFC = 0x00,
 	CFC = 0x02,
 	MTC = 0x04,
 	CTC = 0x06,
 };
 
-enum instr_grp_cop0 {
+// ---------------------------------------------------------------------------
+// COP0 group instructions
+// ---------------------------------------------------------------------------
+enum {
 	RFE = 0x10,
 };
 
-enum instr_grp_cop2 {
+// ---------------------------------------------------------------------------
+// Geometry Transformation Engine (GTE/COP2) instructions
+// ---------------------------------------------------------------------------
+enum {
 	RTPS  = 0x01,
 	NCLIP = 0x06,
 	OP    = 0x0C,
@@ -215,24 +327,19 @@ enum instr_grp_cop2 {
 	NCCT  = 0x3F
 };
 
-PSYCHO_NODISCARD PSYCHO_ALWAYS_INLINE unsigned int mvmva_mx(uint32_t instr)
+PSYCHO_NODISCARD PSYCHO_ALWAYS_INLINE uint32_t jmp_addr(uint32_t pc, uint32_t instr)
 {
-	return (instr >> MVMVA_MX_SHIFT) & MVMVA_PARAM_MASK;
+	return (field_get32(INSTR_TARGET, instr) << 2) + (pc & 0xF0000000);
 }
 
-PSYCHO_NODISCARD PSYCHO_ALWAYS_INLINE unsigned int mvmva_vx(uint32_t instr)
+PSYCHO_NODISCARD PSYCHO_ALWAYS_INLINE uint32_t branch_addr(uint32_t pc, uint32_t instr)
 {
-	return (instr >> MVMVA_VX_SHIFT) & MVMVA_PARAM_MASK;
-}
-
-PSYCHO_NODISCARD PSYCHO_ALWAYS_INLINE unsigned int mvmva_tx(uint32_t instr)
-{
-	return (instr >> MVMVA_TX_SHIFT) & MVMVA_PARAM_MASK;
+	return sign_extend_16_32(field_get16(INSTR_IMMEDIATE, instr) << 2) + pc + sizeof(instr);
 }
 
 PSYCHO_NODISCARD PSYCHO_ALWAYS_INLINE unsigned int shift_frac(uint32_t instr)
 {
-	return (instr & INSTR_SF) ? 12 : 0;
+	return (instr & INSTR_SF) ? SHIFT_FRAC : 0;
 }
 
 PSYCHO_NODISCARD PSYCHO_ALWAYS_INLINE bool ir123_lm(uint32_t instr)
@@ -243,56 +350,6 @@ PSYCHO_NODISCARD PSYCHO_ALWAYS_INLINE bool ir123_lm(uint32_t instr)
 PSYCHO_NODISCARD PSYCHO_ALWAYS_INLINE uint32_t vaddr_to_paddr(uint32_t vaddr)
 {
 	return ((vaddr >> 30) == 2) ? (vaddr & 0x1FFFFFFF) : vaddr;
-}
-
-PSYCHO_NODISCARD PSYCHO_ALWAYS_INLINE unsigned int instr_op(uint32_t instr)
-{
-	return instr >> 26;
-}
-
-PSYCHO_NODISCARD PSYCHO_ALWAYS_INLINE unsigned int instr_rs(uint32_t instr)
-{
-	return (instr >> 21) & 0x1F;
-}
-
-PSYCHO_NODISCARD PSYCHO_ALWAYS_INLINE unsigned int instr_rt(uint32_t instr)
-{
-	return (instr >> 16) & 0x1F;
-}
-
-PSYCHO_NODISCARD PSYCHO_ALWAYS_INLINE unsigned int instr_rd(uint32_t instr)
-{
-	return (instr >> 11) & 0x1F;
-}
-
-PSYCHO_NODISCARD PSYCHO_ALWAYS_INLINE unsigned int instr_shamt(uint32_t instr)
-{
-	return (instr >> 6) & 0x1F;
-}
-
-PSYCHO_NODISCARD PSYCHO_ALWAYS_INLINE unsigned int instr_target(uint32_t instr)
-{
-	return instr & 0x03FFFFFF;
-}
-
-PSYCHO_NODISCARD PSYCHO_ALWAYS_INLINE unsigned int instr_funct(uint32_t instr)
-{
-	return instr & 0x0000003F;
-}
-
-PSYCHO_NODISCARD PSYCHO_ALWAYS_INLINE uint16_t instr_imm(uint32_t instr)
-{
-	return instr & UINT16_MAX;
-}
-
-PSYCHO_NODISCARD PSYCHO_ALWAYS_INLINE uint32_t jmp_addr(uint32_t pc, uint32_t instr)
-{
-	return (instr_target(instr) << 2) + (pc & 0xF0000000);
-}
-
-PSYCHO_NODISCARD PSYCHO_ALWAYS_INLINE uint32_t branch_addr(uint32_t pc, uint32_t instr)
-{
-	return sign_extend_16_32(instr_imm(instr) << 2) + pc + sizeof(instr);
 }
 
 extern const uint8_t psycho_gte_unr_tbl[0x101];
