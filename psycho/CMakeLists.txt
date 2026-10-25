@@ -32,9 +32,9 @@ target_sources(
 	include/psycho/debug/fixed_string.h
 	include/psycho/debug/log.h
 	include/psycho/devices/digital_pad.h
-	include/psycho/system/cpu/defs.h
-	include/psycho/system/cpu/interpreter.h
-	include/psycho/system/cpu/ops.h
+	include/psycho/system/cpu/backend/backend.h
+	include/psycho/system/cpu/backend/interpreter.h
+	include/psycho/system/cpu/cpu.h
 	include/psycho/system/bus.h
 	include/psycho/system/gpu.h
 	include/psycho/system/intc.h
@@ -53,21 +53,24 @@ target_sources(
 	src/debug/log.c
 	src/debug/log.h
 	src/devices/digital_pad.c
+	src/system/cpu/backend/interpreter.c
+	src/system/cpu/backend/interpreter.h
+	src/system/cpu/cpu.c
+	src/system/cpu/cpu.h
 	src/system/cpu/defs.c
 	src/system/cpu/defs.h
-	src/system/cpu/interpreter.c
-	src/system/cpu/interpreter.h
 	src/system/gpu/gpu.c
 	src/system/gpu/gpu.h
 	src/system/gpu/sw.c
 	src/system/gpu/sw.h
+	src/system/sio0/defs.h
+	src/system/sio0/sio0_device.c
+	src/system/sio0/sio0.c
+	src/system/sio0/sio0.h
 	src/system/bus.c
 	src/system/bus.h
 	src/system/intc.c
 	src/system/intc.h
-	src/system/sio0_device.c
-	src/system/sio0.c
-	src/system/sio0.h
 	src/ctx.c
 	src/exe_loader.c
 	src/exe_loader.h
@@ -77,6 +80,17 @@ target_include_directories(psycho PUBLIC include)
 target_include_directories(psycho PRIVATE src)
 
 set_source_files_properties(
-	src/cpu/interpreter.c PROPERTIES
+	src/system/cpu/backend/interpreter.c PROPERTIES
 	COMPILE_OPTIONS "-fno-gcse;-fno-crossjumping"
+)
+
+install(
+	TARGETS psycho
+	ARCHIVE DESTINATION lib
+)
+
+install(
+	DIRECTORY include/psycho
+	DESTINATION lib/include
+	FILES_MATCHING PATTERN "*.h"
 )

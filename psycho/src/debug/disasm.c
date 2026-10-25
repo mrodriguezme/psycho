@@ -428,11 +428,11 @@ bool psycho_disasm_instr(struct psycho_ctx *ctx, uint32_t pc, struct psycho_disa
 	}
 
 	case J:
-		fmt("j 0x%08X", jmpsycho_addr(pc, instr));
+		fmt("j 0x%08X", jmp_addr(pc, instr));
 		break;
 
 	case JAL:
-		fmt("jal 0x%08X", jmpsycho_addr(pc, instr));
+		fmt("jal 0x%08X", jmp_addr(pc, instr));
 		break;
 
 	case BEQ:
@@ -667,30 +667,30 @@ void psycho_disasm_trace_end(struct psycho_ctx *ctx)
 
 		switch (ctx->disasm.traces.data[trace]) {
 		case PSYCHO_DISASM_TRACE_GPR_RT: {
-			uint32_t val = ctx->cpu.gpr_get(ctx, rt);
+			uint32_t val = ctx->cpu.base.gpr[rt];
 
 			psycho_fixed_string_append(&ctx->disasm.res.str, "%s=0x%08X", gpr[rt], val);
 			break;
 		}
 
 		case PSYCHO_DISASM_TRACE_GPR_RD: {
-			uint32_t val = ctx->cpu.gpr_get(ctx, rd);
+			uint32_t val = ctx->cpu.base.gpr[rd];
 			psycho_fixed_string_append(&ctx->disasm.res.str, "%s=0x%08X", gpr[rd], val);
 
 			break;
 		}
 
 		case PSYCHO_DISASM_TRACE_CPU_LO:
-			psycho_fixed_string_append(&ctx->disasm.res.str, "LO=0x%08X", ctx->cpu.reg_lo_get(ctx));
+			psycho_fixed_string_append(&ctx->disasm.res.str, "LO=0x%08X", ctx->cpu.base.lo);
 			break;
 
 		case PSYCHO_DISASM_TRACE_CPU_HI:
-			psycho_fixed_string_append(&ctx->disasm.res.str, "HI=0x%08X", ctx->cpu.reg_hi_get(ctx));
+			psycho_fixed_string_append(&ctx->disasm.res.str, "HI=0x%08X", ctx->cpu.base.hi);
 			break;
 
 		case PSYCHO_DISASM_TRACE_CPU_PADDR: {
-			uint32_t instr = ctx->cpu.instr_get(ctx);
-			uint32_t vaddr = ctx->cpu.gpr_get(ctx, rs);
+			uint32_t instr = ctx->cpu.base.instr;
+			uint32_t vaddr = ctx->cpu.base.gpr[rs];
 
 			uint32_t val = instr_imm(instr) + (vaddr & 0x1FFFFFFF);
 

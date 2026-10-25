@@ -23,7 +23,7 @@
 
 #include "bus.h"
 #include "intc.h"
-#include "sio0.h"
+#include "sio0/sio0.h"
 
 DECLARE_LOG_MODULE(PSYCHO_LOG_MODULE_BUS);
 

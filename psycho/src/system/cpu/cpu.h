@@ -17,39 +17,8 @@
 
 #pragma once
 
-#include <stdbool.h>
-#include "defs.h"
+#include "psycho/ctx.h"
 
-#ifdef __cplusplus
-extern "C" {
-#endif // __cplusplus
-
-struct psycho_ctx;
-
-struct psycho_cpu_cfg {
-	void (*illegal_instr)(struct psycho_ctx *ctx, uint32_t instr);
-};
-
-struct psycho_cpu_ops {
-	void (*irq_mux_assert)(struct psycho_ctx *ctx, bool state);
-
-	void (*gpr_set)(struct psycho_ctx *ctx, enum psycho_cpu_gpr gpr, uint32_t val);
-	uint32_t (*gpr_get)(struct psycho_ctx *ctx, enum psycho_cpu_gpr gpr);
-
-	uint32_t (*reg_lo_get)(struct psycho_ctx *ctx);
-	uint32_t (*reg_hi_get)(struct psycho_ctx *ctx);
-
-	void (*pc_set)(struct psycho_ctx *ctx, uint32_t pc);
-	uint32_t (*pc_get)(struct psycho_ctx *ctx);
-
-	void (*run)(struct psycho_ctx *ctx, bool single_step);
-	void (*stop)(struct psycho_ctx *ctx);
-
-	uint32_t (*instr_get)(struct psycho_ctx *ctx);
-
-	void (*reset)(struct psycho_ctx *ctx);
-};
-
-#ifdef __cplusplus
-}
-#endif // __cplusplus
+void psycho_cpu_reset(struct psycho_ctx *ctx);
+void psycho_cpu_pc_set(struct psycho_ctx *ctx, uint32_t pc);
+void psycho_cpu_irq_mux_assert(struct psycho_ctx *ctx, bool asserted);

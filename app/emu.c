@@ -212,12 +212,14 @@ void emu_init(struct emu_runner *emu, const char *bios_file, const char *exe_fil
 
 	struct psycho_ctx_cfg *cfg = psycho_ctx_cfg_get(&emu->ctx);
 
+	cfg->cpu.backend = PSYCHO_CPU_BACKEND_INTERPRETER;
+
 	cfg->cpu.illegal_instr = illegal_instr_cb;
 	cfg->disasm.tracing    = false;
 
 	cfg->log.log_cb = NULL;
 
-	cfg->bios_call_tracer.enabled = false;
+	cfg->bios_call_tracer.enabled	 = false;
 	cfg->bios_call_tracer.deref_ptrs = true;
 
 	//cfg->log.modules[PSYCHO_LOG_MODULE_SCHED] = PSYCHO_LOG_LEVEL_TRACE;

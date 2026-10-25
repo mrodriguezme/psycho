@@ -78,7 +78,7 @@ PSYCHO_CONST static const char *button_name(enum psycho_digital_pad_button butto
 		return "Square";
 
 	default:
-		PSYCHO_UNREACHABLE;
+		unreachable();
 	}
 }
 
@@ -163,7 +163,7 @@ static uint8_t transceive(void *dev, uint8_t mosi)
 		break;
 
 	default:
-		PSYCHO_UNREACHABLE;
+		unreachable();
 	}
 
 	if (ack)

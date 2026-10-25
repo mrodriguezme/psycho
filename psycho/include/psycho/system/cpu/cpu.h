@@ -17,16 +17,23 @@
 
 #pragma once
 
+#pragma once
+
 #include <stddef.h>
 #include <stdint.h>
+
+#include "backend/backend.h"
 
 #ifdef __cplusplus
 extern "C" {
 #endif // __cplusplus
 
-enum {
-	PSYCHO_CPU_CLKFREQ_HZ = 33868800,
+struct psycho_cpu_cfg {
+	enum psycho_cpu_backend backend;
+	void (*illegal_instr)(struct psycho_ctx *ctx, uint32_t instr);
 };
+
+constexpr uint32_t PSYCHO_CPU_CLKFREQ_HZ = 33868800;
 
 enum psycho_cpu_gpr {
 	PSYCHO_CPU_GPR_ZERO  = 0,
@@ -243,6 +250,34 @@ struct psycho_cpu_cop2_ccr_layout {
 		};
 		uint32_t array[PSYCHO_CPU_COP2_CCR_COUNT];
 	};
+};
+
+struct psycho_cpu_delay_slot {
+	uint32_t dst;
+	uint32_t val;
+};
+
+struct psycho_cpu {
+	struct {
+		struct psycho_cpu_cop2_cpr_layout cpr;
+		struct psycho_cpu_cop2_ccr_layout ccr;
+	} cop2;
+
+	uint32_t gpr[PSYCHO_CPU_GPR_COUNT];
+	uint32_t cop0_cpr[PSYCHO_CPU_COP0_CPR_COUNT];
+
+	struct psycho_cpu_delay_slot ld_pending;
+	struct psycho_cpu_delay_slot ld_next;
+
+	uint32_t pc;
+	uint32_t next_pc;
+	uint32_t delay_pc;
+	uint32_t instr;
+	uint32_t lo;
+	uint32_t hi;
+
+	bool in_bd;
+	bool next_in_bd;
 };
 
 #define psycho_static_assert_same_word(t, m, idx) \

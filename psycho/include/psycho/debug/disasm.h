@@ -21,7 +21,7 @@
 #include <stddef.h>
 
 #include "psycho/common/compiler_support.h"
-#include "psycho/system/cpu/defs.h"
+#include "psycho/system/cpu/cpu.h"
 #include "psycho/debug/fixed_string.h"
 
 #ifdef __cplusplus

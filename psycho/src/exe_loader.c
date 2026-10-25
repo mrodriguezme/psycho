@@ -20,6 +20,7 @@
 #include "exe_loader.h"
 #include "debug/log.h"
 #include "common/util.h"
+#include "system/cpu/cpu.h"
 #include "system/cpu/defs.h"
 
 DECLARE_LOG_MODULE(PSYCHO_LOG_MODULE_CTX);
@@ -35,15 +36,15 @@ struct exe_hdr {
 	const uint32_t data_sect_size;
 	const uint32_t bss_sect_addr;
 	const uint32_t bss_sect_size;
-	const uint32_t spsycho_fpsycho_base;
-	const uint32_t spsycho_fpsycho_offs;
+	const uint32_t sp_fp_base;
+	const uint32_t sp_fp_offs;
 	const uint8_t resv_bios_fn[0x4C - 0x38];
 	const uint8_t ascii_marker;
 	const uint8_t ascii_or_zerofilled[1971];
 	const uint8_t code;
 };
 
-#define static_assert_offset(x, memb, off) _Static_assert(offsetof(x, memb) == (off), "Offset is not correct.")
+#define static_assert_offset(x, memb, off) static_assert(offsetof(x, memb) == (off))
 
 static_assert_offset(struct exe_hdr, id, 0x000);
 static_assert_offset(struct exe_hdr, zero, 0x008);
@@ -55,8 +56,8 @@ static_assert_offset(struct exe_hdr, data_sect_addr, 0x20);
 static_assert_offset(struct exe_hdr, data_sect_size, 0x24);
 static_assert_offset(struct exe_hdr, bss_sect_addr, 0x28);
 static_assert_offset(struct exe_hdr, bss_sect_size, 0x2C);
-static_assert_offset(struct exe_hdr, spsycho_fpsycho_base, 0x30);
-static_assert_offset(struct exe_hdr, spsycho_fpsycho_offs, 0x34);
+static_assert_offset(struct exe_hdr, sp_fp_base, 0x30);
+static_assert_offset(struct exe_hdr, sp_fp_offs, 0x34);
 static_assert_offset(struct exe_hdr, resv_bios_fn, 0x38);
 static_assert_offset(struct exe_hdr, ascii_marker, 0x4C);
 static_assert_offset(struct exe_hdr, code, 0x800);
@@ -89,18 +90,19 @@ void psycho_ctx_exe_inject(struct psycho_ctx *ctx)
 
 	LOG_INFO(ctx, "injecting exe (dst=0x%08X, size=%u)", exe->dst_ram, exe->file_size);
 
-	ctx->cpu.pc_set(ctx, exe->pc);
-	ctx->cpu.gpr_set(ctx, PSYCHO_CPU_GPR_GP, exe->gp);
+	psycho_cpu_pc_set(ctx, exe->pc);
 
-	if (exe->spsycho_fpsycho_base) {
-		const uint32_t val = exe->spsycho_fpsycho_base + exe->spsycho_fpsycho_offs;
+	ctx->cpu.base.gpr[PSYCHO_CPU_GPR_GP] = exe->gp;
 
-		ctx->cpu.gpr_set(ctx, PSYCHO_CPU_GPR_SP, val);
-		ctx->cpu.gpr_set(ctx, PSYCHO_CPU_GPR_FP, val);
+	if (exe->sp_fp_base) {
+		uint32_t val = exe->sp_fp_base + exe->sp_fp_offs;
+
+		ctx->cpu.base.gpr[PSYCHO_CPU_GPR_SP] = val;
+		ctx->cpu.base.gpr[PSYCHO_CPU_GPR_FP] = val;
 	}
 
-	const uint32_t paddr = vaddr_to_paddr(exe->dst_ram);
-	memcpy(&ctx->bus.ram[paddr], &exe->code, exe->file_size);
+	uint32_t paddr = vaddr_to_paddr(exe->dst_ram);
 
+	memcpy(&ctx->bus.ram[paddr], &exe->code, exe->file_size);
 	memset(&ctx->exe, 0, sizeof(ctx->exe));
 }

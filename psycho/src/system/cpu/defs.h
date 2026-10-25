@@ -115,7 +115,7 @@ enum cpu_exception {
 	EXCEPTION_OV	  = 12
 };
 
-enum instr_grpsycho_op {
+enum instr_grp_op {
 	GRP_SPECIAL = 0x00,
 	GRP_REGIMM  = 0x01,
 	J	    = 0x02,
@@ -148,7 +148,7 @@ enum instr_grpsycho_op {
 	SWR	    = 0x2E,
 };
 
-enum instr_grpsycho_special {
+enum instr_grp_special {
 	SLL	= 0x00,
 	SRL	= 0x02,
 	SRA	= 0x03,
@@ -179,18 +179,18 @@ enum instr_grpsycho_special {
 	SLTU	= 0x2B
 };
 
-enum instr_grpsycho_cop {
+enum instr_grp_cop {
 	MFC = 0x00,
 	CFC = 0x02,
 	MTC = 0x04,
 	CTC = 0x06,
 };
 
-enum instr_grpsycho_cop0 {
+enum instr_grp_cop0 {
 	RFE = 0x10,
 };
 
-enum instr_grpsycho_cop2 {
+enum instr_grp_cop2 {
 	RTPS  = 0x01,
 	NCLIP = 0x06,
 	OP    = 0x0C,
@@ -285,7 +285,7 @@ PSYCHO_NODISCARD PSYCHO_ALWAYS_INLINE uint16_t instr_imm(uint32_t instr)
 	return instr & UINT16_MAX;
 }
 
-PSYCHO_NODISCARD PSYCHO_ALWAYS_INLINE uint32_t jmpsycho_addr(uint32_t pc, uint32_t instr)
+PSYCHO_NODISCARD PSYCHO_ALWAYS_INLINE uint32_t jmp_addr(uint32_t pc, uint32_t instr)
 {
 	return (instr_target(instr) << 2) + (pc & 0xF0000000);
 }

@@ -18,7 +18,6 @@
 #pragma once
 
 #include <stdint.h>
-#include <stdbool.h>
 #include <stddef.h>
 
 #ifdef __cplusplus
@@ -27,9 +26,7 @@ extern "C" {
 
 struct psycho_ctx;
 
-enum {
-	PSYCHO_SCHED_NUM_EVENTS = 25,
-};
+constexpr size_t PSYCHO_SCHED_EVENTS_NUM_MAX = 25;
 
 enum psycho_sched_event_type {
 	PSYCHO_SCHED_EVENT_TYPE_VBLANK,
@@ -43,18 +40,19 @@ struct psycho_sched_event {
 	uint64_t ts;
 	uint64_t period;
 
-	void (*cb)(struct psycho_ctx *ctx, void *userdata);
-	enum psycho_sched_event_type type;
-	bool permanent;
-
 	size_t idx;
-	bool valid;
 
+	void (*cb)(struct psycho_ctx *ctx, void *userdata);
 	void *userdata;
+
+	enum psycho_sched_event_type type;
+
+	bool permanent;
+	bool valid;
 };
 
 struct psycho_sched {
-	struct psycho_sched_event *events[PSYCHO_SCHED_NUM_EVENTS];
+	struct psycho_sched_event *events[PSYCHO_SCHED_EVENTS_NUM_MAX];
 	size_t num_events;
 	uint64_t ts_now;
 };

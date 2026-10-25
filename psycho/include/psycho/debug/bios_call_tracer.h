@@ -17,7 +17,6 @@
 
 #pragma once
 
-#include <stdbool.h>
 #include <stddef.h>
 #include <stdint.h>
 
@@ -30,10 +29,8 @@ extern "C" {
 struct psycho_ctx;
 struct psycho_bios_call_tracer_frame;
 
-enum {
-	PSYCHO_BIOS_CALL_TRACER_STACK_MAX      = 16,
-	PSYCHO_BIOS_CALL_TRACER_STDOUT_LEN_MAX = 128,
-};
+constexpr size_t PSYCHO_BIOS_CALL_TRACER_STACK_FRAMES_MAX = 4;
+constexpr size_t PSYCHO_BIOS_CALL_TRACER_STDOUT_LEN_MAX	  = 128;
 
 enum psycho_bios_call_tracer_func_ret {
 	PSYCHO_BIOS_CALL_FUNC_RET_INT,
@@ -44,8 +41,8 @@ enum psycho_bios_call_tracer_func_ret {
 
 struct psycho_bios_call_tracer_func_entry {
 	const char *prototype;
-	enum psycho_bios_call_tracer_func_ret ret;
 	void (*hook_cb)(struct psycho_ctx *ctx, struct psycho_bios_call_tracer_frame *frame);
+	enum psycho_bios_call_tracer_func_ret ret;
 };
 
 struct psycho_bios_call_tracer_frame {
@@ -78,7 +75,7 @@ struct psycho_bios_call_tracer_stdout {
 
 struct psycho_bios_call_tracer {
 	struct {
-		struct psycho_bios_call_tracer_frame frames[PSYCHO_BIOS_CALL_TRACER_STACK_MAX];
+		struct psycho_bios_call_tracer_frame frames[PSYCHO_BIOS_CALL_TRACER_STACK_FRAMES_MAX];
 		size_t top;
 	} stack;
 

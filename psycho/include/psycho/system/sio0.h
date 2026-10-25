@@ -18,6 +18,11 @@
 #pragma once
 
 #include "sio0_device.h"
+#include "psycho/lib/ring_buffer.h"
+
+constexpr size_t PSYCHO_SIO0_RXFIFO_SIZE = 8;
+
+PSYCHO_RING_BUFFER_DEFINE(psycho_sio0_rxfifo, uint8_t, PSYCHO_SIO0_RXFIFO_SIZE);
 
 struct psycho_sio0 {
 	struct psycho_sio0_device *devices[PSYCHO_SIO0_SLOT_COUNT][PSYCHO_SIO0_DEVICE_TYPE_COUNT];
@@ -28,14 +33,7 @@ struct psycho_sio0 {
 		uint32_t latched;
 	} txfifo;
 
-	struct {
-		size_t num_entries;
-
-		union {
-			uint8_t entries[4];
-			uint32_t raw;
-		};
-	} rxfifo;
+	struct psycho_sio0_rxfifo rxfifo;
 
 	uint32_t sr;
 	uint16_t mr;

@@ -28,8 +28,7 @@ extern "C" {
 #include "debug/log.h"
 
 #include "system/bus.h"
-#include "system/cpu/interpreter.h"
-#include "system/cpu/ops.h"
+#include "system/cpu/backend/interpreter.h"
 #include "system/gpu.h"
 #include "system/intc.h"
 #include "system/sio0.h"
@@ -54,7 +53,12 @@ struct psycho_ctx {
 	struct psycho_sched sched;
 	struct psycho_sio0 sio0;
 	struct psycho_ctx_cfg cfg;
-	struct psycho_cpu_ops cpu;
+
+	struct {
+		struct psycho_cpu base;
+		const struct psycho_cpu_backend_ops *backend;
+		struct psycho_cpu_interpreter interpreter;
+	} cpu;
 
 	struct {
 		const uint8_t *data;
@@ -66,6 +70,7 @@ struct psycho_ctx {
 };
 
 enum psycho_ctx_ret {
+	PSYCHO_CTX_CPU_BACKEND_ERROR	 = -4,
 	PSYCHO_CTX_EXE_FILE_SIZE_INVALID = -3,
 	PSYCHO_CTX_EXE_SIZE_INVALID	 = -2,
 	PSYCHO_CTX_EXE_ID_INVALID	 = -1,
@@ -74,7 +79,7 @@ enum psycho_ctx_ret {
 
 PSYCHO_NODISCARD PSYCHO_CONST struct psycho_ctx_cfg *psycho_ctx_cfg_get(struct psycho_ctx *ctx) PSYCHO_NONNULL;
 
-void psycho_ctx_init(struct psycho_ctx *ctx) PSYCHO_NONNULL;
+enum psycho_ctx_ret psycho_ctx_init(struct psycho_ctx *ctx) PSYCHO_NONNULL;
 
 void psycho_ctx_reset(struct psycho_ctx *ctx) PSYCHO_NONNULL;
 

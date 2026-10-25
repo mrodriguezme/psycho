@@ -17,43 +17,13 @@
 
 #pragma once
 
-#include <stdbool.h>
 #include <stddef.h>
-
-#include "psycho/system/cpu/defs.h"
 
 #ifdef __cplusplus
 extern "C" {
 #endif // __cplusplus
 
-struct psycho_ctx;
-
-struct psycho_cpu_dly_slot {
-	uint32_t dst;
-	uint32_t val;
-};
-
 struct psycho_cpu_interpreter {
-	uint32_t gpr[PSYCHO_CPU_GPR_COUNT];
-	uint32_t cop0_cpr[PSYCHO_CPU_COP0_CPR_COUNT];
-
-	struct {
-		struct psycho_cpu_cop2_cpr_layout cpr;
-		struct psycho_cpu_cop2_ccr_layout ccr;
-	} cop2;
-
-	uint32_t pc;
-	uint32_t npc;
-	uint32_t dly_pc;
-	uint32_t instr;
-	uint32_t lo;
-	uint32_t hi;
-
-	struct psycho_cpu_dly_slot ld_pend;
-	struct psycho_cpu_dly_slot ld_next;
-
-	bool in_bd;
-	bool next_in_bd;
 	bool slow;
 };
 

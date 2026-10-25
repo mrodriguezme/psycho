@@ -17,6 +17,6 @@
 
 #pragma once
 
-#include "psycho/ctx.h"
+#include "psycho/system/cpu/backend/backend.h"
 
-void psycho_cpu_int_init(struct psycho_ctx *ctx);
+extern const struct psycho_cpu_backend_ops psycho_cpu_backend_ops_interpreter;

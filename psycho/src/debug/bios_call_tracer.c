@@ -147,13 +147,13 @@ PSYCHO_NONNULL static void frame_init(struct psycho_ctx *ctx, struct psycho_bios
 	frame->func    = func;
 	frame->arg_pos = 0;
 
-	frame->a0 = ctx->cpu.gpr_get(ctx, PSYCHO_CPU_GPR_A0);
-	frame->a1 = ctx->cpu.gpr_get(ctx, PSYCHO_CPU_GPR_A1);
-	frame->a2 = ctx->cpu.gpr_get(ctx, PSYCHO_CPU_GPR_A2);
-	frame->a3 = ctx->cpu.gpr_get(ctx, PSYCHO_CPU_GPR_A3);
+	frame->a0 = ctx->cpu.base.gpr[PSYCHO_CPU_GPR_A0];
+	frame->a1 = ctx->cpu.base.gpr[PSYCHO_CPU_GPR_A1];
+	frame->a2 = ctx->cpu.base.gpr[PSYCHO_CPU_GPR_A2];
+	frame->a3 = ctx->cpu.base.gpr[PSYCHO_CPU_GPR_A3];
 
-	frame->sp = ctx->cpu.gpr_get(ctx, PSYCHO_CPU_GPR_SP);
-	frame->ra = ctx->cpu.gpr_get(ctx, PSYCHO_CPU_GPR_RA);
+	frame->sp = ctx->cpu.base.gpr[PSYCHO_CPU_GPR_SP];
+	frame->ra = ctx->cpu.base.gpr[PSYCHO_CPU_GPR_RA];
 
 	psycho_fixed_string_init(&frame->result.str, frame->result.buf, sizeof(frame->result.buf));
 }
@@ -378,6 +378,6 @@ void psycho_bios_call_tracer_end(struct psycho_ctx *ctx, uint32_t v0)
 		return;
 
 	default:
-		PSYCHO_UNREACHABLE;
+		unreachable();
 	}
 }

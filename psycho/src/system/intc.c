@@ -16,6 +16,7 @@
 // OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 #include "intc.h"
+#include "system/cpu/cpu.h"
 #include "debug/log.h"
 
 DECLARE_LOG_MODULE(PSYCHO_LOG_MODULE_INTC);
@@ -64,7 +65,7 @@ void psycho_intc_mask_set(struct psycho_ctx *ctx, uint32_t mask)
 		irq_mask_log(ctx, mask);
 
 	ctx->intc.i_mask = mask;
-	ctx->cpu.irq_mux_assert(ctx, ctx->intc.i_mask & ctx->intc.i_stat);
+	psycho_cpu_irq_mux_assert(ctx, ctx->intc.i_mask & ctx->intc.i_stat);
 }
 
 void psycho_intc_irqs_ack(struct psycho_ctx *ctx, uint32_t mask)
@@ -73,7 +74,7 @@ void psycho_intc_irqs_ack(struct psycho_ctx *ctx, uint32_t mask)
 		irq_ack_log(ctx, mask);
 
 	ctx->intc.i_stat &= mask;
-	ctx->cpu.irq_mux_assert(ctx, ctx->intc.i_mask & ctx->intc.i_stat);
+	psycho_cpu_irq_mux_assert(ctx, ctx->intc.i_mask & ctx->intc.i_stat);
 }
 
 void psycho_intc_irqs_pending_set(struct psycho_ctx *ctx, uint32_t mask)
@@ -82,5 +83,5 @@ void psycho_intc_irqs_pending_set(struct psycho_ctx *ctx, uint32_t mask)
 		irq_pending_log(ctx, mask);
 
 	ctx->intc.i_stat |= mask;
-	ctx->cpu.irq_mux_assert(ctx, ctx->intc.i_mask & ctx->intc.i_stat);
+	psycho_cpu_irq_mux_assert(ctx, ctx->intc.i_mask & ctx->intc.i_stat);
 }

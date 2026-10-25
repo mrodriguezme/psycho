@@ -16,30 +16,66 @@
 // OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 #include "common/sched.h"
+#include "common/util.h"
 
 #include "debug/bios_call_tracer.h"
 #include "debug/log.h"
 
-#include "system/cpu/interpreter.h"
+#include "system/cpu/cpu.h"
+#include "system/cpu/backend/interpreter.h"
 #include "system/gpu/gpu.h"
-#include "system/sio0.h"
+#include "system/sio0/sio0.h"
 
 DECLARE_LOG_MODULE(PSYCHO_LOG_MODULE_CTX);
+
+static const struct psycho_cpu_backend_ops *const cpu_backends[PSYCHO_CPU_BACKEND_COUNT] = {
+	[PSYCHO_CPU_BACKEND_INTERPRETER] = &psycho_cpu_backend_ops_interpreter,
+};
+
+static int cpu_backend_set(struct psycho_ctx *ctx)
+{
+	enum psycho_cpu_backend b = ctx->cfg.cpu.backend;
+
+	if ((b >= ARRAY_SIZE(cpu_backends)) || (!cpu_backends[b]))
+		return -1;
+
+	const struct psycho_cpu_backend_ops *next = cpu_backends[b];
+	const struct psycho_cpu_backend_ops *prev = ctx->cpu.backend;
+
+	if (unlikely(next == prev))
+		return PSYCHO_CTX_OK;
+
+	if ((next->init) && (!next->init(ctx)))
+		return PSYCHO_CTX_CPU_BACKEND_ERROR;
+
+	if ((prev) && (prev->fini))
+		prev->fini(ctx);
+
+	psycho_cpu_reset(ctx);
+	ctx->cpu.backend = next;
+
+	LOG_INFO(ctx, "cpu backend set to \"%s\"", ctx->cpu.backend->name);
+	return PSYCHO_CTX_OK;
+}
 
 struct psycho_ctx_cfg *psycho_ctx_cfg_get(struct psycho_ctx *ctx)
 {
 	return &ctx->cfg;
 }
 
-void psycho_ctx_init(struct psycho_ctx *ctx)
+enum psycho_ctx_ret psycho_ctx_init(struct psycho_ctx *ctx)
 {
+	enum psycho_ctx_ret ret;
+
+	if ((ret = cpu_backend_set(ctx)) != PSYCHO_CTX_OK)
+		return ret;
+
 	psycho_bios_call_tracer_init(ctx);
 	psycho_gpu_init(ctx);
-
-	psycho_cpu_int_init(ctx);
 	psycho_ctx_reset(ctx);
 
 	LOG_INFO(ctx, "initialized");
+	return ret;
 }
 
 void psycho_ctx_reset(struct psycho_ctx *ctx)
@@ -48,14 +84,14 @@ void psycho_ctx_reset(struct psycho_ctx *ctx)
 	psycho_gpu_rst(ctx);
 	psycho_sio0_reset(ctx);
 
-	ctx->cpu.reset(ctx);
+	ctx->cpu.backend->reset(ctx);
 	LOG_INFO(ctx, "reset");
 }
 
 void psycho_ctx_run(struct psycho_ctx *ctx)
 {
 	ctx->running = true;
-	ctx->cpu.run(ctx, false);
+	ctx->cpu.backend->run(ctx, false);
 }
 
 void psycho_ctx_stop(struct psycho_ctx *ctx)
