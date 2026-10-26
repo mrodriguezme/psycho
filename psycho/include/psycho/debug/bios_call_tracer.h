@@ -20,6 +20,7 @@
 #include <stddef.h>
 #include <stdint.h>
 
+#include "psycho/lib/lifo.h"
 #include "fixed_string.h"
 
 #ifdef __cplusplus
@@ -29,7 +30,7 @@ extern "C" {
 struct psycho_ctx;
 struct psycho_bios_call_tracer_frame;
 
-constexpr size_t PSYCHO_BIOS_CALL_TRACER_STACK_FRAMES_MAX = 4;
+constexpr size_t PSYCHO_BIOS_CALL_TRACER_STACK_FRAMES_MAX = 8;
 constexpr size_t PSYCHO_BIOS_CALL_TRACER_STDOUT_LEN_MAX	  = 128;
 
 enum psycho_bios_call_tracer_func_ret {
@@ -62,6 +63,9 @@ struct psycho_bios_call_tracer_frame {
 	uint32_t arg_pos;
 };
 
+PSYCHO_LIFO_DEFINE(psycho_bios_call_tracer_stack, struct psycho_bios_call_tracer_frame,
+		   PSYCHO_BIOS_CALL_TRACER_STACK_FRAMES_MAX);
+
 struct psycho_bios_call_trace_cfg {
 	void (*stdout_line)(struct psycho_ctx *ctx, struct psycho_fixed_string *str);
 	bool deref_ptrs;
@@ -74,10 +78,7 @@ struct psycho_bios_call_tracer_stdout {
 };
 
 struct psycho_bios_call_tracer {
-	struct {
-		struct psycho_bios_call_tracer_frame frames[PSYCHO_BIOS_CALL_TRACER_STACK_FRAMES_MAX];
-		size_t top;
-	} stack;
+	struct psycho_bios_call_tracer_stack stack;
 
 	struct {
 		struct psycho_bios_call_tracer_stdout tty_original;

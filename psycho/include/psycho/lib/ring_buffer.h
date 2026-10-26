@@ -20,13 +20,14 @@
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wunused-macros"
 
-#define PSYCHO_RING_BUFFER_DEFINE(name, type, capacity)                                                            \
-	static_assert(!((capacity) & ((capacity) - 1)), "ring buffer " #name " capacity must be a power of two"); \
-                                                                                                                   \
-	struct name {                                                                                              \
-		type data[capacity];                                                                               \
-		size_t read;                                                                                       \
-		size_t write;                                                                                      \
-	};
+#define PSYCHO_RING_BUFFER_DEFINE(name, type, capacity)                               \
+	struct name {                                                                 \
+		static_assert((capacity) > 0 && ((capacity) & ((capacity) - 1)) == 0, \
+			      #name " capacity must be a non-zero power of two");     \
+                                                                                      \
+		type data[capacity];                                                  \
+		size_t read;                                                          \
+		size_t write;                                                         \
+	}
 
 #pragma GCC diagnostic pop

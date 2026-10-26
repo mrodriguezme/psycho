@@ -18,10 +18,12 @@
 #pragma once
 
 #include "psycho/ctx.h"
+#include "lib/lifo.h"
+#include "common/util.h"
 
-enum {
-	JR_RA = 0x03E00008,
-};
+LIFO_IMPL(psycho_bios_call_tracer_stack, struct psycho_bios_call_tracer_frame, LIFO_OVERFLOW_POLICY_DROP_NEWEST);
+
+constexpr uint32_t JR_RA = 0x03E00008;
 
 void psycho_bios_call_tracer_init(struct psycho_ctx *ctx) PSYCHO_NONNULL;
 
@@ -35,10 +37,8 @@ PSYCHO_NONNULL PSYCHO_ALWAYS_INLINE bool leaving_bios_call(struct psycho_ctx *ct
 	if (instr != JR_RA)
 		return false;
 
-	if (!ctx->bios_call_tracer.stack.top)
-		return false;
-
-	return ctx->bios_call_tracer.stack.frames[ctx->bios_call_tracer.stack.top - 1].ra == ra;
+	struct psycho_bios_call_tracer_frame *frame = psycho_bios_call_tracer_stack_top(&ctx->bios_call_tracer.stack);
+	return frame && frame->ra == ra;
 }
 
 PSYCHO_NONNULL PSYCHO_ALWAYS_INLINE size_t bios_call_tracer_pc_to_offset(uint32_t pc)

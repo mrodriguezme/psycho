@@ -158,22 +158,6 @@ PSYCHO_NONNULL static void frame_init(struct psycho_ctx *ctx, struct psycho_bios
 	psycho_fixed_string_init(&frame->result.str, frame->result.buf, sizeof(frame->result.buf));
 }
 
-PSYCHO_NODISCARD PSYCHO_NONNULL static struct psycho_bios_call_tracer_frame *stack_emplace(struct psycho_ctx *ctx)
-{
-	if (unlikely(ctx->bios_call_tracer.stack.top >= ARRAY_SIZE(ctx->bios_call_tracer.stack.frames)))
-		return NULL;
-
-	return &ctx->bios_call_tracer.stack.frames[ctx->bios_call_tracer.stack.top++];
-}
-
-PSYCHO_NODISCARD PSYCHO_NONNULL static struct psycho_bios_call_tracer_frame *stack_pop(struct psycho_ctx *ctx)
-{
-	if (!ctx->bios_call_tracer.stack.top)
-		return NULL;
-
-	return &ctx->bios_call_tracer.stack.frames[--ctx->bios_call_tracer.stack.top];
-}
-
 PSYCHO_NODISCARD PSYCHO_NONNULL static uint32_t get_arg(struct psycho_ctx *ctx,
 							struct psycho_bios_call_tracer_frame *frame)
 {
@@ -341,12 +325,13 @@ void psycho_bios_call_tracer_begin(struct psycho_ctx *ctx, uint32_t func, uint32
 		return;
 	}
 
-	struct psycho_bios_call_tracer_frame *frame = stack_emplace(ctx);
-
-	if (unlikely(!frame)) {
-		LOG_WARN(ctx, "BIOS call stack is too deep for us to handle");
+	if (unlikely(psycho_bios_call_tracer_stack_full(&ctx->bios_call_tracer.stack))) {
+		LOG_WARN(ctx, "BIOS call stack is too deep for us to handle - refusing to trace this call");
 		return;
 	}
+
+	struct psycho_bios_call_tracer_frame *frame =
+		psycho_bios_call_tracer_stack_emplace(&ctx->bios_call_tracer.stack);
 
 	frame_init(ctx, frame, entry);
 
@@ -358,7 +343,7 @@ void psycho_bios_call_tracer_begin(struct psycho_ctx *ctx, uint32_t func, uint32
 
 void psycho_bios_call_tracer_end(struct psycho_ctx *ctx, uint32_t v0)
 {
-	struct psycho_bios_call_tracer_frame *frame = stack_pop(ctx);
+	struct psycho_bios_call_tracer_frame *frame = psycho_bios_call_tracer_stack_pop(&ctx->bios_call_tracer.stack);
 
 	switch (frame->func->ret) {
 	case PSYCHO_BIOS_CALL_FUNC_RET_CHAR:

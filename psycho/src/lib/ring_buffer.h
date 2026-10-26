@@ -17,6 +17,8 @@
 
 #pragma once
 
+#include <string.h>
+
 enum ring_buffer_overflow_policy {
 	// Discard the oldest entry, append the new one
 	RING_BUFFER_OVERFLOW_POLICY_DROP_OLDEST,
@@ -31,70 +33,80 @@ enum ring_buffer_overflow_policy {
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wunused-macros"
 
-#define RING_BUFFER_IMPL(name, type, capacity, policy)                            \
-	PSYCHO_ALWAYS_INLINE void name##_clear(struct name *rb)                   \
-	{                                                                         \
-		memset(rb, 0, sizeof(*rb));                                       \
-	}                                                                         \
-                                                                                  \
-	PSYCHO_ALWAYS_INLINE void name##_init(struct name *rb)                    \
-	{                                                                         \
-		name##_clear(rb);                                                 \
-	}                                                                         \
-                                                                                  \
-	PSYCHO_NODISCARD PSYCHO_ALWAYS_INLINE size_t name##_mask(size_t val)      \
-	{                                                                         \
-		return val & ((capacity) - 1);                                    \
-	}                                                                         \
-                                                                                  \
-	PSYCHO_NODISCARD PSYCHO_ALWAYS_INLINE size_t name##_size(struct name *rb) \
-	{                                                                         \
-		return rb->write - rb->read;                                      \
-	}                                                                         \
-                                                                                  \
-	PSYCHO_NODISCARD PSYCHO_ALWAYS_INLINE bool name##_full(struct name *rb)   \
-	{                                                                         \
-		return name##_size(rb) == (capacity);                             \
-	}                                                                         \
-                                                                                  \
-	PSYCHO_NODISCARD PSYCHO_ALWAYS_INLINE bool name##_empty(struct name *rb)  \
-	{                                                                         \
-		return rb->read == rb->write;                                     \
-	}                                                                         \
-                                                                                  \
-	PSYCHO_ALWAYS_INLINE void name##_push(struct name *rb, type val)          \
-	{                                                                         \
-		if (likely(!name##_full(rb)))                                     \
-			goto store;                                               \
-                                                                                  \
-		switch (policy) {                                                 \
-		case RING_BUFFER_OVERFLOW_POLICY_DROP_OLDEST:                     \
-			rb->read++;                                               \
-			break;                                                    \
-                                                                                  \
-		case RING_BUFFER_OVERFLOW_POLICY_DROP_NEWEST:                     \
-			return;                                                   \
-                                                                                  \
-		case RING_BUFFER_OVERFLOW_POLICY_REPLACE_NEWEST:                  \
-			rb->data[name##_mask(rb->write - 1)] = (val);             \
-			return;                                                   \
-                                                                                  \
-		default:                                                          \
-			unreachable();                                            \
-		}                                                                 \
-                                                                                  \
-store:                                                                            \
-		rb->data[name##_mask(rb->write++)] = (val);                       \
-	}                                                                         \
-                                                                                  \
-	PSYCHO_NODISCARD PSYCHO_ALWAYS_INLINE type name##_pop(struct name *rb)    \
-	{                                                                         \
-		return rb->data[name##_mask(rb->read++)];                         \
-	}                                                                         \
-                                                                                  \
-	PSYCHO_NODISCARD PSYCHO_ALWAYS_INLINE type name##_back(struct name *rb)   \
-	{                                                                         \
-		return rb->data[name##_mask(rb->write - 1)];                      \
+#define RING_BUFFER_IMPL(name, type, policy)                                                  \
+	PSYCHO_ALWAYS_INLINE void name##_clear(struct name *rb)                               \
+	{                                                                                     \
+		memset(rb, 0, sizeof(*rb));                                                   \
+	}                                                                                     \
+                                                                                              \
+	PSYCHO_ALWAYS_INLINE void name##_init(struct name *rb)                                \
+	{                                                                                     \
+		name##_clear(rb);                                                             \
+	}                                                                                     \
+                                                                                              \
+	PSYCHO_NODISCARD PSYCHO_ALWAYS_INLINE size_t name##_mask(struct name *rb, size_t val) \
+	{                                                                                     \
+		return val & (ARRAY_SIZE(rb->data) - 1);                                      \
+	}                                                                                     \
+                                                                                              \
+	PSYCHO_NODISCARD PSYCHO_ALWAYS_INLINE size_t name##_size(struct name *rb)             \
+	{                                                                                     \
+		return rb->write - rb->read;                                                  \
+	}                                                                                     \
+                                                                                              \
+	PSYCHO_NODISCARD PSYCHO_ALWAYS_INLINE bool name##_full(struct name *rb)               \
+	{                                                                                     \
+		return name##_size(rb) == ARRAY_SIZE(rb->data);                               \
+	}                                                                                     \
+                                                                                              \
+	PSYCHO_NODISCARD PSYCHO_ALWAYS_INLINE bool name##_empty(struct name *rb)              \
+	{                                                                                     \
+		return rb->read == rb->write;                                                 \
+	}                                                                                     \
+                                                                                              \
+	PSYCHO_NODISCARD PSYCHO_ALWAYS_INLINE type *name##_emplace(struct name *rb)           \
+	{                                                                                     \
+		if (likely(!name##_full(rb)))                                                 \
+			return &rb->data[name##_mask(rb, rb->write++)];                       \
+                                                                                              \
+		switch (policy) {                                                             \
+		case RING_BUFFER_OVERFLOW_POLICY_DROP_OLDEST:                                 \
+			rb->read++;                                                           \
+			return &rb->data[name##_mask(rb, rb->write++)];                       \
+                                                                                              \
+		case RING_BUFFER_OVERFLOW_POLICY_DROP_NEWEST:                                 \
+			return NULL;                                                          \
+                                                                                              \
+		case RING_BUFFER_OVERFLOW_POLICY_REPLACE_NEWEST:                              \
+			return &rb->data[name##_mask(rb, rb->write - 1)];                     \
+                                                                                              \
+		default:                                                                      \
+			unreachable();                                                        \
+		}                                                                             \
+	}                                                                                     \
+                                                                                              \
+	PSYCHO_ALWAYS_INLINE void name##_push(struct name *rb, type val)                      \
+	{                                                                                     \
+		type *slot = name##_emplace(rb);                                              \
+                                                                                              \
+		if (likely(slot))                                                             \
+			*slot = (val);                                                        \
+	}                                                                                     \
+                                                                                              \
+	PSYCHO_NODISCARD PSYCHO_ALWAYS_INLINE type *name##_pop(struct name *rb)               \
+	{                                                                                     \
+		if (unlikely(name##_empty(rb)))                                               \
+			return NULL;                                                          \
+                                                                                              \
+		return &rb->data[name##_mask(rb, rb->read++)];                                \
+	}                                                                                     \
+                                                                                              \
+	PSYCHO_NODISCARD PSYCHO_ALWAYS_INLINE type *name##_back(struct name *rb)              \
+	{                                                                                     \
+		if (unlikely(name##_empty(rb)))                                               \
+			return NULL;                                                          \
+                                                                                              \
+		return &rb->data[name##_mask(rb, rb->write - 1)];                             \
 	}
 
 #pragma GCC diagnostic pop
