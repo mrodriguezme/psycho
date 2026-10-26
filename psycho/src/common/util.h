@@ -33,32 +33,48 @@
 #define bits_became_set(a, b, bits) ((!((a) & (bits))) && ((b) & (bits)))
 #define bits_became_clr(a, b, bits) (((a) & (bits)) && !((b) & (bits)))
 
-#define max(a, b)                       \
-	({                              \
-		__typeof__(a) _a = (a); \
-		__typeof__(b) _b = (b); \
-		_a > _b ? _a : _b;      \
+#define min3(a, b, c)                                                                                                  \
+	({                                                                                                             \
+		auto min3_a_ = (a);                                                                                    \
+		auto min3_b_ = (b);                                                                                    \
+		auto min3_c_ = (c);                                                                                    \
+		min3_a_ < min3_b_ ? (min3_a_ < min3_c_ ? min3_a_ : min3_c_) : (min3_b_ < min3_c_ ? min3_b_ : min3_c_); \
 	})
 
-#define min(a, b)                       \
-	({                              \
-		__typeof__(a) _a = (a); \
-		__typeof__(b) _b = (b); \
-		_a < _b ? _a : _b;      \
+#define max3(a, b, c)                                                                                                  \
+	({                                                                                                             \
+		auto max3_a_ = (a);                                                                                    \
+		auto max3_b_ = (b);                                                                                    \
+		auto max3_c_ = (c);                                                                                    \
+		max3_a_ > max3_b_ ? (max3_a_ > max3_c_ ? max3_a_ : max3_c_) : (max3_b_ > max3_c_ ? max3_b_ : max3_c_); \
 	})
 
-#define swap(a, b)                       \
-	({                               \
-		__auto_type _tmp = *(a); \
-		*(a)		 = *(b); \
-		*(b)		 = _tmp; \
+#define max(a, b)                  \
+	({                         \
+		auto _a = (a);     \
+		auto _b = (b);     \
+		_a > _b ? _a : _b; \
+	})
+
+#define min(a, b)                  \
+	({                         \
+		auto _a = (a);     \
+		auto _b = (b);     \
+		_a < _b ? _a : _b; \
+	})
+
+#define swap(a, b)                \
+	({                        \
+		auto _tmp = *(a); \
+		*(a)	  = *(b); \
+		*(b)	  = _tmp; \
 	})
 
 #define clamp(val, min, max)                                      \
 	({                                                        \
-		__typeof__(val) _val = (val);                     \
-		__typeof__(min) _min = (min);                     \
-		__typeof__(max) _max = (max);                     \
+		auto _val = (val);                                \
+		auto _min = (min);                                \
+		auto _max = (max);                                \
 		_val < _min ? _min : (_val > _max ? _max : _val); \
 	})
 
@@ -79,17 +95,17 @@ PSYCHO_ALWAYS_INLINE uint32_t field_set32(uint32_t src, uint32_t mask, uint32_t 
 
 PSYCHO_ALWAYS_INLINE uint16_t field_get16(uint16_t mask, uint16_t reg)
 {
-    return (uint16_t)((reg & mask) >> __builtin_ctz(mask));
+	return (uint16_t)((reg & mask) >> __builtin_ctz(mask));
 }
 
 PSYCHO_ALWAYS_INLINE uint16_t field_prep16(uint16_t mask, uint16_t val)
 {
-    return (uint16_t)((uint32_t)val << __builtin_ctz(mask)) & mask;
+	return (uint16_t)((uint32_t)val << __builtin_ctz(mask)) & mask;
 }
 
 PSYCHO_ALWAYS_INLINE uint16_t field_set16(uint16_t src, uint16_t mask, uint16_t val)
 {
-    return (uint16_t)((src & ~mask) | field_prep16(mask, val));
+	return (uint16_t)((src & ~mask) | field_prep16(mask, val));
 }
 
 PSYCHO_ALWAYS_INLINE uint64_t us_to_cycles(uint64_t us)

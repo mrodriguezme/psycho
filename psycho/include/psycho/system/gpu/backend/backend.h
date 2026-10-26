@@ -18,59 +18,60 @@
 #pragma once
 
 #include <stddef.h>
-#include "psycho/system/sched.h"
+#include <stdint.h>
 
 #ifdef __cplusplus
 extern "C" {
 #endif // __cplusplus
 
-enum {
-	PSYCHO_VRAM_HEIGHT = 512,
-	PSYCHO_VRAM_WIDTH  = 1024,
-};
+constexpr int PSYCHO_GPU_VRAM_HEIGHT = 512;
+constexpr int PSYCHO_GPU_VRAM_WIDTH  = 1024;
+
+typedef uint16_t psycho_gpu_vram[PSYCHO_GPU_VRAM_HEIGHT][PSYCHO_GPU_VRAM_WIDTH];
 
 struct psycho_ctx;
 
-typedef uint16_t psycho_gpu_vram[PSYCHO_VRAM_HEIGHT][PSYCHO_VRAM_WIDTH];
-
 struct psycho_gpu_vertex {
+	int16_t x, y;
+	uint8_t r, g, b;
+	uint8_t u, v;
+};
+
+struct psycho_gpu_rect_info {};
+
+struct psycho_gpu_poly_info {
+	struct psycho_gpu_vertex v[4];
+	unsigned int nverts;
+	uint16_t clut;
+	uint16_t tpage;
+	bool gouraud;
+	bool textured;
+	bool raw_texture;
+	bool semi_trans;
+};
+
+struct psycho_gpu_fill_info {
+	uint32_t color;
 	int16_t x;
 	int16_t y;
-	unsigned int color;
+	int16_t w;
+	int16_t h;
 };
 
-struct psycho_gpu_render_ops {
-	void (*rect)(struct psycho_ctx *ctx, struct psycho_gpu_vertex *v0);
+
+enum psycho_gpu_backend {
+	PSYCHO_GPU_BACKEND_SOFTWARE,
+	PSYCHO_GPU_BACKEND_COUNT,
 };
 
-struct psycho_gpu {
-	struct {
-		void (*fn)(struct psycho_ctx *ctx);
-		size_t rem_params;
-		size_t params;
-		uint32_t data[64];
-	} init;
-
-	struct {
-		size_t x;
-		size_t y;
-		size_t x_orig;
-		size_t x_max;
-		unsigned int rem;
-	} copy;
-
-	struct psycho_gpu_vertex rect;
-
-	struct psycho_gpu_render_ops render_ops;
-
-	psycho_gpu_vram vram;
-
-	void (*cmd_fn)(struct psycho_ctx *ctx, uint32_t packet);
-
-	struct psycho_sched_event vblank_event;
-
-	uint32_t gpustat;
-	uint32_t gpuread;
+struct psycho_gpu_backend_ops {
+	const char *name;
+	bool (*init)(struct psycho_ctx *ctx);
+	void (*fini)(struct psycho_ctx *ctx);
+	void (*reset)(struct psycho_ctx *ctx);
+	void (*rect)(struct psycho_ctx *ctx, struct psycho_gpu_rect_info *rect);
+	void (*poly)(struct psycho_ctx *ctx, struct psycho_gpu_poly_info *poly);
+	void (*fill)(struct psycho_ctx *ctx, struct psycho_gpu_fill_info *fill);
 };
 
 #ifdef __cplusplus

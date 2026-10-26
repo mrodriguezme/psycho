@@ -15,10 +15,11 @@
 // COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR
 // OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
-#include "sw.h"
-#include "gpu.h"
+#include "defs.h"
 
-void psycho_gpu_sw_draw_rect(struct psycho_ctx *ctx, struct psycho_gpu_vertex *v0)
-{
-	vram_px_set(ctx, v0->x, v0->y, color_to_15bit(v0->color));
-}
+const int8_t psycho_gpu_dither_matrix[4][4] = {
+	{ -4, 0, -3, 1 },
+	{ 2, -2, 3, -1 },
+	{ -3, 1, -4, 0 },
+	{ 3, -1, 2, -2 },
+};

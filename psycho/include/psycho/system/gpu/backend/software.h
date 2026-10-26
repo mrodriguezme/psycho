@@ -17,6 +17,16 @@
 
 #pragma once
 
-#include "psycho/ctx.h"
+#include "backend.h"
 
-void psycho_gpu_sw_draw_rect(struct psycho_ctx *ctx, struct psycho_gpu_vertex *v0);
+#ifdef __cplusplus
+extern "C" {
+#endif // __cplusplus
+
+struct psycho_gpu_backend_software {
+	psycho_gpu_vram vram;
+};
+
+#ifdef __cplusplus
+}
+#endif // __cplusplus

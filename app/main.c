@@ -60,8 +60,8 @@ static bool gfx_init(void)
 	else
 		SDL_Log("vsync enabled");
 
-	texture = SDL_CreateTexture(renderer, SDL_PIXELFORMAT_XBGR1555, SDL_TEXTUREACCESS_STREAMING, PSYCHO_VRAM_WIDTH,
-				    PSYCHO_VRAM_HEIGHT);
+	texture = SDL_CreateTexture(renderer, SDL_PIXELFORMAT_XBGR1555, SDL_TEXTUREACCESS_STREAMING,
+				    PSYCHO_GPU_VRAM_WIDTH, PSYCHO_GPU_VRAM_HEIGHT);
 
 	if (!texture) {
 		SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "SDL_CreateTexture() failed: %s", SDL_GetError());
@@ -96,15 +96,15 @@ static void render_frame(void)
 		return;
 	}
 
-	size_t row_bytes = PSYCHO_VRAM_WIDTH * sizeof(uint16_t);
+	size_t row_bytes = PSYCHO_GPU_VRAM_WIDTH * sizeof(uint16_t);
 
 	if (pitch == (int)row_bytes)
-		memcpy(pixels, src, row_bytes * PSYCHO_VRAM_HEIGHT);
+		memcpy(pixels, src, row_bytes * PSYCHO_GPU_VRAM_HEIGHT);
 	else {
 		uint8_t *src_bytes = (uint8_t *)src;
 		uint8_t *dst_bytes = (uint8_t *)pixels;
 
-		for (int y = 0; y < PSYCHO_VRAM_HEIGHT; ++y)
+		for (int y = 0; y < PSYCHO_GPU_VRAM_HEIGHT; ++y)
 			memcpy(dst_bytes + y * pitch, src_bytes + y * row_bytes, row_bytes);
 	}
 

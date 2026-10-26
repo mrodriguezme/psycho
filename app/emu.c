@@ -142,7 +142,7 @@ static void on_vblank(struct psycho_ctx *ctx, void *userdata)
 	poll_pad(emu);
 
 	int idx = SDL_GetAtomicInt(&emu->write_idx);
-	memcpy(emu->fbufs[idx], ctx->gpu.vram, sizeof(emu->fbufs[idx]));
+	memcpy(emu->fbufs[idx], ctx->gpu.software.vram, sizeof(emu->fbufs[idx]));
 
 	SDL_SetAtomicInt(&emu->write_idx, idx ^ 1);
 	SDL_AddAtomicInt(&emu->frame_count, 1);
@@ -222,12 +222,12 @@ void emu_init(struct emu_runner *emu, const char *bios_file, const char *exe_fil
 	//cfg->bios_call_tracer.enabled	 = true;
 	cfg->bios_call_tracer.deref_ptrs = true;
 
-	//cfg->log.modules[PSYCHO_LOG_MODULE_SCHED] = PSYCHO_LOG_LEVEL_TRACE;
+	cfg->log.modules[PSYCHO_LOG_MODULE_GPU] = PSYCHO_LOG_LEVEL_TRACE;
 
 	cfg->log.modules[PSYCHO_LOG_MODULE_BIOS_CALL_TRACER] = PSYCHO_LOG_LEVEL_TRACE;
 
-	cfg->on_vblank	     = on_vblank;
-	cfg->vblank_userdata = emu;
+	cfg->gpu.on_vblank	     = on_vblank;
+	cfg->gpu.vblank_userdata = emu;
 
 	psycho_ctx_init(&emu->ctx);
 	psycho_digital_pad_init(&emu->ctx, &emu->pad);

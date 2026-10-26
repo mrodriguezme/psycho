@@ -31,10 +31,14 @@ target_sources(
 	include/psycho/debug/fixed_string.h
 	include/psycho/debug/log.h
 	include/psycho/devices/digital_pad.h
+	include/psycho/lib/lifo.h
+	include/psycho/lib/ring_buffer.h
 	include/psycho/system/cpu/backend/backend.h
 	include/psycho/system/cpu/backend/interpreter.h
 	include/psycho/system/cpu/cpu.h
-	include/psycho/system/gpu.h
+	include/psycho/system/gpu/backend/backend.h
+	include/psycho/system/gpu/backend/software.h
+	include/psycho/system/gpu/gpu.h
 	include/psycho/system/intc.h
 	include/psycho/system/sbus.h
 	include/psycho/system/sched.h
@@ -51,16 +55,20 @@ target_sources(
 	src/debug/log.c
 	src/debug/log.h
 	src/devices/digital_pad.c
+	src/lib/lifo.h
+	src/lib/ring_buffer.h
 	src/system/cpu/backend/interpreter.c
 	src/system/cpu/backend/interpreter.h
 	src/system/cpu/cpu.c
 	src/system/cpu/cpu.h
 	src/system/cpu/defs.c
 	src/system/cpu/defs.h
+	src/system/gpu/backend/software/software.c
+	src/system/gpu/backend/software/software.h
+	src/system/gpu/defs.c
+	src/system/gpu/defs.h
 	src/system/gpu/gpu.c
 	src/system/gpu/gpu.h
-	src/system/gpu/sw.c
-	src/system/gpu/sw.h
 	src/system/intc/intc.c
 	src/system/intc/intc.h
 	src/system/sbus/defs.h

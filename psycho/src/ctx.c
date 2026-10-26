@@ -23,6 +23,7 @@
 
 #include "system/cpu/cpu.h"
 #include "system/cpu/backend/interpreter.h"
+#include "system/gpu/backend/software/software.h"
 #include "system/gpu/gpu.h"
 #include "system/sio0/sio0.h"
 
@@ -30,6 +31,10 @@ DECLARE_LOG_MODULE(PSYCHO_LOG_MODULE_CTX);
 
 static const struct psycho_cpu_backend_ops *const cpu_backends[PSYCHO_CPU_BACKEND_COUNT] = {
 	[PSYCHO_CPU_BACKEND_INTERPRETER] = &psycho_cpu_backend_ops_interpreter,
+};
+
+static const struct psycho_gpu_backend_ops *const gpu_backends[PSYCHO_GPU_BACKEND_COUNT] = {
+	[PSYCHO_GPU_BACKEND_SOFTWARE] = &psycho_gpu_backend_ops_software,
 };
 
 static int cpu_backend_set(struct psycho_ctx *ctx)
@@ -58,6 +63,33 @@ static int cpu_backend_set(struct psycho_ctx *ctx)
 	return PSYCHO_CTX_OK;
 }
 
+static int gpu_backend_set(struct psycho_ctx *ctx)
+{
+	enum psycho_gpu_backend b = ctx->cfg.gpu.backend;
+
+	if ((b >= ARRAY_SIZE(gpu_backends)) || (!gpu_backends[b]))
+		return -1;
+
+	const struct psycho_gpu_backend_ops *next = gpu_backends[b];
+	const struct psycho_gpu_backend_ops *prev = ctx->gpu.backend;
+
+	if (unlikely(next == prev))
+		return PSYCHO_CTX_OK;
+
+	if ((next->init) && (!next->init(ctx)))
+		return PSYCHO_CTX_CPU_BACKEND_ERROR;
+
+	if ((prev) && (prev->fini))
+		prev->fini(ctx);
+
+	psycho_gpu_reset(ctx);
+	ctx->gpu.backend = next;
+
+	LOG_INFO(ctx, "gpu backend set to \"%s\"", ctx->gpu.backend->name);
+	return PSYCHO_CTX_OK;
+}
+
+
 struct psycho_ctx_cfg *psycho_ctx_cfg_get(struct psycho_ctx *ctx)
 {
 	return &ctx->cfg;
@@ -70,8 +102,10 @@ enum psycho_ctx_ret psycho_ctx_init(struct psycho_ctx *ctx)
 	if ((ret = cpu_backend_set(ctx)) != PSYCHO_CTX_OK)
 		return ret;
 
+	if ((ret = gpu_backend_set(ctx)) != PSYCHO_CTX_OK)
+		return ret;
+
 	psycho_bios_call_tracer_init(ctx);
-	psycho_gpu_init(ctx);
 	psycho_ctx_reset(ctx);
 
 	LOG_INFO(ctx, "initialized");
@@ -81,10 +115,12 @@ enum psycho_ctx_ret psycho_ctx_init(struct psycho_ctx *ctx)
 void psycho_ctx_reset(struct psycho_ctx *ctx)
 {
 	psycho_sched_reset(ctx);
-	psycho_gpu_rst(ctx);
 	psycho_sio0_reset(ctx);
+	psycho_gpu_reset(ctx);
 
+	ctx->gpu.backend->reset(ctx);
 	ctx->cpu.backend->reset(ctx);
+
 	LOG_INFO(ctx, "reset");
 }
 

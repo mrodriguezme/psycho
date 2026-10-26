@@ -27,7 +27,8 @@ extern "C" {
 
 #include "system/sbus.h"
 #include "system/cpu/backend/interpreter.h"
-#include "system/gpu.h"
+#include "system/gpu/backend/software.h"
+#include "system/gpu/gpu.h"
 #include "system/intc.h"
 #include "system/sio0.h"
 
@@ -35,6 +36,7 @@ struct psycho_ctx_cfg {
 	struct psycho_log_cfg log;
 	struct psycho_bios_call_trace_cfg bios_call_tracer;
 	struct psycho_cpu_cfg cpu;
+	struct psycho_gpu_cfg gpu;
 
 	void (*on_vblank)(struct psycho_ctx *ctx, void *userdata);
 	void *vblank_userdata;
@@ -44,10 +46,15 @@ struct psycho_ctx_cfg {
 
 struct psycho_ctx {
 	struct psycho_bus bus;
-	struct psycho_gpu gpu;
+
+	struct {
+		struct psycho_gpu base;
+		const struct psycho_gpu_backend_ops *backend;
+		struct psycho_gpu_backend_software software;
+	} gpu;
+
 	struct psycho_bios_call_tracer bios_call_tracer;
 	struct psycho_disasm disasm;
-	struct psycho_cpu_interpreter cpu_interpreter;
 	struct psycho_sched sched;
 	struct psycho_sio0 sio0;
 	struct psycho_ctx_cfg cfg;
@@ -68,6 +75,7 @@ struct psycho_ctx {
 };
 
 enum psycho_ctx_ret {
+	PSYCHO_CTX_GPU_BACKEND_ERROR	 = -5,
 	PSYCHO_CTX_CPU_BACKEND_ERROR	 = -4,
 	PSYCHO_CTX_EXE_FILE_SIZE_INVALID = -3,
 	PSYCHO_CTX_EXE_SIZE_INVALID	 = -2,

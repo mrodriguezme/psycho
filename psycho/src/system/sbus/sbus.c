@@ -19,10 +19,10 @@
 
 #include "debug/log.h"
 
-#include "system/gpu/gpu.h"
-
 #include "sbus.h"
 #include "defs.h"
+
+#include "system/gpu/gpu.h"
 #include "system/intc/intc.h"
 #include "system/sio0/sio0.h"
 
@@ -56,11 +56,11 @@ uint32_t psycho_bus_load_word(struct psycho_ctx *ctx, uint32_t paddr, bool *vali
 	case I_MASK:
 		return ctx->intc.i_mask;
 
-	case GPU_GPUSTAT:
-		return ctx->gpu.gpustat;
+	case GPU_GP0:
+		return UINT32_MAX;
 
-	case GPU_GPUREAD:
-		return psycho_gpuread(ctx);
+	case GPU_GP1:
+		return ctx->gpu.base.stat;
 
 	case BIOS_BEGIN ... BIOS_END:
 		memcpy(&ret, &ctx->bus.bios[paddr & BIOS_MASK], sizeof(uint32_t));
