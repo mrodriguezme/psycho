@@ -22,7 +22,7 @@
 
 #include "debug/log.h"
 
-#include "system/intc.h"
+#include "system/intc/intc.h"
 #include "lib/ring_buffer.h"
 
 #include "sio0.h"

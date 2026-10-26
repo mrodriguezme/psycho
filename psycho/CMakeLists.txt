@@ -61,6 +61,8 @@ target_sources(
 	src/system/gpu/gpu.h
 	src/system/gpu/sw.c
 	src/system/gpu/sw.h
+	src/system/intc/intc.c
+	src/system/intc/intc.h
 	src/system/sbus/defs.h
 	src/system/sbus/sbus.c
 	src/system/sbus/sbus.h
@@ -68,8 +70,6 @@ target_sources(
 	src/system/sio0/sio0_device.c
 	src/system/sio0/sio0.c
 	src/system/sio0/sio0.h
-	src/system/intc.c
-	src/system/intc.h
 	src/system/sched.c
 	src/system/sched.h
 	src/ctx.c

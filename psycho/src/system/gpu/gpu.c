@@ -20,7 +20,7 @@
 
 #include "sw.h"
 #include "gpu.h"
-#include "system/intc.h"
+#include "system/intc/intc.h"
 #include "debug/log.h"
 #include "system/sched.h"
 

@@ -24,19 +24,32 @@ enum {
 	I_MASK = 0x1F801074,
 };
 
+#define IRQ_LIST(X)         \
+	X(VBLANK, "vblank") \
+	X(GPU, "gpu")       \
+	X(CDROM, "cdrom")   \
+	X(DMAC, "dmac")     \
+	X(TMR0, "tmr0")     \
+	X(TMR1, "tmr1")     \
+	X(TMR2, "tmr2")     \
+	X(SIO0, "sio0")     \
+	X(SIO1, "sio1")     \
+	X(SPU, "spu")       \
+	X(LIGHTPEN, "lightpen")
+
 enum {
-	IRQ_VBLANK   = 1 << 0,
-	IRQ_GPU	     = 1 << 1,
-	IRQ_CDROM    = 1 << 2,
-	IRQ_DMAC     = 1 << 3,
-	IRQ_TMR0     = 1 << 4,
-	IRQ_TMR1     = 1 << 5,
-	IRQ_TMR2     = 1 << 6,
-	IRQ_SIO0     = 1 << 7,
-	IRQ_SIO1     = 1 << 8,
-	IRQ_SPU	     = 1 << 9,
-	IRQ_LIGHTPEN = 1 << 10,
-	IRQ_COUNT    = 11
+#define X(id, name) IRQ_BIT_##id,
+	IRQ_LIST(X)
+#undef X
+	// clang-format off
+	IRQ_COUNT
+	// clang-format on
+};
+
+enum {
+#define X(id, name) IRQ_##id = 1 << IRQ_BIT_##id,
+	IRQ_LIST(X)
+#undef X
 };
 
 void psycho_intc_mask_set(struct psycho_ctx *ctx, uint32_t mask) PSYCHO_NONNULL;

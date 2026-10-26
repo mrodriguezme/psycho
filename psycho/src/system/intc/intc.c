@@ -21,48 +21,30 @@
 
 DECLARE_LOG_MODULE(PSYCHO_LOG_MODULE_INTC);
 
-static const char *irq_names[IRQ_COUNT] = {
-	// clang-format off
-
-	[0]	= "vblank",
-	[1]	= "gpu",
-	[2]	= "cdrom",
-	[3]	= "dmac",
-	[4]	= "tmr0",
-	[5]	= "tmr1",
-	[6]	= "tmr2",
-	[7]	= "sio0",
-	[8]	= "sio1",
-	[9]	= "spu",
-	[10]	= "lightpen"
-
-	// clang-format on
+static const char *const irq_names[IRQ_COUNT] = {
+#define X(id, name) [IRQ_BIT_##id] = name,
+	IRQ_LIST(X)
+#undef X
 };
 
-static void irq_mask_log(struct psycho_ctx *ctx, uint32_t mask)
-{
-	for (unsigned int bit = 0; mask; mask >>= 1, ++bit)
-		LOG_DEBUG_UNCHECKED(ctx, "irq \"%s\" %s", irq_names[bit], (mask & 1) ? "enabled" : "disabled");
-}
+constexpr uint32_t IRQ_ALL = (UINT32_C(1) << IRQ_COUNT) - 1;
 
-static void irq_ack_log(struct psycho_ctx *ctx, uint32_t mask)
+static void irq_log_bits(struct psycho_ctx *ctx, uint32_t bits, const char *what)
 {
-	for (unsigned int bit = 0; mask; mask >>= 1, ++bit)
-		if (((ctx->intc.i_stat >> bit) & 1) && !(mask & 1))
-			LOG_DEBUG_UNCHECKED(ctx, "irq \"%s\" acked", irq_names[bit]);
-}
-
-static void irq_pending_log(struct psycho_ctx *ctx, uint32_t mask)
-{
-	for (unsigned int bit = 0; mask; mask >>= 1, ++bit)
-		if (!((ctx->intc.i_stat >> bit) & 1) && (mask & 1))
-			LOG_DEBUG_UNCHECKED(ctx, "irq \"%s\" pending", irq_names[bit]);
+	for (; bits; bits &= bits - 1)
+		LOG_DEBUG_UNCHECKED(ctx, "irq \"%s\" %s", irq_names[__builtin_ctz(bits)], what);
 }
 
 void psycho_intc_mask_set(struct psycho_ctx *ctx, uint32_t mask)
 {
-	if (LOG_MODULE_LEVEL_ENABLED(ctx, DEBUG))
-		irq_mask_log(ctx, mask);
+	mask &= IRQ_ALL;
+
+	if (LOG_MODULE_LEVEL_ENABLED(ctx, DEBUG)) {
+		uint32_t changed = ctx->intc.i_mask ^ mask;
+
+		irq_log_bits(ctx, changed & mask, "enabled");
+		irq_log_bits(ctx, changed & ~mask, "disabled");
+	}
 
 	ctx->intc.i_mask = mask;
 	psycho_cpu_irq_mux_assert(ctx, ctx->intc.i_mask & ctx->intc.i_stat);
@@ -71,7 +53,7 @@ void psycho_intc_mask_set(struct psycho_ctx *ctx, uint32_t mask)
 void psycho_intc_irqs_ack(struct psycho_ctx *ctx, uint32_t mask)
 {
 	if (LOG_MODULE_LEVEL_ENABLED(ctx, DEBUG))
-		irq_ack_log(ctx, mask);
+		irq_log_bits(ctx, ctx->intc.i_stat & ~mask & IRQ_ALL, "acked");
 
 	ctx->intc.i_stat &= mask;
 	psycho_cpu_irq_mux_assert(ctx, ctx->intc.i_mask & ctx->intc.i_stat);
@@ -80,8 +62,8 @@ void psycho_intc_irqs_ack(struct psycho_ctx *ctx, uint32_t mask)
 void psycho_intc_irqs_pending_set(struct psycho_ctx *ctx, uint32_t mask)
 {
 	if (LOG_MODULE_LEVEL_ENABLED(ctx, DEBUG))
-		irq_pending_log(ctx, mask);
+		irq_log_bits(ctx, mask & ~ctx->intc.i_stat & IRQ_ALL, "pending");
 
-	ctx->intc.i_stat |= mask;
+	ctx->intc.i_stat |= (mask & IRQ_ALL);
 	psycho_cpu_irq_mux_assert(ctx, ctx->intc.i_mask & ctx->intc.i_stat);
 }
