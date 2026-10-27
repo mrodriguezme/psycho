@@ -37,7 +37,19 @@ struct psycho_gpu_vertex {
 	uint8_t u, v;
 };
 
-struct psycho_gpu_rect_info {};
+struct psycho_gpu_rect_info {
+	int16_t x, y;
+	int16_t w, h;
+	uint8_t r, g, b;
+	uint8_t u, v;
+	uint16_t clut;
+	uint16_t tpage;
+	bool textured;
+	bool raw_texture;
+	bool semi_trans;
+	bool flip_x;
+	bool flip_y;
+};
 
 struct psycho_gpu_poly_info {
 	struct psycho_gpu_vertex v[4];
@@ -58,7 +70,6 @@ struct psycho_gpu_fill_info {
 	int16_t h;
 };
 
-
 enum psycho_gpu_backend {
 	PSYCHO_GPU_BACKEND_SOFTWARE,
 	PSYCHO_GPU_BACKEND_COUNT,
@@ -72,6 +83,8 @@ struct psycho_gpu_backend_ops {
 	void (*rect)(struct psycho_ctx *ctx, struct psycho_gpu_rect_info *rect);
 	void (*poly)(struct psycho_ctx *ctx, struct psycho_gpu_poly_info *poly);
 	void (*fill)(struct psycho_ctx *ctx, struct psycho_gpu_fill_info *fill);
+	void (*vram_write)(struct psycho_ctx *ctx, size_t x, size_t y, uint16_t color);
+	uint16_t (*vram_read)(struct psycho_ctx *ctx, size_t x, size_t y);
 };
 
 #ifdef __cplusplus

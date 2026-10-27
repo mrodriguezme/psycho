@@ -39,6 +39,7 @@ enum {
 
 enum {
 	GP1_CMD_RESET			     = 0x00,
+	GP1_CMD_COMMAND_BUFFER_RESET	     = 0x01,
 	GP1_CMD_DISPLAY_DISABLED_SET	     = 0x03,
 	GP1_CMD_DISPLAY_AREA_START_SET	     = 0x05,
 	GP1_CMD_DISPLAY_RANGE_HORIZONTAL_SET = 0x06,
@@ -109,6 +110,16 @@ constexpr uint32_t POLY_ABE	= 1 << 25;
 constexpr uint32_t POLY_TME	= 1 << 26;
 constexpr uint32_t POLY_VTX	= 1 << 27;
 constexpr uint32_t POLY_IIP	= 1 << 28;
+
+// ---------------------------------------------------------------------------
+// GP0 draw rectangle command parameters
+// ---------------------------------------------------------------------------
+constexpr uint32_t RECT_R0_MASK = GENMASK32(7, 0);
+constexpr uint32_t RECT_G0_MASK = GENMASK32(15, 8);
+constexpr uint32_t RECT_B0_MASK = GENMASK32(23, 16);
+constexpr uint32_t RECT_TGE = 1 << 24;
+constexpr uint32_t RECT_ABE = 1 << 25;
+constexpr uint32_t RECT_TME = 1 << 26;
 
 // ---------------------------------------------------------------------------
 // "GP0(0xE3) - Set Drawing Area top left (X1,Y1)" command parameters

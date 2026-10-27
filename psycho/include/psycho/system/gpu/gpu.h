@@ -42,11 +42,22 @@ struct psycho_gpu_cfg {
 	void *vblank_userdata;
 };
 
+struct psycho_gpu_vram_transfer_info {
+	uint32_t pixels_remaining;
+	uint16_t x0;
+	uint16_t y0;
+	uint16_t width;
+	uint16_t col;
+	uint16_t row;
+};
+
 struct psycho_gpu {
 	struct psycho_gpu_fifo_write fifo_write;
 	struct psycho_gpu_fifo_read fifo_read;
 
 	struct psycho_sched_event vblank_event;
+
+	struct psycho_gpu_vram_transfer_info vram_transfer_info;
 
 	struct {
 		void (*handler)(struct psycho_ctx *ctx);

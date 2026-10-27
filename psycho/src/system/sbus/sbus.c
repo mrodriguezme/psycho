@@ -89,6 +89,12 @@ uint16_t psycho_bus_load_halfword(struct psycho_ctx *ctx, uint32_t paddr, bool *
 		memcpy(&ret, &ctx->bus.spad[paddr & SCRATCHPAD_MASK], sizeof(uint16_t));
 		return ret;
 
+	case I_MASK:
+		return ctx->intc.i_mask;
+
+	case I_STAT:
+		return ctx->intc.i_stat;
+
 	case SIO0_CR:
 		return ctx->sio0.cr;
 
@@ -220,6 +226,14 @@ bool psycho_bus_store_halfword(struct psycho_ctx *ctx, uint32_t paddr, uint16_t 
 	case 0x1F801124:
 	case 0x1F801128:
 	case 0x1F801120:
+		break;
+
+	case I_MASK:
+		psycho_intc_mask_set(ctx, data);
+		break;
+
+	case I_STAT:
+		psycho_intc_irqs_ack(ctx, data);
 		break;
 
 	default:

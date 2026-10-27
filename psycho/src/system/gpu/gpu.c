@@ -30,15 +30,6 @@
 
 DECLARE_LOG_MODULE(PSYCHO_LOG_MODULE_GPU);
 
-struct vram_xfer {
-	uint32_t pixels_remaining;
-	uint16_t x0;
-	uint16_t y0;
-	uint16_t width;
-	uint16_t col;
-	uint16_t row;
-};
-
 RING_BUFFER_IMPL(psycho_gpu_fifo_write, uint32_t, RING_BUFFER_OVERFLOW_POLICY_DROP_OLDEST);
 RING_BUFFER_IMPL(psycho_gpu_fifo_read, uint32_t, RING_BUFFER_OVERFLOW_POLICY_DROP_OLDEST);
 
@@ -177,6 +168,57 @@ PSYCHO_NONNULL static unsigned int xsiz_fill_mask(uint32_t xsiz)
 	return ((xsiz & 0x3FF) + 0x0F) & ~0x0F;
 }
 
+PSYCHO_NONNULL static unsigned int ypos_fill_mask(uint32_t ypos)
+{
+	return ypos & 0x1FF;
+}
+
+PSYCHO_NONNULL static unsigned int ysiz_fill_mask(uint32_t ysiz)
+{
+	return ysiz & 0x1FF;
+}
+
+PSYCHO_NONNULL static unsigned int xpos_copy_mask(uint32_t xpos)
+{
+	return xpos & 0x3FF;
+}
+
+PSYCHO_NONNULL static unsigned int xsiz_copy_mask(uint32_t xsiz)
+{
+	return ((xsiz - 1) & 0x3FF) + 1;
+}
+
+PSYCHO_NONNULL static unsigned int ypos_copy_mask(uint32_t ypos)
+{
+	return ypos & 0x1FF;
+}
+
+PSYCHO_NONNULL static unsigned int ysiz_copy_mask(uint32_t ysiz)
+{
+	return ((ysiz - 1) & 0x1FF) + 1;
+}
+
+PSYCHO_NODISCARD static unsigned int copy_x(struct psycho_gpu_vram_transfer_info *info)
+{
+	return (info->x0 + info->col) & (PSYCHO_GPU_VRAM_WIDTH - 1);
+}
+
+PSYCHO_NODISCARD static unsigned int copy_y(struct psycho_gpu_vram_transfer_info *info)
+{
+	return (info->y0 + info->row) & (PSYCHO_GPU_VRAM_HEIGHT - 1);
+}
+
+PSYCHO_NONNULL static void copy_advance(struct psycho_gpu_vram_transfer_info *info)
+{
+	info->pixels_remaining--;
+	info->col++;
+
+	if (info->col == info->width) {
+		info->col = 0;
+		info->row++;
+	}
+}
+
 PSYCHO_NONNULL static void on_vblank(struct psycho_ctx *ctx, void *userdata)
 {
 	(void)userdata;
@@ -193,6 +235,59 @@ PSYCHO_NONNULL static void write_fifo_push(struct psycho_ctx *ctx, uint32_t data
 		LOG_WARN(ctx, "write fifo full - overwriting oldest entry");
 
 	psycho_gpu_fifo_write_push(&ctx->gpu.base.fifo_write, data);
+}
+
+PSYCHO_NODISCARD static unsigned int rect_fixed_size(uint32_t packet)
+{
+	static const unsigned int sizes[4] = { 0, 1, 8, 16 }; // 0 = variable
+
+	return sizes[(packet >> 27) & 3];
+}
+
+PSYCHO_NONNULL static void draw_rect(struct psycho_ctx *ctx)
+{
+	struct psycho_gpu_rect_info rect = {};
+
+	uint32_t cmd = *psycho_gpu_fifo_write_pop(&ctx->gpu.base.fifo_write);
+	uint32_t xy  = *psycho_gpu_fifo_write_pop(&ctx->gpu.base.fifo_write);
+
+	rect.textured	 = cmd & RECT_TME;
+	rect.raw_texture = cmd & RECT_TGE;
+	rect.semi_trans	 = cmd & RECT_ABE;
+
+	rect.r = field_get32(RECT_R0_MASK, cmd);
+	rect.g = field_get32(RECT_G0_MASK, cmd);
+	rect.b = field_get32(RECT_B0_MASK, cmd);
+
+	rect.x = sign_extend_11_16(xy) + ctx->gpu.base.drawing_offset_x;
+	rect.y = sign_extend_11_16(xy >> 16) + ctx->gpu.base.drawing_offset_y;
+
+	if (rect.textured) {
+		uint32_t uv = *psycho_gpu_fifo_write_pop(&ctx->gpu.base.fifo_write);
+
+		rect.u	  = uv & UINT8_MAX;
+		rect.v	  = (uv >> 8) & UINT8_MAX;
+		rect.clut = uv >> 16;
+	}
+
+	unsigned int size = rect_fixed_size(cmd);
+
+	if (size) {
+		rect.w = size;
+		rect.h = size;
+	} else {
+		uint32_t wh = *psycho_gpu_fifo_write_pop(&ctx->gpu.base.fifo_write);
+
+		rect.w = wh & 0x3FF;
+		rect.h = (wh >> 16) & 0x1FF;
+	}
+
+	LOG_TRACE(ctx, "rect: pos=(%d,%d) size=%dx%d%s%s%s", rect.x, rect.y, rect.w, rect.h,
+		  rect.textured ? " textured" : "", rect.raw_texture ? " raw" : "",
+		  rect.semi_trans ? " semi-trans" : "");
+
+	ctx->gpu.backend->rect(ctx, &rect);
+	ctx->gpu.base.stat |= (STAT_IDLE | STAT_WFEP);
 }
 
 PSYCHO_NONNULL static void draw_polygon(struct psycho_ctx *ctx)
@@ -283,6 +378,21 @@ PSYCHO_NONNULL static void setup_cmd_poly(struct psycho_ctx *ctx, uint32_t packe
 	ctx->gpu.base.stat &= ~(STAT_IDLE | STAT_WFEP);
 }
 
+PSYCHO_NONNULL static void setup_cmd_rect(struct psycho_ctx *ctx, uint32_t packet)
+{
+	write_fifo_push(ctx, packet);
+
+	uint32_t words = 2;
+	words += (packet & RECT_TME) ? 1 : 0;
+	words += rect_fixed_size(packet) ? 0 : 1;
+
+	ctx->gpu.base.cmd.handler	 = draw_rect;
+	ctx->gpu.base.cmd.required_words = words;
+
+	// Same WFEP rule as polygons: cleared as soon as the command word arrives.
+	ctx->gpu.base.stat &= ~(STAT_IDLE | STAT_WFEP);
+}
+
 PSYCHO_NONNULL static void fill_vram_handler(struct psycho_ctx *ctx)
 {
 	uint32_t cmd  = *psycho_gpu_fifo_write_pop(&ctx->gpu.base.fifo_write);
@@ -291,10 +401,10 @@ PSYCHO_NONNULL static void fill_vram_handler(struct psycho_ctx *ctx)
 
 	struct psycho_gpu_fill_info info;
 
-	info.x = xpos_fill_mask(pos);
-	info.y = (pos >> 16) & 0x1FF;
-	info.w = xsiz_fill_mask(size);
-	info.h = (size >> 16) & 0x1FF;
+	info.x = xpos_fill_mask(pos & UINT16_MAX);
+	info.y = ypos_fill_mask(pos >> 16);
+	info.w = xsiz_fill_mask(size & UINT16_MAX);
+	info.h = ysiz_fill_mask(size >> 16);
 
 	uint8_t r = field_get32(POLY_R0_MASK, cmd);
 	uint8_t g = field_get32(POLY_G0_MASK, cmd);
@@ -336,6 +446,91 @@ PSYCHO_NONNULL static void setup_cmd_misc(struct psycho_ctx *ctx, uint32_t packe
 		LOG_INFO(ctx, "unknown misc cmd 0x%02X", cmd_type);
 		break;
 	}
+}
+
+PSYCHO_NONNULL static void vram_transfer_init(struct psycho_ctx *ctx)
+{
+	uint32_t cmd  = *psycho_gpu_fifo_write_pop(&ctx->gpu.base.fifo_write);
+	uint32_t pos  = *psycho_gpu_fifo_write_pop(&ctx->gpu.base.fifo_write);
+	uint32_t size = *psycho_gpu_fifo_write_pop(&ctx->gpu.base.fifo_write);
+
+	unsigned int w = xsiz_copy_mask(size & UINT16_MAX);
+	unsigned int h = ysiz_copy_mask(size >> 16);
+
+	ctx->gpu.base.vram_transfer_info.x0		  = xpos_copy_mask(pos & UINT16_MAX);
+	ctx->gpu.base.vram_transfer_info.y0		  = ypos_copy_mask(pos >> 16);
+	ctx->gpu.base.vram_transfer_info.width		  = w;
+	ctx->gpu.base.vram_transfer_info.pixels_remaining = w * h;
+}
+
+PSYCHO_NONNULL static void do_cpu_to_vram_processing(struct psycho_ctx *ctx)
+{
+	struct psycho_gpu_vram_transfer_info *xfer = &ctx->gpu.base.vram_transfer_info;
+
+	uint32_t pixels = *psycho_gpu_fifo_write_pop(&ctx->gpu.base.fifo_write);
+
+	unsigned int num_pixels = 2;
+
+	do {
+		ctx->gpu.backend->vram_write(ctx, copy_x(xfer), copy_y(xfer), pixels & UINT16_MAX);
+		copy_advance(xfer);
+		pixels >>= 16;
+	} while (--num_pixels && xfer->pixels_remaining);
+
+	if (!xfer->pixels_remaining)
+		ctx->gpu.base.stat |= STAT_IDLE;
+}
+
+PSYCHO_NONNULL static void process_cpu_to_vram(struct psycho_ctx *ctx)
+{
+	vram_transfer_init(ctx);
+
+	ctx->gpu.base.cmd.handler	 = do_cpu_to_vram_processing;
+	ctx->gpu.base.cmd.required_words = 1;
+}
+
+#if 0
+PSYCHO_NONNULL static void vram_to_cpu_refill(struct psycho_ctx *ctx)
+{
+	struct psycho_gpu_vram_transfer_info *xfer = &ctx->gpu.base.vram_transfer_info;
+
+	unsigned int shift = 0;
+	uint32_t pixel	   = 0;
+
+	do {
+		pixel |= (uint32_t)ctx->gpu.backend->vram_read(ctx, copy_x(xfer), copy_y(xfer)) << shift;
+		copy_advance(xfer);
+		shift += 16;
+	} while ((shift < 32) && xfer->pixels_remaining);
+
+	psycho_gpu_fifo_read_push(&ctx->gpu.base.fifo_read, pixel);
+}
+#endif
+
+PSYCHO_NONNULL static void process_vram_to_cpu(struct psycho_ctx *ctx)
+{
+	vram_transfer_init(ctx);
+	ctx->gpu.base.stat |= (STAT_IDLE | STAT_RFFL);
+}
+
+PSYCHO_NONNULL static void setup_cpu_to_vram_blit(struct psycho_ctx *ctx, uint32_t packet)
+{
+	write_fifo_push(ctx, packet);
+
+	ctx->gpu.base.cmd.handler	 = process_cpu_to_vram;
+	ctx->gpu.base.cmd.required_words = 3;
+
+	ctx->gpu.base.stat &= ~STAT_IDLE;
+}
+
+PSYCHO_NONNULL static void setup_vram_to_cpu_blit(struct psycho_ctx *ctx, uint32_t packet)
+{
+	write_fifo_push(ctx, packet);
+
+	ctx->gpu.base.cmd.handler	 = process_vram_to_cpu;
+	ctx->gpu.base.cmd.required_words = 3;
+
+	ctx->gpu.base.stat &= ~STAT_IDLE;
 }
 
 PSYCHO_NONNULL static void draw_mode_set(struct psycho_ctx *ctx, uint32_t val)
@@ -438,6 +633,18 @@ PSYCHO_NONNULL static void setup_cmd(struct psycho_ctx *ctx, uint32_t packet)
 		setup_cmd_poly(ctx, packet);
 		break;
 
+	case CMD_TYPE_RECT:
+		setup_cmd_rect(ctx, packet);
+		break;
+
+	case CMD_TYPE_CPU_TO_VRAM_BLIT:
+		setup_cpu_to_vram_blit(ctx, packet);
+		break;
+
+	case CMD_TYPE_VRAM_TO_CPU_BLIT:
+		setup_vram_to_cpu_blit(ctx, packet);
+		break;
+
 	case CMD_TYPE_ENV:
 		do_cmd_env(ctx, packet);
 		break;
@@ -475,7 +682,7 @@ void psycho_gp0(struct psycho_ctx *ctx, uint32_t packet)
 
 	write_fifo_push(ctx, packet);
 
-	if (psycho_gpu_fifo_write_size(&ctx->gpu.base.fifo_write) == ctx->gpu.base.cmd.required_words)
+	if (psycho_gpu_fifo_write_size(&ctx->gpu.base.fifo_write) >= ctx->gpu.base.cmd.required_words)
 		ctx->gpu.base.cmd.handler(ctx);
 }
 
@@ -500,6 +707,13 @@ void psycho_gp1(struct psycho_ctx *ctx, uint32_t packet)
 		ctx->gpu.base.stat |= STAT_WFEP;
 
 		LOG_INFO(ctx, "GPU reset by guest software");
+		return;
+
+	case GP1_CMD_COMMAND_BUFFER_RESET:
+		psycho_gpu_fifo_write_clear(&ctx->gpu.base.fifo_write);
+		ctx->gpu.base.stat |= STAT_WFEP;
+
+		LOG_INFO(ctx, "command buffer reset");
 		return;
 
 	case GP1_CMD_DISPLAY_DISABLED_SET:

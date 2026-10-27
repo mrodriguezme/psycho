@@ -138,16 +138,41 @@ static void fill(struct psycho_ctx *ctx, struct psycho_gpu_fill_info *info)
 
 static void rect(struct psycho_ctx *ctx, struct psycho_gpu_rect_info *info)
 {
+	if (info->textured)
+		return;
+
+	int x0 = clamp(info->x, 0, PSYCHO_GPU_VRAM_WIDTH);
+	int x1 = clamp(info->x + info->w, 0, PSYCHO_GPU_VRAM_WIDTH);
+	int y0 = clamp(info->y, 0, PSYCHO_GPU_VRAM_HEIGHT);
+	int y1 = clamp(info->y + info->h, 0, PSYCHO_GPU_VRAM_HEIGHT);
+
+	uint16_t color = rgb888_to_rgb555(info->r, info->g, info->b);
+
+	for (int y = y0; y < y1; ++y)
+		for (int x = x0; x < x1; ++x)
+			ctx->gpu.software.vram[y][x] = color;
+}
+
+static void vram_write(struct psycho_ctx *ctx, size_t x, size_t y, uint16_t color)
+{
+	ctx->gpu.software.vram[y][x] = color;
+}
+
+static uint16_t vram_read(struct psycho_ctx *ctx, size_t x, size_t y)
+{
+	return ctx->gpu.software.vram[y][x];
 }
 
 const struct psycho_gpu_backend_ops psycho_gpu_backend_ops_software = {
 	// clang-format off
 
-	.reset	= reset,
-	.name	= "Software",
-	.fill	= fill,
-	.poly	= poly,
-	.rect	= rect,
+	.reset		= reset,
+	.name		= "Software",
+	.fill		= fill,
+	.poly		= poly,
+	.rect		= rect,
+	.vram_write	= vram_write,
+	.vram_read	= vram_read
 
 	// clang-format on
 };

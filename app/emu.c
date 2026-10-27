@@ -213,16 +213,18 @@ void emu_init(struct emu_runner *emu, const char *bios_file, const char *exe_fil
 	struct psycho_ctx_cfg *cfg = psycho_ctx_cfg_get(&emu->ctx);
 
 	cfg->cpu.backend = PSYCHO_CPU_BACKEND_INTERPRETER;
+	cfg->gpu.backend = PSYCHO_GPU_BACKEND_SOFTWARE;
 
 	cfg->cpu.illegal_instr = illegal_instr_cb;
-	cfg->disasm.tracing    = false;
+	//cfg->disasm.tracing    = true;
 
 	cfg->log.log_cb = log_cb;
 
 	//cfg->bios_call_tracer.enabled	 = true;
 	cfg->bios_call_tracer.deref_ptrs = true;
 
-	cfg->log.modules[PSYCHO_LOG_MODULE_GPU] = PSYCHO_LOG_LEVEL_TRACE;
+	cfg->log.modules[PSYCHO_LOG_MODULE_BUS] = PSYCHO_LOG_LEVEL_TRACE;
+	//cfg->log.modules[PSYCHO_LOG_MODULE_GPU] = PSYCHO_LOG_LEVEL_TRACE;
 
 	cfg->log.modules[PSYCHO_LOG_MODULE_BIOS_CALL_TRACER] = PSYCHO_LOG_LEVEL_TRACE;
 
