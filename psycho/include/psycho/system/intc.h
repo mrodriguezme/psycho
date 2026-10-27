@@ -23,8 +23,6 @@
 extern "C" {
 #endif // __cplusplus
 
-struct psycho_ctx;
-
 struct psycho_intc {
 	uint32_t i_stat;
 	uint32_t i_mask;

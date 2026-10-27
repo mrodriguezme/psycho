@@ -24,6 +24,7 @@
 #include "gpu.h"
 #include "defs.h"
 
+#include "system/dmac/dmac.h"
 #include "system/intc/intc.h"
 
 #include "lib/ring_buffer.h"
@@ -52,11 +53,6 @@ PSYCHO_NONNULL static void display_disabled_set(struct psycho_ctx *ctx, bool dis
 PSYCHO_NODISCARD static int16_t sign_extend_11_16(uint32_t v)
 {
 	return (int16_t)((int32_t)(v << 21) >> 21);
-}
-
-PSYCHO_NONNULL static void dma_direction_set(struct psycho_ctx *ctx, enum dma_direction dir)
-{
-	field_set32(ctx->gpu.base.stat, STAT_DMD_MASK, dir);
 }
 
 PSYCHO_NONNULL static void display_area_start_set(struct psycho_ctx *ctx, uint32_t val)
@@ -219,6 +215,19 @@ PSYCHO_NONNULL static void copy_advance(struct psycho_gpu_vram_transfer_info *in
 	}
 }
 
+PSYCHO_NONNULL static void dreq_assert(struct psycho_ctx *ctx, bool asserted)
+{
+	if (!!(ctx->gpu.base.stat & STAT_DREQ) == asserted)
+		return;
+
+	if (asserted)
+		ctx->gpu.base.stat |= STAT_DREQ;
+	else
+		ctx->gpu.base.stat &= ~STAT_DREQ;
+
+	psycho_dmac_channel_dreq_update(ctx, DMAC_CHANNEL_GPU, asserted);
+}
+
 PSYCHO_NONNULL static void on_vblank(struct psycho_ctx *ctx, void *userdata)
 {
 	(void)userdata;
@@ -229,12 +238,69 @@ PSYCHO_NONNULL static void on_vblank(struct psycho_ctx *ctx, void *userdata)
 	psycho_intc_irqs_pending_set(ctx, IRQ_VBLANK);
 }
 
+PSYCHO_NONNULL static void dreq_update(struct psycho_ctx *ctx)
+{
+	uint32_t stat = ctx->gpu.base.stat;
+	bool dreq;
+
+	switch (field_get32(STAT_DMD_MASK, stat)) {
+	case DMD_WFNF:
+		dreq = !psycho_gpu_fifo_write_full(&ctx->gpu.base.fifo_write);
+		break;
+
+	case DMD_WFEP:
+		dreq = stat & STAT_WFEP;
+		break;
+
+	case DMD_RFFL:
+		dreq = stat & STAT_RFFL;
+		break;
+
+	default:
+		dreq = false;
+		break;
+	}
+
+	dreq_assert(ctx, dreq);
+}
+
 PSYCHO_NONNULL static void write_fifo_push(struct psycho_ctx *ctx, uint32_t data)
 {
-	if (unlikely(psycho_gpu_fifo_write_full(&ctx->gpu.base.fifo_write)))
+	bool full = psycho_gpu_fifo_write_full(&ctx->gpu.base.fifo_write);
+
+	if (unlikely(full))
 		LOG_WARN(ctx, "write fifo full - overwriting oldest entry");
 
 	psycho_gpu_fifo_write_push(&ctx->gpu.base.fifo_write, data);
+}
+
+PSYCHO_NONNULL PSYCHO_NODISCARD static uint32_t write_fifo_pop(struct psycho_ctx *ctx)
+{
+	uint32_t data = 0x00000000;
+
+	if (likely(!psycho_gpu_fifo_write_empty(&ctx->gpu.base.fifo_write)))
+		data = *psycho_gpu_fifo_write_pop(&ctx->gpu.base.fifo_write);
+	else
+		LOG_WARN(ctx, "write fifo empty - returning 0x00000000");
+
+	return data;
+}
+
+PSYCHO_NONNULL static void dma_direction_set(struct psycho_ctx *ctx, enum dma_direction dir)
+{
+	static const char *const strs[] = {
+		// clang-format off
+
+		[DMD_OFF]	= "off",
+		[DMD_WFNF]	= "gp0 write FIFO not full",
+		[DMD_WFEP]	= "gp0 write FIFO empty",
+		[DMD_RFFL]	= "GPUREAD data ready"
+
+		// clang-format on
+	};
+
+	ctx->gpu.base.stat = field_set32(ctx->gpu.base.stat, STAT_DMD_MASK, dir);
+	LOG_INFO(ctx, "dma direction set to \"%s\"", strs[dir]);
 }
 
 PSYCHO_NODISCARD static unsigned int rect_fixed_size(uint32_t packet)
@@ -248,8 +314,8 @@ PSYCHO_NONNULL static void draw_rect(struct psycho_ctx *ctx)
 {
 	struct psycho_gpu_rect_info rect = {};
 
-	uint32_t cmd = *psycho_gpu_fifo_write_pop(&ctx->gpu.base.fifo_write);
-	uint32_t xy  = *psycho_gpu_fifo_write_pop(&ctx->gpu.base.fifo_write);
+	uint32_t cmd = write_fifo_pop(ctx);
+	uint32_t xy  = write_fifo_pop(ctx);
 
 	rect.textured	 = cmd & RECT_TME;
 	rect.raw_texture = cmd & RECT_TGE;
@@ -263,7 +329,7 @@ PSYCHO_NONNULL static void draw_rect(struct psycho_ctx *ctx)
 	rect.y = sign_extend_11_16(xy >> 16) + ctx->gpu.base.drawing_offset_y;
 
 	if (rect.textured) {
-		uint32_t uv = *psycho_gpu_fifo_write_pop(&ctx->gpu.base.fifo_write);
+		uint32_t uv = write_fifo_pop(ctx);
 
 		rect.u	  = uv & UINT8_MAX;
 		rect.v	  = (uv >> 8) & UINT8_MAX;
@@ -276,7 +342,7 @@ PSYCHO_NONNULL static void draw_rect(struct psycho_ctx *ctx)
 		rect.w = size;
 		rect.h = size;
 	} else {
-		uint32_t wh = *psycho_gpu_fifo_write_pop(&ctx->gpu.base.fifo_write);
+		uint32_t wh = write_fifo_pop(ctx);
 
 		rect.w = wh & 0x3FF;
 		rect.h = (wh >> 16) & 0x1FF;
@@ -294,7 +360,7 @@ PSYCHO_NONNULL static void draw_polygon(struct psycho_ctx *ctx)
 {
 	struct psycho_gpu_poly_info poly = {};
 
-	uint32_t cmd = *psycho_gpu_fifo_write_pop(&ctx->gpu.base.fifo_write);
+	uint32_t cmd = write_fifo_pop(ctx);
 
 	poly.nverts	 = (cmd & POLY_VTX) ? 4 : 3;
 	poly.gouraud	 = cmd & POLY_IIP;
@@ -308,20 +374,20 @@ PSYCHO_NONNULL static void draw_polygon(struct psycho_ctx *ctx)
 		struct psycho_gpu_vertex *vert = &poly.v[i];
 
 		if (i && poly.gouraud)
-			color = *psycho_gpu_fifo_write_pop(&ctx->gpu.base.fifo_write);
+			color = write_fifo_pop(ctx);
 
 		vert->r = field_get32(POLY_R0_MASK, color);
 		vert->g = field_get32(POLY_G0_MASK, color);
 		vert->b = field_get32(POLY_B0_MASK, color);
 
-		uint32_t xy = *psycho_gpu_fifo_write_pop(&ctx->gpu.base.fifo_write);
+		uint32_t xy = write_fifo_pop(ctx);
 		vert->x	    = sign_extend_11_16(xy);
 		vert->y	    = sign_extend_11_16(xy >> 16);
 
 		if (!poly.textured)
 			continue;
 
-		uint32_t uv = *psycho_gpu_fifo_write_pop(&ctx->gpu.base.fifo_write);
+		uint32_t uv = write_fifo_pop(ctx);
 
 		vert->u = uv & UINT8_MAX;
 		vert->v = (uv >> 8) & UINT8_MAX;
@@ -395,9 +461,9 @@ PSYCHO_NONNULL static void setup_cmd_rect(struct psycho_ctx *ctx, uint32_t packe
 
 PSYCHO_NONNULL static void fill_vram_handler(struct psycho_ctx *ctx)
 {
-	uint32_t cmd  = *psycho_gpu_fifo_write_pop(&ctx->gpu.base.fifo_write);
-	uint32_t pos  = *psycho_gpu_fifo_write_pop(&ctx->gpu.base.fifo_write);
-	uint32_t size = *psycho_gpu_fifo_write_pop(&ctx->gpu.base.fifo_write);
+	uint32_t cmd  = write_fifo_pop(ctx);
+	uint32_t pos  = write_fifo_pop(ctx);
+	uint32_t size = write_fifo_pop(ctx);
 
 	struct psycho_gpu_fill_info info;
 
@@ -450,9 +516,9 @@ PSYCHO_NONNULL static void setup_cmd_misc(struct psycho_ctx *ctx, uint32_t packe
 
 PSYCHO_NONNULL static void vram_transfer_init(struct psycho_ctx *ctx)
 {
-	uint32_t cmd  = *psycho_gpu_fifo_write_pop(&ctx->gpu.base.fifo_write);
-	uint32_t pos  = *psycho_gpu_fifo_write_pop(&ctx->gpu.base.fifo_write);
-	uint32_t size = *psycho_gpu_fifo_write_pop(&ctx->gpu.base.fifo_write);
+	uint32_t cmd  = write_fifo_pop(ctx);
+	uint32_t pos  = write_fifo_pop(ctx);
+	uint32_t size = write_fifo_pop(ctx);
 
 	unsigned int w = xsiz_copy_mask(size & UINT16_MAX);
 	unsigned int h = ysiz_copy_mask(size >> 16);
@@ -467,7 +533,7 @@ PSYCHO_NONNULL static void do_cpu_to_vram_processing(struct psycho_ctx *ctx)
 {
 	struct psycho_gpu_vram_transfer_info *xfer = &ctx->gpu.base.vram_transfer_info;
 
-	uint32_t pixels = *psycho_gpu_fifo_write_pop(&ctx->gpu.base.fifo_write);
+	uint32_t pixels = write_fifo_pop(ctx);
 
 	unsigned int num_pixels = 2;
 
@@ -668,6 +734,8 @@ void psycho_gpu_reset(struct psycho_ctx *ctx)
 	ctx->gpu.base.vblank_event.permanent = true;
 
 	ctx->gpu.base.stat = STAT_IDLE | STAT_WFEP;
+	dreq_update(ctx);
+
 	psycho_sched_event_add(ctx, &ctx->gpu.base.vblank_event);
 }
 
@@ -675,15 +743,16 @@ void psycho_gp0(struct psycho_ctx *ctx, uint32_t packet)
 {
 	LOG_TRACE(ctx, "GP0 <- 0x%08X", packet);
 
-	if (ctx->gpu.base.stat & STAT_IDLE) {
+	if (ctx->gpu.base.stat & STAT_IDLE)
 		setup_cmd(ctx, packet);
-		return;
+	else {
+		write_fifo_push(ctx, packet);
+
+		if (psycho_gpu_fifo_write_size(&ctx->gpu.base.fifo_write) >= ctx->gpu.base.cmd.required_words)
+			ctx->gpu.base.cmd.handler(ctx);
 	}
 
-	write_fifo_push(ctx, packet);
-
-	if (psycho_gpu_fifo_write_size(&ctx->gpu.base.fifo_write) >= ctx->gpu.base.cmd.required_words)
-		ctx->gpu.base.cmd.handler(ctx);
+	dreq_update(ctx);
 }
 
 void psycho_gp1(struct psycho_ctx *ctx, uint32_t packet)
@@ -707,37 +776,43 @@ void psycho_gp1(struct psycho_ctx *ctx, uint32_t packet)
 		ctx->gpu.base.stat |= STAT_WFEP;
 
 		LOG_INFO(ctx, "GPU reset by guest software");
-		return;
+		break;
 
 	case GP1_CMD_COMMAND_BUFFER_RESET:
 		psycho_gpu_fifo_write_clear(&ctx->gpu.base.fifo_write);
 		ctx->gpu.base.stat |= STAT_WFEP;
 
 		LOG_INFO(ctx, "command buffer reset");
-		return;
+		break;
 
 	case GP1_CMD_DISPLAY_DISABLED_SET:
 		display_disabled_set(ctx, packet & 1);
-		return;
+		break;
+
+	case GP1_CMD_DMA_DIRECTION_SET:
+		dma_direction_set(ctx, packet & 3);
+		break;
 
 	case GP1_CMD_DISPLAY_AREA_START_SET:
 		display_area_start_set(ctx, packet);
-		return;
+		break;
 
 	case GP1_CMD_DISPLAY_RANGE_HORIZONTAL_SET:
 		display_range_horizontal_set(ctx, packet);
-		return;
+		break;
 
 	case GP1_CMD_DISPLAY_RANGE_VERTICAL_SET:
 		display_range_vertical_set(ctx, packet);
-		return;
+		break;
 
 	case GP1_CMD_DISPLAY_MODE_SET:
 		display_mode_set(ctx, packet);
-		return;
+		break;
 
 	default:
 		LOG_WARN(ctx, "unknown GP1 command 0x%02X", cmd);
-		return;
+		break;
 	}
+
+	dreq_update(ctx);
 }

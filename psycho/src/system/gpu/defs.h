@@ -41,6 +41,7 @@ enum {
 	GP1_CMD_RESET			     = 0x00,
 	GP1_CMD_COMMAND_BUFFER_RESET	     = 0x01,
 	GP1_CMD_DISPLAY_DISABLED_SET	     = 0x03,
+	GP1_CMD_DMA_DIRECTION_SET	     = 0x04,
 	GP1_CMD_DISPLAY_AREA_START_SET	     = 0x05,
 	GP1_CMD_DISPLAY_RANGE_HORIZONTAL_SET = 0x06,
 	GP1_CMD_DISPLAY_RANGE_VERTICAL_SET   = 0x07,
@@ -97,6 +98,10 @@ constexpr uint32_t STAT_IDLE	 = 1 << 26;
 constexpr uint32_t STAT_RFFL	 = 1 << 27;
 constexpr uint32_t STAT_WFEP	 = 1 << 28;
 constexpr uint32_t STAT_DMD_MASK = GENMASK32(30, 29);
+constexpr uint32_t STAT_DMD_OFF	 = 0;
+constexpr uint32_t STAT_DMD_WFNF = 1;
+constexpr uint32_t STAT_DMD_WFEP = 2;
+constexpr uint32_t STAT_DMD_RFFL = 3;
 constexpr uint32_t STAT_ODE	 = UINT32_C(1) << 31;
 
 // ---------------------------------------------------------------------------
@@ -117,9 +122,9 @@ constexpr uint32_t POLY_IIP	= 1 << 28;
 constexpr uint32_t RECT_R0_MASK = GENMASK32(7, 0);
 constexpr uint32_t RECT_G0_MASK = GENMASK32(15, 8);
 constexpr uint32_t RECT_B0_MASK = GENMASK32(23, 16);
-constexpr uint32_t RECT_TGE = 1 << 24;
-constexpr uint32_t RECT_ABE = 1 << 25;
-constexpr uint32_t RECT_TME = 1 << 26;
+constexpr uint32_t RECT_TGE	= 1 << 24;
+constexpr uint32_t RECT_ABE	= 1 << 25;
+constexpr uint32_t RECT_TME	= 1 << 26;
 
 // ---------------------------------------------------------------------------
 // "GP0(0xE3) - Set Drawing Area top left (X1,Y1)" command parameters

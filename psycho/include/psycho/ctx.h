@@ -29,6 +29,7 @@ extern "C" {
 #include "system/cpu/backend/interpreter.h"
 #include "system/gpu/backend/software.h"
 #include "system/gpu/gpu.h"
+#include "system/dmac.h"
 #include "system/intc.h"
 #include "system/sio0.h"
 
@@ -69,6 +70,8 @@ struct psycho_ctx {
 		const uint8_t *data;
 		size_t size;
 	} exe;
+
+	struct psycho_dmac dmac;
 
 	struct psycho_intc intc;
 	bool running;

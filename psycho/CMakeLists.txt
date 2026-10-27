@@ -39,6 +39,7 @@ target_sources(
 	include/psycho/system/gpu/backend/backend.h
 	include/psycho/system/gpu/backend/software.h
 	include/psycho/system/gpu/gpu.h
+	include/psycho/system/dmac.h
 	include/psycho/system/intc.h
 	include/psycho/system/sbus.h
 	include/psycho/system/sched.h
@@ -63,6 +64,9 @@ target_sources(
 	src/system/cpu/cpu.h
 	src/system/cpu/defs.c
 	src/system/cpu/defs.h
+	src/system/dmac/defs.h
+	src/system/dmac/dmac.c
+	src/system/dmac/dmac.h
 	src/system/gpu/backend/software/software.c
 	src/system/gpu/backend/software/software.h
 	src/system/gpu/defs.c

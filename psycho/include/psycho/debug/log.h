@@ -41,27 +41,28 @@ extern "C" {
 	X(GPU, "gpu")                           \
 	X(INTC, "intc")                         \
 	X(SIO0, "sio0")                         \
-	X(DIGITAL_PAD, "digital pad")
+	X(DIGITAL_PAD, "digital pad")           \
+	X(DMAC, "dmac")
 
 struct psycho_ctx;
 
 enum psycho_log_level {
-// clang-format off
-
 #define X(id, name) PSYCHO_LOG_LEVEL_##id,
 	PSYCHO_LOG_LEVEL_LIST(X)
 #undef X
+	// clang-format off
+
 	PSYCHO_LOG_LEVEL_COUNT
 
 	// clang-format on
 };
 
 enum psycho_log_module {
-// clang-format off
-
 #define X(id, name) PSYCHO_LOG_MODULE_##id,
 	PSYCHO_LOG_MODULE_LIST(X)
 #undef X
+	// clang-format off
+
 	PSYCHO_LOG_MODULE_COUNT
 
 	// clang-format on

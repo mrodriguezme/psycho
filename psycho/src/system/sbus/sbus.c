@@ -22,6 +22,7 @@
 #include "sbus.h"
 #include "defs.h"
 
+#include "system/dmac/dmac.h"
 #include "system/gpu/gpu.h"
 #include "system/intc/intc.h"
 #include "system/sio0/sio0.h"
@@ -65,6 +66,34 @@ uint32_t psycho_bus_load_word(struct psycho_ctx *ctx, uint32_t paddr, bool *vali
 	case BIOS_BEGIN ... BIOS_END:
 		memcpy(&ret, &ctx->bus.bios[paddr & BIOS_MASK], sizeof(uint32_t));
 		return ret;
+
+	case 0x1F80101C:
+	case 0x1F802080:
+		return UINT32_MAX;
+
+	case DMAC_DPCR:
+		return ctx->dmac.dpcr;
+
+	case DMAC_DICR:
+		return ctx->dmac.dicr;
+
+	case DMAC_GPU_MADR:
+		return ctx->dmac.channels[DMAC_CHANNEL_GPU].madr;
+
+	case DMAC_GPU_BCR:
+		return ctx->dmac.channels[DMAC_CHANNEL_GPU].bcr;
+
+	case DMAC_GPU_CHCR:
+		return ctx->dmac.channels[DMAC_CHANNEL_GPU].chcr;
+
+	case DMAC_OTC_MADR:
+		return ctx->dmac.channels[DMAC_CHANNEL_OTC].madr;
+
+	case DMAC_OTC_CHCR:
+		return ctx->dmac.channels[DMAC_CHANNEL_OTC].chcr;
+
+	case DMAC_OTC_BCR:
+		return ctx->dmac.channels[DMAC_CHANNEL_OTC].bcr;
 
 	default:
 		LOG_ERR(ctx, "bad word load from unknown physical address 0x%08X", paddr);
@@ -177,6 +206,98 @@ bool psycho_bus_store_word(struct psycho_ctx *ctx, uint32_t paddr, uint32_t data
 	case COM_DELAY:
 	case DRAM_CTRL:
 	case BIU_CACHE_CTRL_REG:
+		break;
+
+	case DMAC_MDECIN_MADR:
+		dmac_channel_madr_write(ctx, DMAC_CHANNEL_MDECIN, data);
+		break;
+
+	case DMAC_MDECIN_BCR:
+		dmac_channel_bcr_write(ctx, DMAC_CHANNEL_MDECIN, data);
+		break;
+
+	case DMAC_MDECIN_CHCR:
+		ctx->dmac.channels[DMAC_CHANNEL_MDECIN].chcr = data;
+		break;
+
+	case DMAC_MDECOUT_MADR:
+		dmac_channel_madr_write(ctx, DMAC_CHANNEL_MDECOUT, data);
+		break;
+
+	case DMAC_MDECOUT_BCR:
+		dmac_channel_bcr_write(ctx, DMAC_CHANNEL_MDECOUT, data);
+		break;
+
+	case DMAC_MDECOUT_CHCR:
+		ctx->dmac.channels[DMAC_CHANNEL_MDECOUT].chcr = data;
+		break;
+
+	case DMAC_GPU_MADR:
+		dmac_channel_madr_write(ctx, DMAC_CHANNEL_GPU, data);
+		break;
+
+	case DMAC_GPU_BCR:
+		dmac_channel_bcr_write(ctx, DMAC_CHANNEL_GPU, data);
+		break;
+
+	case DMAC_GPU_CHCR:
+		ctx->dmac.channels[DMAC_CHANNEL_GPU].chcr = data;
+		break;
+
+	case DMAC_CDROM_CHCR:
+		ctx->dmac.channels[DMAC_CHANNEL_CDROM].chcr = data;
+		break;
+
+	case DMAC_CDROM_BCR:
+		dmac_channel_bcr_write(ctx, DMAC_CHANNEL_CDROM, data);
+		break;
+
+	case DMAC_CDROM_MADR:
+		dmac_channel_madr_write(ctx, DMAC_CHANNEL_CDROM, data);
+		break;
+
+	case DMAC_SPU_MADR:
+		dmac_channel_madr_write(ctx, DMAC_CHANNEL_SPU, data);
+		break;
+
+	case DMAC_SPU_BCR:
+		dmac_channel_bcr_write(ctx, DMAC_CHANNEL_SPU, data);
+		break;
+
+	case DMAC_SPU_CHCR:
+		ctx->dmac.channels[DMAC_CHANNEL_SPU].chcr = data;
+		break;
+
+	case DMAC_PIO_CHCR:
+		ctx->dmac.channels[DMAC_CHANNEL_PIO].chcr = data;
+		break;
+
+	case DMAC_PIO_MADR:
+		dmac_channel_madr_write(ctx, DMAC_CHANNEL_PIO, data);
+		break;
+
+	case DMAC_PIO_BCR:
+		dmac_channel_bcr_write(ctx, DMAC_CHANNEL_PIO, data);
+		break;
+
+	case DMAC_OTC_CHCR:
+		ctx->dmac.channels[DMAC_CHANNEL_OTC].chcr = data;
+		break;
+
+	case DMAC_OTC_BCR:
+		dmac_channel_bcr_write(ctx, DMAC_CHANNEL_OTC, data);
+		break;
+
+	case DMAC_OTC_MADR:
+		dmac_channel_madr_write(ctx, DMAC_CHANNEL_OTC, data);
+		break;
+
+	case DMAC_DPCR:
+		dmac_dpcr_write(ctx, data);
+		break;
+
+	case DMAC_DICR:
+		dmac_dicr_write(ctx, data);
 		break;
 
 	default:
