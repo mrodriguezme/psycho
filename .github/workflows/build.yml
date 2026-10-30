@@ -17,7 +17,7 @@ jobs:
         run: |
           apt-get update
           apt-get install -y --no-install-recommends \
-            ca-certificates git build-essential cmake ninja-build pkg-config
+            ca-certificates git build-essential cmake ninja-build pkg-config libsdl3-dev
 
       - uses: actions/checkout@v4
         with:
