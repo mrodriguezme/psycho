@@ -279,7 +279,7 @@ PSYCHO_NONNULL PSYCHO_NODISCARD static uint32_t write_fifo_pop(struct psycho_ctx
 	uint32_t data = 0x00000000;
 
 	if (likely(!psycho_gpu_fifo_write_empty(&ctx->gpu.base.fifo_write)))
-		data = *psycho_gpu_fifo_write_pop(&ctx->gpu.base.fifo_write);
+		data = psycho_gpu_fifo_write_pop_unchecked(&ctx->gpu.base.fifo_write);
 	else
 		LOG_WARN(ctx, "write fifo empty - returning 0x00000000");
 

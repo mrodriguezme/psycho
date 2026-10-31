@@ -475,7 +475,7 @@ PSYCHO_NONNULL static void rtp(struct psycho_ctx *ctx, struct psycho_gte_vector 
 		MAC[i] = sum >> sf;
 	}
 
-	sum >>= 12;
+	sum >>= SHIFT_FRAC;
 
 	for (size_t i = 1; i < ARRAY_SIZE(MAC) - 1; ++i)
 		IR[i] = ir123_sat(ctx, i, MAC[i], lm);

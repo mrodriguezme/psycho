@@ -31,7 +31,7 @@ struct psycho_ctx;
 struct psycho_bios_call_tracer_frame;
 
 constexpr size_t PSYCHO_BIOS_CALL_TRACER_STACK_FRAMES_MAX = 8;
-constexpr size_t PSYCHO_BIOS_CALL_TRACER_STDOUT_LEN_MAX	  = 128;
+constexpr size_t PSYCHO_BIOS_CALL_TRACER_STDOUT_LEN_MAX	  = 256;
 
 enum psycho_bios_call_tracer_func_ret {
 	PSYCHO_BIOS_CALL_FUNC_RET_INT,

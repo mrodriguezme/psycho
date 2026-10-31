@@ -90,10 +90,10 @@ enum ring_buffer_overflow_policy {
 		type *slot = name##_emplace(rb);                                              \
                                                                                               \
 		if (likely(slot))                                                             \
-			*slot = (val);                                                        \
+			*slot = val;                                                          \
 	}                                                                                     \
                                                                                               \
-	PSYCHO_NODISCARD PSYCHO_ALWAYS_INLINE type *name##_pop(struct name *rb)               \
+	PSYCHO_NODISCARD PSYCHO_ALWAYS_INLINE type *name##_pop_ptr(struct name *rb)           \
 	{                                                                                     \
 		if (unlikely(name##_empty(rb)))                                               \
 			return NULL;                                                          \
@@ -101,12 +101,46 @@ enum ring_buffer_overflow_policy {
 		return &rb->data[name##_mask(rb, rb->read++)];                                \
 	}                                                                                     \
                                                                                               \
-	PSYCHO_NODISCARD PSYCHO_ALWAYS_INLINE type *name##_back(struct name *rb)              \
+	PSYCHO_NODISCARD PSYCHO_ALWAYS_INLINE type *name##_back_ptr(struct name *rb)          \
 	{                                                                                     \
 		if (unlikely(name##_empty(rb)))                                               \
 			return NULL;                                                          \
                                                                                               \
 		return &rb->data[name##_mask(rb, rb->write - 1)];                             \
+	}                                                                                     \
+                                                                                              \
+	PSYCHO_NODISCARD PSYCHO_ALWAYS_INLINE bool name##_pop(struct name *rb, type *out)     \
+	{                                                                                     \
+		type *slot = name##_pop_ptr(rb);                                              \
+                                                                                              \
+		if (unlikely(!slot))                                                          \
+			return false;                                                         \
+                                                                                              \
+		if (out)                                                                      \
+			*out = *slot;                                                         \
+                                                                                              \
+		return true;                                                                  \
+	}                                                                                     \
+                                                                                              \
+	PSYCHO_NODISCARD PSYCHO_ALWAYS_INLINE type name##_pop_unchecked(struct name *rb)      \
+	{                                                                                     \
+		return rb->data[name##_mask(rb, rb->read++)];                                 \
+	}                                                                                     \
+                                                                                              \
+	PSYCHO_NODISCARD PSYCHO_ALWAYS_INLINE bool name##_back(struct name *rb, type *out)    \
+	{                                                                                     \
+		type *slot = name##_back_ptr(rb);                                             \
+                                                                                              \
+		if (unlikely(!slot))                                                          \
+			return false;                                                         \
+                                                                                              \
+		*out = *slot;                                                                 \
+		return true;                                                                  \
+	}                                                                                     \
+                                                                                              \
+	PSYCHO_NODISCARD PSYCHO_ALWAYS_INLINE type name##_back_unchecked(struct name *rb)     \
+	{                                                                                     \
+		return rb->data[name##_mask(rb, rb->write - 1)];                              \
 	}
 
 #pragma GCC diagnostic pop

@@ -121,7 +121,7 @@ PSYCHO_NONNULL static void rx_push(struct psycho_ctx *ctx, uint8_t byte)
 	if (unlikely(psycho_sio0_rxfifo_full(&ctx->sio0.rxfifo))) {
 		// When receiving bytes while the RX FIFO is full, then the last FIFO entry will by overwritten by the
 		// new byte.
-		uint8_t old = *psycho_sio0_rxfifo_back(&ctx->sio0.rxfifo);
+		uint8_t old = psycho_sio0_rxfifo_back_unchecked(&ctx->sio0.rxfifo);
 		psycho_sio0_rxfifo_push(&ctx->sio0.rxfifo, byte);
 
 		LOG_WARN(ctx, "RX FIFO overflow; replaced last RX FIFO entry 0x%02X with 0x%02X", old, byte);
@@ -255,7 +255,7 @@ uint8_t psycho_sio0_dr_read_byte(struct psycho_ctx *ctx)
 		return ctx->sio0.last_rx;
 	}
 
-	uint8_t byte = *psycho_sio0_rxfifo_pop(&ctx->sio0.rxfifo);
+	uint8_t byte = psycho_sio0_rxfifo_pop_unchecked(&ctx->sio0.rxfifo);
 	LOG_TRACE(ctx, "RX FIFO popped; returning 0x%02X", byte);
 
 	num_entries--;

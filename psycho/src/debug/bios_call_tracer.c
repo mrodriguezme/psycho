@@ -268,7 +268,7 @@ PSYCHO_NONNULL static void on_putchar(struct psycho_ctx *ctx, struct psycho_bios
 		LOG_INFO(ctx, "[stdout] %s", ctx->bios_call_tracer.tty_log.buf);
 
 		if (ctx->cfg.bios_call_tracer.stdout_line)
-			ctx->cfg.bios_call_tracer.stdout_line(ctx, &ctx->bios_call_tracer.tty_log.str);
+			ctx->cfg.bios_call_tracer.stdout_line(ctx, &ctx->bios_call_tracer.tty_original.str);
 
 		reset_stdout_strs(ctx);
 	}
