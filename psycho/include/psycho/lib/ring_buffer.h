@@ -25,7 +25,7 @@
 		static_assert((capacity) > 0 && ((capacity) & ((capacity) - 1)) == 0, \
 			      #name " capacity must be a non-zero power of two");     \
                                                                                       \
-		type data[capacity];                                                  \
+		type data[(capacity)];                                                \
 		size_t read;                                                          \
 		size_t write;                                                         \
 	}

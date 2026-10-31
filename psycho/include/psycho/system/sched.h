@@ -19,6 +19,7 @@
 
 #include <stdint.h>
 #include <stddef.h>
+#include "psycho/lib/binary_heap.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -28,19 +29,28 @@ struct psycho_ctx;
 
 constexpr size_t PSYCHO_SCHED_EVENTS_NUM_MAX = 25;
 
+PSYCHO_BINARY_HEAP_DEFINE(psycho_sched_event_heap, struct psycho_sched_event *, PSYCHO_SCHED_EVENTS_NUM_MAX);
+
+#define PSYCHO_SCHED_EVENT_LIST(X)                                      \
+	X(VBLANK, "vblank")                                             \
+	X(SIO0_TX, "sio0 tx")                                           \
+	X(SIO0_DEVICE_ACK_PULSE_ASSERT, "sio0 device ack pulse assert") \
+	X(SIO0_DEVICE_ACK_PULSE_DEASSERT, "sio0 device ack pulse deassert")
+
 enum psycho_sched_event_type {
-	PSYCHO_SCHED_EVENT_TYPE_VBLANK,
-	PSYCHO_SCHED_EVENT_TYPE_SIO0_TX,
-	PSYCHO_SCHED_EVENT_TYPE_SIO0_DEVICE_ACK_PULSE_ASSERT,
-	PSYCHO_SCHED_EVENT_TYPE_SIO0_DEVICE_ACK_PULSE_DEASSERT,
-	PSYCHO_SCHED_EVENT_TYPE_COUNT
+#define X(id, name) PSYCHO_SCHED_EVENT_TYPE_##id,
+	PSYCHO_SCHED_EVENT_LIST(X)
+#undef X
+	// clang-format off
+
+	PSYCHO_SCHED_EVENT_COUNT
+
+	// clang-format on
 };
 
 struct psycho_sched_event {
 	uint64_t ts;
 	uint64_t period;
-
-	size_t idx;
 
 	void (*cb)(struct psycho_ctx *ctx, void *userdata);
 	void *userdata;
@@ -52,8 +62,7 @@ struct psycho_sched_event {
 };
 
 struct psycho_sched {
-	struct psycho_sched_event *events[PSYCHO_SCHED_EVENTS_NUM_MAX];
-	size_t num_events;
+	struct psycho_sched_event_heap heap;
 	uint64_t ts_now;
 };
 

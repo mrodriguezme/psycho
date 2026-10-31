@@ -19,14 +19,19 @@
 
 #include "psycho/ctx.h"
 
-PSYCHO_ALWAYS_INLINE void psycho_sched_adv_ts(struct psycho_ctx *ctx, uint64_t ts)
+PSYCHO_ALWAYS_INLINE void psycho_sched_ts_advance(struct psycho_ctx *ctx, uint64_t ts)
 {
 	ctx->sched.ts_now += ts;
+}
+
+PSYCHO_NONNULL PSYCHO_ALWAYS_INLINE bool psycho_sched_run_required(struct psycho_ctx *ctx)
+{
+	return ctx->sched.ts_now >= ctx->sched.heap.data[0]->ts;
 }
 
 void psycho_sched_reset(struct psycho_ctx *ctx) PSYCHO_NONNULL;
 
 void psycho_sched_run(struct psycho_ctx *ctx) PSYCHO_NONNULL;
 
-void psycho_sched_event_add(struct psycho_ctx *ctx, struct psycho_sched_event *ev) PSYCHO_NONNULL;
-void psycho_sched_event_delete(struct psycho_ctx *ctx, struct psycho_sched_event *ev) PSYCHO_NONNULL;
+void psycho_sched_event_add(struct psycho_ctx *ctx, struct psycho_sched_event *event) PSYCHO_NONNULL;
+void psycho_sched_event_delete(struct psycho_ctx *ctx, struct psycho_sched_event *event) PSYCHO_NONNULL;

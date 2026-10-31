@@ -24,7 +24,7 @@
 	struct name {                                                              \
 		static_assert((capacity) > 0, #name " capacity must be non-zero"); \
                                                                                    \
-		type data[capacity];                                               \
+		type data[(capacity)];                                             \
 		size_t size;                                                       \
 	}
 

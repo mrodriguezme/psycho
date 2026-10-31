@@ -56,7 +56,6 @@ static int cpu_backend_set(struct psycho_ctx *ctx)
 	if ((prev) && (prev->fini))
 		prev->fini(ctx);
 
-	psycho_cpu_reset(ctx);
 	ctx->cpu.backend = next;
 
 	LOG_INFO(ctx, "cpu backend set to \"%s\"", ctx->cpu.backend->name);
@@ -82,13 +81,11 @@ static int gpu_backend_set(struct psycho_ctx *ctx)
 	if ((prev) && (prev->fini))
 		prev->fini(ctx);
 
-	psycho_gpu_reset(ctx);
 	ctx->gpu.backend = next;
 
 	LOG_INFO(ctx, "gpu backend set to \"%s\"", ctx->gpu.backend->name);
 	return PSYCHO_CTX_OK;
 }
-
 
 struct psycho_ctx_cfg *psycho_ctx_cfg_get(struct psycho_ctx *ctx)
 {
@@ -115,6 +112,7 @@ enum psycho_ctx_ret psycho_ctx_init(struct psycho_ctx *ctx)
 void psycho_ctx_reset(struct psycho_ctx *ctx)
 {
 	psycho_sched_reset(ctx);
+	psycho_cpu_reset(ctx);
 	psycho_sio0_reset(ctx);
 	psycho_gpu_reset(ctx);
 

@@ -71,7 +71,7 @@ PSYCHO_NONNULL static void stop(struct psycho_ctx *ctx)
 
 PSYCHO_NODISCARD PSYCHO_NONNULL static uint32_t load_word(struct psycho_ctx *ctx, uint32_t vaddr, bool *valid)
 {
-	psycho_sched_adv_ts(ctx, 1);
+	psycho_sched_ts_advance(ctx, 1);
 
 	vaddr = vaddr_to_paddr(vaddr);
 	return psycho_bus_load_word(ctx, vaddr, valid);
@@ -79,7 +79,7 @@ PSYCHO_NODISCARD PSYCHO_NONNULL static uint32_t load_word(struct psycho_ctx *ctx
 
 PSYCHO_NODISCARD PSYCHO_NONNULL static uint16_t load_halfword(struct psycho_ctx *ctx, uint32_t vaddr, bool *valid)
 {
-	psycho_sched_adv_ts(ctx, 1);
+	psycho_sched_ts_advance(ctx, 1);
 
 	vaddr = vaddr_to_paddr(vaddr);
 	return psycho_bus_load_halfword(ctx, vaddr, valid);
@@ -87,7 +87,7 @@ PSYCHO_NODISCARD PSYCHO_NONNULL static uint16_t load_halfword(struct psycho_ctx 
 
 PSYCHO_NODISCARD PSYCHO_NONNULL static uint8_t load_byte(struct psycho_ctx *ctx, uint32_t vaddr, bool *valid)
 {
-	psycho_sched_adv_ts(ctx, 1);
+	psycho_sched_ts_advance(ctx, 1);
 
 	vaddr = vaddr_to_paddr(vaddr);
 	return psycho_bus_load_byte(ctx, vaddr, valid);
@@ -95,7 +95,7 @@ PSYCHO_NODISCARD PSYCHO_NONNULL static uint8_t load_byte(struct psycho_ctx *ctx,
 
 PSYCHO_NONNULL static bool store_word(struct psycho_ctx *ctx, uint32_t vaddr, uint32_t data)
 {
-	psycho_sched_adv_ts(ctx, 1);
+	psycho_sched_ts_advance(ctx, 1);
 
 	vaddr = vaddr_to_paddr(vaddr);
 	return psycho_bus_store_word(ctx, vaddr, data);
@@ -103,7 +103,7 @@ PSYCHO_NONNULL static bool store_word(struct psycho_ctx *ctx, uint32_t vaddr, ui
 
 PSYCHO_NONNULL static bool store_halfword(struct psycho_ctx *ctx, uint32_t vaddr, uint16_t data)
 {
-	psycho_sched_adv_ts(ctx, 1);
+	psycho_sched_ts_advance(ctx, 1);
 
 	vaddr = vaddr_to_paddr(vaddr);
 	return psycho_bus_store_halfword(ctx, vaddr, data);
@@ -111,7 +111,7 @@ PSYCHO_NONNULL static bool store_halfword(struct psycho_ctx *ctx, uint32_t vaddr
 
 PSYCHO_NONNULL static bool store_byte(struct psycho_ctx *ctx, uint32_t vaddr, uint8_t data)
 {
-	psycho_sched_adv_ts(ctx, 1);
+	psycho_sched_ts_advance(ctx, 1);
 
 	vaddr = vaddr_to_paddr(vaddr);
 	return psycho_bus_store_byte(ctx, vaddr, data);
@@ -139,10 +139,9 @@ PSYCHO_NONNULL static void branch_if(struct psycho_ctx *ctx, uint32_t instr, boo
 {
 	ctx->cpu.base.next_in_bd = true;
 
-	uint32_t bd_mask = -ctx->cpu.base.in_bd;
-	uint32_t base	 = ((ctx->cpu.base.delay_pc - sizeof(uint32_t)) & bd_mask) | (ctx->cpu.base.pc & ~bd_mask);
-	uint32_t target	 = branch_addr(base, instr);
-	uint32_t mask	 = -cond;
+	uint32_t base	= ctx->cpu.base.delay_pc - sizeof(uint32_t);
+	uint32_t target = branch_addr(base, instr);
+	uint32_t mask	= -cond;
 
 	ctx->cpu.base.next_pc = (target & mask) | (ctx->cpu.base.next_pc & ~mask);
 }
@@ -1586,15 +1585,15 @@ PSYCHO_NONNULL static void run(struct psycho_ctx *ctx, bool single_step)
 		delay_slot_process(ctx);                                         \
 	} while (0)
 
-#define DISPATCH()                                                                                            \
-	do {                                                                                                  \
-		gpr[PSYCHO_CPU_GPR_ZERO] = 0;                                                                 \
-                                                                                                              \
-		if (unlikely((ctx->sched.ts_now >= ctx->sched.events[0]->ts) || (ctx->cpu.interpreter.slow))) \
-			goto slow;                                                                            \
-                                                                                                              \
-		FETCH();                                                                                      \
-		goto *dispatch_tbl[op ? (64 + op) : funct];                                                   \
+#define DISPATCH()                                                                             \
+	do {                                                                                   \
+		gpr[PSYCHO_CPU_GPR_ZERO] = 0;                                                  \
+                                                                                               \
+		if (unlikely((psycho_sched_run_required(ctx)) || (ctx->cpu.interpreter.slow))) \
+			goto slow;                                                             \
+                                                                                               \
+		FETCH();                                                                       \
+		goto *dispatch_tbl[op ? (64 + op) : funct];                                    \
 	} while (0)
 
 	static void *const dispatch_tbl[128] = {
@@ -1774,7 +1773,7 @@ slow:
 		psycho_bios_call_tracer_end(ctx, gpr[PSYCHO_CPU_GPR_V0]);
 
 loop:
-	while (unlikely(ctx->sched.ts_now >= ctx->sched.events[0]->ts))
+	while (unlikely(psycho_sched_run_required(ctx)))
 		psycho_sched_run(ctx);
 
 	if (unlikely((!ctx->running) || stepped))
