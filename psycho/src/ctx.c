@@ -23,6 +23,7 @@
 
 #include "system/cpu/cpu.h"
 #include "system/cpu/backend/interpreter.h"
+#include "system/dmac/dmac.h"
 #include "system/gpu/backend/software/software.h"
 #include "system/gpu/gpu.h"
 #include "system/sio0/sio0.h"
@@ -112,6 +113,7 @@ enum psycho_ctx_ret psycho_ctx_init(struct psycho_ctx *ctx)
 void psycho_ctx_reset(struct psycho_ctx *ctx)
 {
 	psycho_sched_reset(ctx);
+	psycho_dmac_reset(ctx);
 	psycho_cpu_reset(ctx);
 	psycho_sio0_reset(ctx);
 	psycho_gpu_reset(ctx);

@@ -33,16 +33,30 @@ constexpr uint32_t BA_MASK    = GENMASK32(31, 16);
 // ---------------------------------------------------------------------------
 // DMAC channel CHCR register layout
 // ---------------------------------------------------------------------------
-constexpr uint32_t CHCR_BUS_SNOOPING		    = 1 << 30;
-constexpr uint32_t CHCR_PAUSE_TRANSFER_DURING_BURST = 1 << 29;
-constexpr uint32_t CHCR_FORCE_TRANSFER_WITHOUT_DREQ = 1 << 28;
-constexpr uint32_t CHCR_START_TRANSFER		    = 1 << 24;
-constexpr uint32_t CHCR_CHOPPING_CPU_WINDOW_SIZE    = GENMASK32(22, 20);
-constexpr uint32_t CHCR_CHOPPING_DMA_WINDOW_SIZE    = GENMASK32(18, 16);
-constexpr uint32_t CHCR_SYNCMODE_MASK		    = GENMASK32(10, 9);
-constexpr uint32_t CHCR_BIT8			    = 1 << 8;
-constexpr uint32_t CHCR_MADR_PER_STEP		    = 1 << 1;
-constexpr uint32_t CHCR_TRANSFER_DIR		    = 1 << 0;
+constexpr uint32_t CHCR_ENABLE_BUS_SNOOPING		  = 1 << 30;
+constexpr uint32_t CHCR_BIT29				  = 1 << 29;
+constexpr uint32_t CHCR_FORCE_TRANSFER_START_WITHOUT_DREQ = 1 << 28;
+constexpr uint32_t CHCR_START_TRANSFER			  = 1 << 24;
+constexpr uint32_t CHCR_CHOPPING_CPU_WINDOW_SIZE	  = GENMASK32(22, 20);
+constexpr uint32_t CHCR_CHOPPING_DMA_WINDOW_SIZE	  = GENMASK32(18, 16);
+constexpr uint32_t CHCR_SYNCMODE_MASK			  = GENMASK32(10, 9);
+constexpr uint32_t CHCR_SYNCMODE_BURST			  = 0;
+constexpr uint32_t CHCR_SYNCMODE_SLICE			  = 1;
+constexpr uint32_t CHCR_SYNCMODE_LINKED_LIST		  = 2;
+constexpr uint32_t CHCR_SYNCMODE_RESERVED		  = 3;
+constexpr uint32_t CHCR_BIT8				  = 1 << 8;
+constexpr uint32_t CHCR_MADR_PER_STEP			  = 1 << 1;
+constexpr uint32_t CHCR_TRANSFER_DIR			  = 1 << 0;
+
+// For DMA6/OTC there are some restrictions, D6_CHCR has only three read/writeable bits: 24, 28, and 30. All other bits
+// are read-only: bit 1 is always 1 (increment=-4), and the other bits are always 0.
+constexpr uint32_t CHCR_OTC_BITS   = CHCR_ENABLE_BUS_SNOOPING | CHCR_FORCE_TRANSFER_START_WITHOUT_DREQ |
+				     CHCR_START_TRANSFER;
+constexpr uint32_t CHCR_FIXED_BITS = CHCR_MADR_PER_STEP;
+
+constexpr uint32_t CHCR_BITS = CHCR_ENABLE_BUS_SNOOPING | CHCR_BIT29 | CHCR_FORCE_TRANSFER_START_WITHOUT_DREQ |
+			       CHCR_START_TRANSFER | CHCR_CHOPPING_CPU_WINDOW_SIZE | CHCR_CHOPPING_DMA_WINDOW_SIZE |
+			       CHCR_SYNCMODE_MASK | CHCR_BIT8 | CHCR_MADR_PER_STEP | CHCR_TRANSFER_DIR;
 
 // ---------------------------------------------------------------------------
 // DPCR register layout

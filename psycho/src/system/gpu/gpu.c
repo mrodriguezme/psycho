@@ -225,7 +225,7 @@ PSYCHO_NONNULL static void dreq_assert(struct psycho_ctx *ctx, bool asserted)
 	else
 		ctx->gpu.base.stat &= ~STAT_DREQ;
 
-	psycho_dmac_channel_dreq_update(ctx, DMAC_CHANNEL_GPU, asserted);
+	psycho_dmac_channel_dreq_update(ctx, PSYCHO_DMAC_CHANNEL_ID_GPU, asserted);
 }
 
 PSYCHO_NONNULL static void on_vblank(struct psycho_ctx *ctx, void *userdata)

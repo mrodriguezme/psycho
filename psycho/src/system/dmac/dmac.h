@@ -23,16 +23,6 @@
 #define DMAC_BCR(channel)  ((0x1F801084) + ((channel) * 0x10))
 #define DMAC_CHCR(channel) ((0x1F801088) + ((channel) * 0x10))
 
-enum dmac_channel {
-	DMAC_CHANNEL_MDECIN	= 0,
-	DMAC_CHANNEL_MDECOUT	= 1,
-	DMAC_CHANNEL_GPU	= 2,
-	DMAC_CHANNEL_CDROM	= 3,
-	DMAC_CHANNEL_SPU	= 4,
-	DMAC_CHANNEL_PIO	= 5,
-	DMAC_CHANNEL_OTC	= 6
-};
-
 enum {
 	DMAC_MDECIN_MADR  = DMAC_MADR(0),
 	DMAC_MDECIN_BCR	  = DMAC_BCR(0),
@@ -61,11 +51,17 @@ enum {
 
 void psycho_dmac_reset(struct psycho_ctx *ctx);
 
-void dmac_channel_madr_write(struct psycho_ctx *ctx, enum dmac_channel channel, uint32_t madr);
-void dmac_channel_bcr_write(struct psycho_ctx *ctx, enum dmac_channel channel, uint32_t bcr);
-void dmac_channel_chcr_write(struct psycho_ctx *ctx, enum dmac_channel channel, uint32_t word);
+void dmac_channel_madr_write(struct psycho_ctx *ctx, enum psycho_dmac_channel_id channel, uint32_t madr) PSYCHO_NONNULL;
+void dmac_channel_bcr_write(struct psycho_ctx *ctx, enum psycho_dmac_channel_id channel, uint32_t bcr) PSYCHO_NONNULL;
+void dmac_channel_chcr_write(struct psycho_ctx *ctx, enum psycho_dmac_channel_id channel, uint32_t word) PSYCHO_NONNULL;
 
 void dmac_dpcr_write(struct psycho_ctx *ctx, uint32_t word) PSYCHO_NONNULL;
 void dmac_dicr_write(struct psycho_ctx *ctx, uint32_t word) PSYCHO_NONNULL;
 
-void psycho_dmac_channel_dreq_update(struct psycho_ctx *ctx, enum dmac_channel channel, bool asserted);
+void psycho_dmac_channel_dreq_update(struct psycho_ctx *ctx, enum psycho_dmac_channel_id channel,
+				     bool asserted) PSYCHO_NONNULL;
+
+PSYCHO_NONNULL PSYCHO_ALWAYS_INLINE PSYCHO_NODISCARD bool psycho_dmac_dma_transfer_active(struct psycho_ctx *ctx)
+{
+	return true;
+}

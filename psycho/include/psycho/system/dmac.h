@@ -24,7 +24,25 @@
 extern "C" {
 #endif // __cplusplus
 
-constexpr unsigned int PSYCHO_DMAC_CHANNELS_NUM = 7;
+#define PSYCHO_DMAC_CHANNEL_LIST(X) \
+	X(MDECIN, "MDECin")         \
+	X(MDECOUT, "MDECout")       \
+	X(GPU, "GPU")               \
+	X(CDROM, "CDROM")           \
+	X(SPU, "SPU")               \
+	X(PIO, "PIO")               \
+	X(OTC, "OTC")
+
+enum psycho_dmac_channel_id {
+#define X(id, name) PSYCHO_DMAC_CHANNEL_ID_##id,
+	PSYCHO_DMAC_CHANNEL_LIST(X)
+#undef X
+	// clang-format off
+
+	PSYCHO_DMAC_CHANNEL_ID_COUNT
+
+	// clang-format on
+};
 
 struct psycho_dmac_channel {
 	uint32_t madr;
@@ -33,11 +51,14 @@ struct psycho_dmac_channel {
 };
 
 struct psycho_dmac {
-	struct psycho_dmac_channel channels[PSYCHO_DMAC_CHANNELS_NUM];
+	struct psycho_dmac_channel channels[PSYCHO_DMAC_CHANNEL_ID_COUNT];
 	struct psycho_sched_event transfer_event;
+	struct psycho_sched_event chopping_event;
+	enum psycho_dmac_channel_id channels_by_priority[PSYCHO_DMAC_CHANNEL_ID_COUNT];
 
 	uint32_t dpcr;
 	uint32_t dicr;
+	unsigned int num_channels_enabled;
 };
 
 #ifdef __cplusplus
