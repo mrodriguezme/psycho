@@ -26,5 +26,5 @@ add_executable(psycho_testbed emu.c main.c)
 
 target_link_libraries(
 	psycho_testbed PRIVATE
-	psycho_cfg_base_c psycho SDL3::SDL3
+	psycho_c_base psycho SDL3::SDL3
 )

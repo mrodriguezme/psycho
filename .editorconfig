@@ -34,3 +34,7 @@ tab_width = 8
 [CMakeLists.txt]
 indent_style = tab
 tab_width = 8
+
+[*.cmake]
+indent_style = tab
+tab_width = 8

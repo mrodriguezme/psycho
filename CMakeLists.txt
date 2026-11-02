@@ -36,6 +36,14 @@ project(
 	LANGUAGES C
 )
 
+foreach(lang C ASM)
+	set(CMAKE_${lang}_FLAGS "")
+
+	foreach(cfg DEBUG RELEASE RELWITHDEBINFO MINSIZEREL)
+		set(CMAKE_${lang}_FLAGS_${cfg} "")
+	endforeach()
+endforeach()
+
 if (NOT PSYCHO_USING_CMAKE_PRESET)
 	message(FATAL_ERROR
 		"You must use a CMake preset to configure this project; run "
@@ -47,117 +55,7 @@ endif()
 option(PSYCHO_ENABLE_SANITIZERS "Enable ASan and UBSan if possible" OFF)
 option(PSYCHO_WARNINGS_ARE_ERRORS "Treat all warnings as errors" OFF)
 
-add_library(psycho_cfg_base_c INTERFACE)
-
-function(add_compiler_flags)
-	foreach(FLAG IN LISTS ARGN)
-		string(MAKE_C_IDENTIFIER "${FLAG}" FLAG_ID)
-		set(var_name "HAVE_FLAG_${FLAG_ID}")
-
-		check_c_compiler_flag(${FLAG} ${var_name})
-
-		if(${var_name})
-			target_compile_options(
-				psycho_cfg_base_c INTERFACE ${FLAG}
-			)
-		endif()
-	endforeach()
-endfunction()
-
-add_compiler_flags(
-	-std=gnu23
-	-Walloc-zero
-	-Walloca
-	-Wbad-function-cast
-	-Wcast-qual
-	-Wdate-time
-	-Wdisabled-optimization
-	-Wdouble-promotion
-	-Wduplicated-branches
-	-Wduplicated-cond
-	-Wextra
-	-Wfloat-equal
-	-Wformat-signedness
-	-Wformat=2
-	-Winit-self
-	-Winline
-	-Winvalid-pch
-	-Wlogical-op
-	-Wmissing-declarations
-	-Wmissing-include-dirs
-	-Wmissing-prototypes
-	-Wnested-externs
-	-Wno-aggressive-loop-optimizations
-	-Wnull-dereference
-	-Wold-style-declaration
-	-Wold-style-definition
-	-Wpacked
-	-Wredundant-decls
-	-Wshadow
-	-Wshift-overflow=2
-	-Wstrict-prototypes
-	-Wsuggest-attribute=cold
-	-Wsuggest-attribute=const
-	-Wsuggest-attribute=format
-	-Wsuggest-attribute=malloc
-	-Wsuggest-attribute=noreturn
-	-Wsuggest-attribute=pure
-	-Wswitch-default
-	-Wswitch-enum
-	-Wsync-nand
-	-Wtrampolines
-	-Wundef
-	-Wuninitialized
-	-Wunknown-pragmas
-	-Wunsafe-loop-optimizations
-	-Wunused-macros
-	-Wvla
-	-Wwrite-strings
-)
-
-if (PSYCHO_ENABLE_SANITIZERS)
-	check_linker_flag(
-		C
-		-fsanitize=address,undefined
-		HAVE_LINKER_SANITIZERS
-	)
-
-	set(CMAKE_REQUIRED_LINK_OPTIONS "-fsanitize=address,undefined")
-
-	check_c_compiler_flag(
-		-fsanitize=address,undefined
-		HAVE_COMPILER_SANITIZERS
-	)
-
-	if (HAVE_COMPILER_SANITIZERS AND HAVE_LINKER_SANITIZERS)
-		target_compile_options(
-			psycho_cfg_base_c INTERFACE
-			-fsanitize=address,undefined
-		)
-
-		target_link_options(
-			psycho_cfg_base_c INTERFACE
-			-fsanitize=address,undefined
-		)
-	endif()
-endif()
-
-if (PSYCHO_WARNINGS_ARE_ERRORS)
-	add_compiler_flags(-Werror)
-endif()
-
-if (CMAKE_BUILD_TYPE STREQUAL "Debug")
-	add_compiler_flags(-Og)
-elseif (CMAKE_BUILD_TYPE STREQUAL "Release")
-	add_compiler_flags(-Ofast)
-endif()
-
-if ((CMAKE_C_COMPILER_ID STREQUAL "AppleClang") OR
-    (CMAKE_C_COMPILER_ID STREQUAL "Clang"))
-	add_compiler_flags(-glldb)
-elseif (CMAKE_C_COMPILER_ID STREQUAL "GNU")
-	add_compiler_flags(-ggdb3)
-endif()
+toolchain_setup_c_base()
 
 add_subdirectory(psycho)
 add_subdirectory(app)

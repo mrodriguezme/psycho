@@ -21,7 +21,7 @@
 # SOFTWARE.
 
 add_library(psycho STATIC)
-target_link_libraries(psycho PRIVATE psycho_cfg_base_c)
+target_link_libraries(psycho PRIVATE psycho_c_base)
 
 target_sources(
 	psycho PRIVATE

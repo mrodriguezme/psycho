@@ -19,6 +19,10 @@
         "PSYCHO_USING_CMAKE_PRESET": {
           "type": "BOOL",
           "value": "ON"
+        },
+        "CMAKE_COLOR_DIAGNOSTICS": {
+          "type": "BOOL",
+          "value": "ON"
         }
       }
     },
@@ -26,15 +30,11 @@
       "name": "dbg",
       "hidden": true,
       "inherits": "base",
-      "description": "Base configuration for Debug builds",
+      "description": "Base configuration for the Debug build type",
       "cacheVariables": {
         "CMAKE_BUILD_TYPE": {
           "type": "STRING",
           "value": "Debug"
-        },
-        "PSYCHO_ENABLE_SANITIZERS": {
-          "type": "BOOL",
-          "value": "ON"
         }
       }
     },
@@ -42,7 +42,7 @@
       "name": "rel",
       "hidden": true,
       "inherits": "base",
-      "description": "Base configuration for Release builds",
+      "description": "Base configuration for the Release build type",
       "cacheVariables": {
         "CMAKE_BUILD_TYPE": {
           "type": "STRING",
@@ -51,68 +51,27 @@
       }
     },
     {
-      "name": "clang",
+      "name": "gcc_x86_64_pc_linux_gnu",
       "hidden": true,
-      "description": "Base configuration for clang",
-      "cacheVariables": {
-        "CMAKE_C_COMPILER": {
-          "type": "STRING",
-          "value": "clang"
-        }
-      }
+      "description": "Base configuration for the gcc x86_64-pc-linux-gnu toolchain",
+      "toolchainFile": "${sourceDir}/cmake/gcc_x86_64_pc_linux_gnu.cmake",
+      "binaryDir": "${sourceDir}/build_${presetName}"
     },
     {
-      "name": "gcc",
-      "hidden": true,
-      "description": "Base configuration for gcc",
-      "cacheVariables": {
-        "CMAKE_C_COMPILER": {
-          "type": "STRING",
-          "value": "gcc"
-        }
-      }
-    },
-    {
-      "name": "clang_dbg",
-      "hidden": false,
-      "binaryDir": "${sourceDir}/build_clang_dbg",
-      "displayName": "Build with clang in Debug mode",
-      "description": "Build the project with clang in Debug mode",
+      "name": "debug_gcc_x86_64_pc_linux_gnu",
+      "displayName": "gcc x86_64-pc-linux-gnu (Debug)",
+      "description": "Debug build type using gcc for x86_64-pc-linux-gnu",
       "inherits": [
-        "clang",
+        "gcc_x86_64_pc_linux_gnu",
         "dbg"
       ]
     },
     {
-      "name": "clang_rel",
-      "hidden": false,
-      "binaryDir": "${sourceDir}/build_clang_rel",
-      "displayName": "Build with clang in Release mode",
-      "description": "Build the project with clang in Release mode",
+      "name": "release_gcc_x86_64_pc_linux_gnu",
+      "displayName": "gcc x86_64-pc-linux-gnu (Release)",
+      "description": "Release build type using gcc for x86_64-pc-linux-gnu",
       "inherits": [
-        "clang",
-        "rel"
-      ]
-    },
-    {
-      "name": "gcc_dbg",
-      "hidden": false,
-      "binaryDir": "${sourceDir}/build_gcc_dbg",
-      "displayName": "Build with gcc in Debug mode",
-      "description": "Build the project with gcc in Debug mode",
-      "inherits": [
-        "gcc",
-        "dbg"
-      ]
-    },
-    {
-      "name": "gcc_rel",
-      "hidden": false,
-      "binaryDir": "${sourceDir}/build_gcc_rel",
-      "displayName": "Build with gcc in Release mode",
-      "description": "Build the project with gcc in Release mode",
-      "inherits": [
-        "gcc",
+        "gcc_x86_64_pc_linux_gnu",
         "rel"
       ]
     }
