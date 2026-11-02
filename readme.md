@@ -6,7 +6,7 @@
 
 psycho is an in-development [Sony PlayStation 1](https://en.wikipedia.org/wiki/PlayStation_%28console%29)
 emulator written in the [C programming language](https://en.wikipedia.org/wiki/C_%28programming_language%29)
-targeting the [C17 ISO/IEC 9899:2018](https://en.wikipedia.org/wiki/C17_%28C_standard_revision%29) standard.
+targeting the [C23 ISO/IEC 9899:2024](https://en.wikipedia.org/wiki/C23_(C_standard_revision)) standard.
 
 This is not suitable for production usage in any way, shape, or form at this
 time. If you want a production quality PS1 emulator, use [DuckStation](https://www.duckstation.org/).
