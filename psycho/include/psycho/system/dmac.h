@@ -50,11 +50,18 @@ struct psycho_dmac_channel {
 	uint32_t chcr;
 };
 
+struct psycho_dma_transfer_data {
+	unsigned int transfer_size;
+	enum psycho_dmac_channel_id id;
+};
+
 struct psycho_dmac {
 	struct psycho_dmac_channel channels[PSYCHO_DMAC_CHANNEL_ID_COUNT];
 	struct psycho_sched_event transfer_event;
 	struct psycho_sched_event chopping_event;
 	enum psycho_dmac_channel_id channels_by_priority[PSYCHO_DMAC_CHANNEL_ID_COUNT];
+
+	struct psycho_dma_transfer_data active_channel;
 
 	uint32_t dpcr;
 	uint32_t dicr;

@@ -31,11 +31,12 @@ constexpr size_t PSYCHO_SCHED_EVENTS_NUM_MAX = 25;
 
 PSYCHO_BINARY_HEAP_DEFINE(psycho_sched_event_heap, struct psycho_sched_event *, PSYCHO_SCHED_EVENTS_NUM_MAX);
 
-#define PSYCHO_SCHED_EVENT_LIST(X)                                      \
-	X(VBLANK, "vblank")                                             \
-	X(SIO0_TX, "sio0 tx")                                           \
-	X(SIO0_DEVICE_ACK_PULSE_ASSERT, "sio0 device ack pulse assert") \
-	X(SIO0_DEVICE_ACK_PULSE_DEASSERT, "sio0 device ack pulse deassert")
+#define PSYCHO_SCHED_EVENT_LIST(X)                                          \
+	X(VBLANK, "vblank")                                                 \
+	X(SIO0_TX, "sio0 tx")                                               \
+	X(SIO0_DEVICE_ACK_PULSE_ASSERT, "sio0 device ack pulse assert")     \
+	X(SIO0_DEVICE_ACK_PULSE_DEASSERT, "sio0 device ack pulse deassert") \
+	X(DMA_TRANSFER, "dma transfer")
 
 enum psycho_sched_event_type {
 #define X(id, name) PSYCHO_SCHED_EVENT_TYPE_##id,

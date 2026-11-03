@@ -816,3 +816,13 @@ void psycho_gp1(struct psycho_ctx *ctx, uint32_t packet)
 
 	dreq_update(ctx);
 }
+
+uint32_t psycho_gpu_gp1_word_read(struct psycho_ctx *ctx)
+{
+	return 0xFFFFFFFF;
+}
+
+bool psycho_gpu_dreq_asserted(struct psycho_ctx *ctx)
+{
+	return ctx->gpu.base.stat & STAT_DREQ;
+}

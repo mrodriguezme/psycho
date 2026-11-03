@@ -32,4 +32,4 @@ void psycho_gp1(struct psycho_ctx *ctx, uint32_t packet) PSYCHO_NONNULL;
 
 PSYCHO_NODISCARD uint32_t psycho_gpu_gp1_word_read(struct psycho_ctx *ctx) PSYCHO_NONNULL;
 
-uint32_t psycho_gpu_dma_read(struct psycho_ctx *ctx);
+bool psycho_gpu_dreq_asserted(struct psycho_ctx *ctx);
