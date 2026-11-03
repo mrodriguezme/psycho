@@ -75,7 +75,7 @@ PSYCHO_NONNULL static void dma_transfer_ram_to_device(struct psycho_ctx *ctx, st
 	int step      = (ch->chcr & CHCR_MADR_PER_STEP) ? -4 : +4;
 	uint32_t madr = ch->madr;
 
-	while (ctx->dmac.active_channel.size--) {
+	while (ctx->dmac.active_channel.transfer_size--) {
 		bool valid;
 		uint32_t word = psycho_bus_load_word(ctx, madr, &valid);
 		channel_cfg[ctx->dmac.active_channel.id].dst(ctx, word);
@@ -223,6 +223,7 @@ void dmac_channel_bcr_write(struct psycho_ctx *ctx, enum psycho_dmac_channel_id 
 static void dma_transfer_init(struct psycho_ctx *ctx, enum psycho_dmac_channel_id id, uint32_t chcr)
 {
 	struct psycho_dmac_channel *ch = &ctx->dmac.channels[id];
+	const char *str		       = channel_to_str(id);
 
 	ctx->dmac.active_channel.id	       = id;
 	ctx->dmac.active_channel.transfer_size = determine_transfer_size(ch->bcr, chcr);
@@ -232,19 +233,18 @@ static void dma_transfer_init(struct psycho_ctx *ctx, enum psycho_dmac_channel_i
 		goto start;
 	}
 
-	LOG_TRACE(ctx, "DMA transfer latched (channel \"%s\") - waiting for DREQ", channel_to_str(channel));
+	LOG_TRACE(ctx, "DMA transfer latched (channel \"%s\") - waiting for DREQ", str);
 
-	if (unlikely(!channel_cfg[channel].dreq_asserted)) {
-		LOG_ERR(ctx, "impossible: channel \"%s\" does not have a DREQ line, this transfer will never run", str);
+	if (unlikely(!channel_cfg[id].dreq_asserted)) {
+		LOG_ERR(ctx, "wtf? channel \"%s\" does not have a DREQ line, this transfer will never run", str);
 		return;
 	}
 
-	if (channel_cfg[channel].dreq_asserted(ctx)) {
+	if (channel_cfg[id].dreq_asserted(ctx))
 		LOG_TRACE(ctx, "starting DMA transfer as DREQ is already active (channel \"%s\")", str);
-		goto start;
-	}
 
-	dma_transfer_event_start(ctx, channel, word);
+start:
+	dma_transfer_event_start(ctx, id, chcr);
 }
 
 void dmac_channel_chcr_write(struct psycho_ctx *ctx, enum psycho_dmac_channel_id channel, uint32_t word)
@@ -256,7 +256,7 @@ void dmac_channel_chcr_write(struct psycho_ctx *ctx, enum psycho_dmac_channel_id
 		word &= CHCR_BITS;
 
 	struct psycho_dmac_channel *ch = &ctx->dmac.channels[channel];
-	const char *str = channel_to_str(channel);
+	const char *str		       = channel_to_str(channel);
 
 	if (unlikely(!bits_became_set(ch->chcr, word, CHCR_START_TRANSFER)))
 		goto store;
@@ -270,19 +270,11 @@ void dmac_channel_chcr_write(struct psycho_ctx *ctx, enum psycho_dmac_channel_id
 	}
 
 	if (ctx->dmac.transfer_event.valid) {
-		LOG_WARN(ctx, "dma transfer ongoing - transfer is delayed");
+		LOG_WARN(ctx, "dma transfer ongoing - transfer may take effect later");
 		goto store;
 	}
 
-	dma_transfer_init(ctx, channel);
-	struct psycho_dmac_channel *ch = &ctx->dmac.channels[channel];
-
-	const char *str = channel_to_str(channel);
-
-	if (unlikely(!bits_became_set(ch->chcr, word, CHCR_START_TRANSFER)))
-		goto store;
-
-	setup_dma_transfer(ctx, channel);
+	dma_transfer_init(ctx, channel, word);
 
 store:
 	LOG_TRACE(ctx, "%s CHCR set to 0x%08X", channel_to_str(channel), word);
