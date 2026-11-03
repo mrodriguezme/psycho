@@ -293,10 +293,10 @@ void dmac_dpcr_write(struct psycho_ctx *ctx, uint32_t word)
 	for (size_t i = 0; i < ctx->dmac.num_channels_enabled; ++i) {
 		enum psycho_dmac_channel_id ch = ctx->dmac.channels_by_priority[i];
 
-		if ((!channel_enabled(prev_dpcr, ch)) && (channel_enabled(word, ch)))
+		if ((!channel_enabled(prev_dpcr, ch)) && (channel_enabled(word, ch)) &&
+		    (ctx->dmac.channels[ch].chcr & CHCR_START_TRANSFER))
 			// Master enable was not previously not enabled for this channel, but it has been now.
-			if (ctx->dmac.channels[ch].chcr & CHCR_START_TRANSFER)
-				__builtin_trap();
+			dma_transfer_init(ctx, ch, ctx->dmac.channels[ch].chcr);
 	}
 
 	LOG_INFO(ctx, "OTC %s", word & DPCR_OTC_MASTER_ENABLE ? "enabled" : "disabled");
