@@ -25,6 +25,7 @@
 #include "defs.h"
 #include "system/gpu/gpu.h"
 #include "debug/log.h"
+#include "system/intc/intc.h"
 
 DECLARE_LOG_MODULE(PSYCHO_LOG_MODULE_DMAC);
 
@@ -49,6 +50,35 @@ static const struct {
 
 	// clang-format on
 };
+
+static bool dicr_irq_active(uint32_t dicr)
+{
+	uint32_t enables = (dicr & DICR_CHANNEL_INTERRUPT_MASK) >> 16;
+	uint32_t flags	 = (dicr & DICR_CHANNEL_INTERRUPT_FLAGS) >> 24;
+
+	return (dicr & DICR_BUS_ERR_FLAG) || ((dicr & DICR_MASTER_INTERRUPT_ENABLE) && (enables & flags));
+}
+
+static void dmac_dicr_update(struct psycho_ctx *ctx, bool prev_master)
+{
+	if (dicr_irq_active(ctx->dmac.dicr))
+		ctx->dmac.dicr |= DICR_MASTER_INTERRUPT_FLAG;
+	else
+		ctx->dmac.dicr &= ~DICR_MASTER_INTERRUPT_FLAG;
+
+	if (!prev_master && (ctx->dmac.dicr & DICR_MASTER_INTERRUPT_FLAG))
+		psycho_intc_irqs_pending_set(ctx, IRQ_DMAC);
+}
+
+PSYCHO_NONNULL static void raise_interrupt(struct psycho_ctx *ctx, enum psycho_dmac_channel_id ch)
+{
+	bool prev = ctx->dmac.dicr & DICR_MASTER_INTERRUPT_FLAG;
+
+	if (ctx->dmac.dicr & (UINT32_C(1) << (16 + ch)))
+		ctx->dmac.dicr |= UINT32_C(1) << (24 + ch);
+
+	dmac_dicr_update(ctx, prev);
+}
 
 PSYCHO_NODISCARD static const char *channel_to_str(enum psycho_dmac_channel_id channel)
 {
@@ -85,6 +115,8 @@ PSYCHO_NONNULL static void dma_transfer_ram_to_device(struct psycho_ctx *ctx, st
 
 	ch->chcr &= ~CHCR_START_TRANSFER;
 	LOG_TRACE(ctx, "channel \"%s\" dma done", channel_to_str(ctx->dmac.active_channel.id));
+
+	raise_interrupt(ctx, ctx->dmac.active_channel.id);
 }
 
 PSYCHO_NONNULL
@@ -108,6 +140,8 @@ static void dma_transfer_device_to_ram(struct psycho_ctx *ctx, struct psycho_dma
 	}
 
 	ch->chcr &= ~(CHCR_START_TRANSFER | CHCR_FORCE_TRANSFER_START_WITHOUT_DREQ);
+	raise_interrupt(ctx, ctx->dmac.active_channel.id);
+
 	LOG_INFO(ctx, "otc transfer done");
 }
 
@@ -304,6 +338,12 @@ void dmac_dpcr_write(struct psycho_ctx *ctx, uint32_t word)
 
 void dmac_dicr_write(struct psycho_ctx *ctx, uint32_t word)
 {
+	bool prev = ctx->dmac.dicr & DICR_MASTER_INTERRUPT_FLAG;
+
+	uint32_t flags = ctx->dmac.dicr & DICR_CHANNEL_INTERRUPT_FLAGS & ~word;
+	ctx->dmac.dicr = flags | (word & DICR_WRITE_BITS);
+
+	dmac_dicr_update(ctx, prev);
 }
 
 void psycho_dmac_channel_dreq_update(struct psycho_ctx *ctx, enum psycho_dmac_channel_id channel, bool asserted)

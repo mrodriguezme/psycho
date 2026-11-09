@@ -49,7 +49,7 @@ enum {
 	DMAC_DICR	  = 0x1F8010F4
 };
 
-void psycho_dmac_reset(struct psycho_ctx *ctx);
+void psycho_dmac_reset(struct psycho_ctx *ctx) PSYCHO_NONNULL;
 
 void dmac_channel_madr_write(struct psycho_ctx *ctx, enum psycho_dmac_channel_id channel, uint32_t madr) PSYCHO_NONNULL;
 void dmac_channel_bcr_write(struct psycho_ctx *ctx, enum psycho_dmac_channel_id channel, uint32_t bcr) PSYCHO_NONNULL;

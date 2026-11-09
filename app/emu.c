@@ -218,18 +218,19 @@ void emu_init(struct emu_runner *emu, const char *bios_file, const char *exe_fil
 
 	cfg->log.log_cb = log_cb;
 
-	cfg->bios_call_tracer.enabled	 = true;
-	cfg->bios_call_tracer.deref_ptrs = true;
+	cfg->bios_call_tracer.enabled	  = true;
+	cfg->bios_call_tracer.deref_ptrs  = true;
 	cfg->bios_call_tracer.stdout_line = on_stdout_line;
 
-	cfg->log.modules[PSYCHO_LOG_MODULE_CPU] = PSYCHO_LOG_LEVEL_ERROR;
-	cfg->log.modules[PSYCHO_LOG_MODULE_BUS] = PSYCHO_LOG_LEVEL_ERROR;
+	cfg->log.modules[PSYCHO_LOG_MODULE_CPU]	 = PSYCHO_LOG_LEVEL_ERROR;
+	cfg->log.modules[PSYCHO_LOG_MODULE_BUS]	 = PSYCHO_LOG_LEVEL_ERROR;
 	cfg->log.modules[PSYCHO_LOG_MODULE_DMAC] = PSYCHO_LOG_LEVEL_TRACE;
-	cfg->log.modules[PSYCHO_LOG_MODULE_GPU] = PSYCHO_LOG_LEVEL_TRACE;
+	cfg->log.modules[PSYCHO_LOG_MODULE_INTC] = PSYCHO_LOG_LEVEL_TRACE;
+	cfg->log.modules[PSYCHO_LOG_MODULE_GPU]	 = PSYCHO_LOG_LEVEL_TRACE;
 
 	//cfg->log.modules[PSYCHO_LOG_MODULE_BIOS_CALL_TRACER] = PSYCHO_LOG_LEVEL_INFO;
 
-	cfg->gpu.on_vblank	     = on_vblank;
+	cfg->gpu.on_vblank	 = on_vblank;
 	cfg->gpu.vblank_userdata = emu;
 
 	psycho_ctx_init(&emu->ctx);
