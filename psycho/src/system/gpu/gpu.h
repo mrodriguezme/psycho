@@ -27,9 +27,9 @@ enum {
 void psycho_gpu_init(struct psycho_ctx *ctx) PSYCHO_NONNULL;
 void psycho_gpu_reset(struct psycho_ctx *ctx) PSYCHO_NONNULL;
 
-void psycho_gp0(struct psycho_ctx *ctx, uint32_t packet) PSYCHO_NONNULL;
+void psycho_gpu_gp0_word_write(struct psycho_ctx *ctx, uint32_t packet) PSYCHO_NONNULL;
 void psycho_gp1(struct psycho_ctx *ctx, uint32_t packet) PSYCHO_NONNULL;
 
 [[nodiscard]] uint32_t psycho_gpu_gp1_word_read(struct psycho_ctx *ctx) PSYCHO_NONNULL;
 
-bool psycho_gpu_dreq_asserted(struct psycho_ctx *ctx);
+bool psycho_gpu_dreq_line(struct psycho_ctx *ctx);

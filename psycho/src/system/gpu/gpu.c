@@ -739,7 +739,7 @@ void psycho_gpu_reset(struct psycho_ctx *ctx)
 	psycho_sched_event_add(ctx, &ctx->gpu.base.vblank_event);
 }
 
-void psycho_gp0(struct psycho_ctx *ctx, uint32_t packet)
+void psycho_gpu_gp0_word_write(struct psycho_ctx *ctx, uint32_t packet)
 {
 	LOG_TRACE(ctx, "GP0 <- 0x%08X", packet);
 
@@ -822,7 +822,7 @@ uint32_t psycho_gpu_gp1_word_read(struct psycho_ctx *ctx)
 	return 0xFFFFFFFF;
 }
 
-bool psycho_gpu_dreq_asserted(struct psycho_ctx *ctx)
+bool psycho_gpu_dreq_line(struct psycho_ctx *ctx)
 {
 	return ctx->gpu.base.stat & STAT_DREQ;
 }

@@ -51,17 +51,22 @@ enum {
 
 void psycho_dmac_reset(struct psycho_ctx *ctx) PSYCHO_NONNULL;
 
-void dmac_channel_madr_write(struct psycho_ctx *ctx, enum psycho_dmac_channel_id channel, uint32_t madr) PSYCHO_NONNULL;
-void dmac_channel_bcr_write(struct psycho_ctx *ctx, enum psycho_dmac_channel_id channel, uint32_t bcr) PSYCHO_NONNULL;
-void dmac_channel_chcr_write(struct psycho_ctx *ctx, enum psycho_dmac_channel_id channel, uint32_t word) PSYCHO_NONNULL;
+void psycho_dmac_channel_madr_write(struct psycho_ctx *ctx, enum psycho_dmac_channel_id channel,
+				    uint32_t madr) PSYCHO_NONNULL;
 
-void dmac_dpcr_write(struct psycho_ctx *ctx, uint32_t word) PSYCHO_NONNULL;
-void dmac_dicr_write(struct psycho_ctx *ctx, uint32_t word) PSYCHO_NONNULL;
+void psycho_dmac_channel_bcr_write(struct psycho_ctx *ctx, enum psycho_dmac_channel_id channel,
+				   uint32_t bcr) PSYCHO_NONNULL;
+
+void psycho_dmac_channel_chcr_write(struct psycho_ctx *ctx, enum psycho_dmac_channel_id channel,
+				    uint32_t word) PSYCHO_NONNULL;
+
+void psycho_dmac_dpcr_write(struct psycho_ctx *ctx, uint32_t word) PSYCHO_NONNULL;
+void psycho_dmac_dicr_write(struct psycho_ctx *ctx, uint32_t word) PSYCHO_NONNULL;
 
 void psycho_dmac_channel_dreq_update(struct psycho_ctx *ctx, enum psycho_dmac_channel_id channel,
 				     bool asserted) PSYCHO_NONNULL;
 
 [[nodiscard]] PSYCHO_NONNULL PSYCHO_ALWAYS_INLINE bool psycho_dmac_dma_transfer_active(struct psycho_ctx *ctx)
 {
-	return true;
+	return ctx->dmac.transfer_event.valid;
 }

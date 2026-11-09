@@ -188,7 +188,7 @@ bool psycho_bus_store_word(struct psycho_ctx *ctx, uint32_t paddr, uint32_t data
 		break;
 
 	case GPU_GP0:
-		psycho_gp0(ctx, data);
+		psycho_gpu_gp0_word_write(ctx, data);
 		break;
 
 	case GPU_GP1:
@@ -209,95 +209,95 @@ bool psycho_bus_store_word(struct psycho_ctx *ctx, uint32_t paddr, uint32_t data
 		break;
 
 	case DMAC_MDECIN_MADR:
-		dmac_channel_madr_write(ctx, PSYCHO_DMAC_CHANNEL_ID_MDECIN, data);
+		psycho_dmac_channel_madr_write(ctx, PSYCHO_DMAC_CHANNEL_ID_MDECIN, data);
 		break;
 
 	case DMAC_MDECIN_BCR:
-		dmac_channel_bcr_write(ctx, PSYCHO_DMAC_CHANNEL_ID_MDECIN, data);
+		psycho_dmac_channel_bcr_write(ctx, PSYCHO_DMAC_CHANNEL_ID_MDECIN, data);
 		break;
 
 	case DMAC_MDECIN_CHCR:
-		dmac_channel_chcr_write(ctx, PSYCHO_DMAC_CHANNEL_ID_MDECIN, data);
+		psycho_dmac_channel_chcr_write(ctx, PSYCHO_DMAC_CHANNEL_ID_MDECIN, data);
 		break;
 
 	case DMAC_MDECOUT_MADR:
-		dmac_channel_madr_write(ctx, PSYCHO_DMAC_CHANNEL_ID_MDECOUT, data);
+		psycho_dmac_channel_madr_write(ctx, PSYCHO_DMAC_CHANNEL_ID_MDECOUT, data);
 		break;
 
 	case DMAC_MDECOUT_BCR:
-		dmac_channel_bcr_write(ctx, PSYCHO_DMAC_CHANNEL_ID_MDECOUT, data);
+		psycho_dmac_channel_bcr_write(ctx, PSYCHO_DMAC_CHANNEL_ID_MDECOUT, data);
 		break;
 
 	case DMAC_MDECOUT_CHCR:
-		dmac_channel_chcr_write(ctx, PSYCHO_DMAC_CHANNEL_ID_MDECOUT, data);
+		psycho_dmac_channel_chcr_write(ctx, PSYCHO_DMAC_CHANNEL_ID_MDECOUT, data);
 		break;
 
 	case DMAC_GPU_MADR:
-		dmac_channel_madr_write(ctx, PSYCHO_DMAC_CHANNEL_ID_GPU, data);
+		psycho_dmac_channel_madr_write(ctx, PSYCHO_DMAC_CHANNEL_ID_GPU, data);
 		break;
 
 	case DMAC_GPU_BCR:
-		dmac_channel_bcr_write(ctx, PSYCHO_DMAC_CHANNEL_ID_GPU, data);
+		psycho_dmac_channel_bcr_write(ctx, PSYCHO_DMAC_CHANNEL_ID_GPU, data);
 		break;
 
 	case DMAC_GPU_CHCR:
-		dmac_channel_chcr_write(ctx, PSYCHO_DMAC_CHANNEL_ID_GPU, data);
+		psycho_dmac_channel_chcr_write(ctx, PSYCHO_DMAC_CHANNEL_ID_GPU, data);
 		break;
 
 	case DMAC_CDROM_CHCR:
-		dmac_channel_chcr_write(ctx, PSYCHO_DMAC_CHANNEL_ID_CDROM, data);
+		psycho_dmac_channel_chcr_write(ctx, PSYCHO_DMAC_CHANNEL_ID_CDROM, data);
 		break;
 
 	case DMAC_CDROM_BCR:
-		dmac_channel_bcr_write(ctx, PSYCHO_DMAC_CHANNEL_ID_CDROM, data);
+		psycho_dmac_channel_bcr_write(ctx, PSYCHO_DMAC_CHANNEL_ID_CDROM, data);
 		break;
 
 	case DMAC_CDROM_MADR:
-		dmac_channel_madr_write(ctx, PSYCHO_DMAC_CHANNEL_ID_CDROM, data);
+		psycho_dmac_channel_madr_write(ctx, PSYCHO_DMAC_CHANNEL_ID_CDROM, data);
 		break;
 
 	case DMAC_SPU_MADR:
-		dmac_channel_madr_write(ctx, PSYCHO_DMAC_CHANNEL_ID_SPU, data);
+		psycho_dmac_channel_madr_write(ctx, PSYCHO_DMAC_CHANNEL_ID_SPU, data);
 		break;
 
 	case DMAC_SPU_BCR:
-		dmac_channel_bcr_write(ctx, PSYCHO_DMAC_CHANNEL_ID_SPU, data);
+		psycho_dmac_channel_bcr_write(ctx, PSYCHO_DMAC_CHANNEL_ID_SPU, data);
 		break;
 
 	case DMAC_SPU_CHCR:
-		dmac_channel_chcr_write(ctx, PSYCHO_DMAC_CHANNEL_ID_SPU, data);
+		psycho_dmac_channel_chcr_write(ctx, PSYCHO_DMAC_CHANNEL_ID_SPU, data);
 		break;
 
 	case DMAC_PIO_CHCR:
-		dmac_channel_chcr_write(ctx, PSYCHO_DMAC_CHANNEL_ID_PIO, data);
+		psycho_dmac_channel_chcr_write(ctx, PSYCHO_DMAC_CHANNEL_ID_PIO, data);
 		break;
 
 	case DMAC_PIO_MADR:
-		dmac_channel_madr_write(ctx, PSYCHO_DMAC_CHANNEL_ID_PIO, data);
+		psycho_dmac_channel_madr_write(ctx, PSYCHO_DMAC_CHANNEL_ID_PIO, data);
 		break;
 
 	case DMAC_PIO_BCR:
-		dmac_channel_bcr_write(ctx, PSYCHO_DMAC_CHANNEL_ID_PIO, data);
+		psycho_dmac_channel_bcr_write(ctx, PSYCHO_DMAC_CHANNEL_ID_PIO, data);
 		break;
 
 	case DMAC_OTC_CHCR:
-		dmac_channel_chcr_write(ctx, PSYCHO_DMAC_CHANNEL_ID_OTC, data);
+		psycho_dmac_channel_chcr_write(ctx, PSYCHO_DMAC_CHANNEL_ID_OTC, data);
 		break;
 
 	case DMAC_OTC_BCR:
-		dmac_channel_bcr_write(ctx, PSYCHO_DMAC_CHANNEL_ID_OTC, data);
+		psycho_dmac_channel_bcr_write(ctx, PSYCHO_DMAC_CHANNEL_ID_OTC, data);
 		break;
 
 	case DMAC_OTC_MADR:
-		dmac_channel_madr_write(ctx, PSYCHO_DMAC_CHANNEL_ID_OTC, data);
+		psycho_dmac_channel_madr_write(ctx, PSYCHO_DMAC_CHANNEL_ID_OTC, data);
 		break;
 
 	case DMAC_DPCR:
-		dmac_dpcr_write(ctx, data);
+		psycho_dmac_dpcr_write(ctx, data);
 		break;
 
 	case DMAC_DICR:
-		dmac_dicr_write(ctx, data);
+		psycho_dmac_dicr_write(ctx, data);
 		break;
 
 	default:
