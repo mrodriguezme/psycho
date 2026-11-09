@@ -30,71 +30,71 @@ enum lifo_overflow_policy {
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wunused-macros"
 
-#define LIFO_IMPL(name, type, policy)                                               \
-	PSYCHO_ALWAYS_INLINE void name##_clear(struct name *st)                     \
-	{                                                                           \
-		memset(st, 0, sizeof(*st));                                         \
-	}                                                                           \
-                                                                                    \
-	PSYCHO_ALWAYS_INLINE void name##_init(struct name *st)                      \
-	{                                                                           \
-		name##_clear(st);                                                   \
-	}                                                                           \
-                                                                                    \
-	PSYCHO_NODISCARD PSYCHO_ALWAYS_INLINE size_t name##_size(struct name *st)   \
-	{                                                                           \
-		return st->size;                                                    \
-	}                                                                           \
-                                                                                    \
-	PSYCHO_NODISCARD PSYCHO_ALWAYS_INLINE bool name##_full(struct name *st)     \
-	{                                                                           \
-		return st->size == ARRAY_SIZE(st->data);                            \
-	}                                                                           \
-                                                                                    \
-	PSYCHO_NODISCARD PSYCHO_ALWAYS_INLINE bool name##_empty(struct name *st)    \
-	{                                                                           \
-		return st->size == 0;                                               \
-	}                                                                           \
-                                                                                    \
-	PSYCHO_NODISCARD PSYCHO_ALWAYS_INLINE type *name##_emplace(struct name *st) \
-	{                                                                           \
-		if (likely(!name##_full(st)))                                       \
-			return &st->data[st->size++];                               \
-                                                                                    \
-		switch (policy) {                                                   \
-		case LIFO_OVERFLOW_POLICY_DROP_NEWEST:                              \
-			return NULL;                                                \
-                                                                                    \
-		case LIFO_OVERFLOW_POLICY_REPLACE_TOP:                              \
-			return &st->data[st->size - 1];                             \
-                                                                                    \
-		default:                                                            \
-			unreachable();                                              \
-		}                                                                   \
-	}                                                                           \
-                                                                                    \
-	PSYCHO_ALWAYS_INLINE void name##_push(struct name *st, type val)            \
-	{                                                                           \
-		type *slot = name##_emplace(st);                                    \
-                                                                                    \
-		if (likely(slot))                                                   \
-			*slot = (val);                                              \
-	}                                                                           \
-                                                                                    \
-	PSYCHO_NODISCARD PSYCHO_ALWAYS_INLINE type *name##_pop(struct name *st)     \
-	{                                                                           \
-		if (unlikely(name##_empty(st)))                                     \
-			return NULL;                                                \
-                                                                                    \
-		return &st->data[--st->size];                                       \
-	}                                                                           \
-                                                                                    \
-	PSYCHO_NODISCARD PSYCHO_ALWAYS_INLINE type *name##_top(struct name *st)     \
-	{                                                                           \
-		if (unlikely(name##_empty(st)))                                     \
-			return NULL;                                                \
-                                                                                    \
-		return &st->data[st->size - 1];                                     \
+#define LIFO_IMPL(name, type, policy)                                            \
+	PSYCHO_ALWAYS_INLINE void name##_clear(struct name *st)                  \
+	{                                                                        \
+		memset(st, 0, sizeof(*st));                                      \
+	}                                                                        \
+                                                                                 \
+	PSYCHO_ALWAYS_INLINE void name##_init(struct name *st)                   \
+	{                                                                        \
+		name##_clear(st);                                                \
+	}                                                                        \
+                                                                                 \
+	[[nodiscard]] PSYCHO_ALWAYS_INLINE size_t name##_size(struct name *st)   \
+	{                                                                        \
+		return st->size;                                                 \
+	}                                                                        \
+                                                                                 \
+	[[nodiscard]] PSYCHO_ALWAYS_INLINE bool name##_full(struct name *st)     \
+	{                                                                        \
+		return st->size == ARRAY_SIZE(st->data);                         \
+	}                                                                        \
+                                                                                 \
+	[[nodiscard]] PSYCHO_ALWAYS_INLINE bool name##_empty(struct name *st)    \
+	{                                                                        \
+		return st->size == 0;                                            \
+	}                                                                        \
+                                                                                 \
+	[[nodiscard]] PSYCHO_ALWAYS_INLINE type *name##_emplace(struct name *st) \
+	{                                                                        \
+		if (likely(!name##_full(st)))                                    \
+			return &st->data[st->size++];                            \
+                                                                                 \
+		switch (policy) {                                                \
+		case LIFO_OVERFLOW_POLICY_DROP_NEWEST:                           \
+			return NULL;                                             \
+                                                                                 \
+		case LIFO_OVERFLOW_POLICY_REPLACE_TOP:                           \
+			return &st->data[st->size - 1];                          \
+                                                                                 \
+		default:                                                         \
+			unreachable();                                           \
+		}                                                                \
+	}                                                                        \
+                                                                                 \
+	PSYCHO_ALWAYS_INLINE void name##_push(struct name *st, type val)         \
+	{                                                                        \
+		type *slot = name##_emplace(st);                                 \
+                                                                                 \
+		if (likely(slot))                                                \
+			*slot = (val);                                           \
+	}                                                                        \
+                                                                                 \
+	[[nodiscard]] PSYCHO_ALWAYS_INLINE type *name##_pop(struct name *st)     \
+	{                                                                        \
+		if (unlikely(name##_empty(st)))                                  \
+			return NULL;                                             \
+                                                                                 \
+		return &st->data[--st->size];                                    \
+	}                                                                        \
+                                                                                 \
+	[[nodiscard]] PSYCHO_ALWAYS_INLINE type *name##_top(struct name *st)     \
+	{                                                                        \
+		if (unlikely(name##_empty(st)))                                  \
+			return NULL;                                             \
+                                                                                 \
+		return &st->data[st->size - 1];                                  \
 	}
 
 #pragma GCC diagnostic pop

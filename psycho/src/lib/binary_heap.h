@@ -20,17 +20,17 @@
 #include <string.h>
 #include "common/util.h"
 
-PSYCHO_ALWAYS_INLINE PSYCHO_NODISCARD size_t node_parent(size_t node)
+[[nodiscard]] PSYCHO_ALWAYS_INLINE size_t node_parent(size_t node)
 {
 	return (node - 1) / 2;
 }
 
-PSYCHO_ALWAYS_INLINE PSYCHO_NODISCARD size_t node_left(size_t node)
+[[nodiscard]] PSYCHO_ALWAYS_INLINE size_t node_left(size_t node)
 {
 	return (node * 2) + 1;
 }
 
-PSYCHO_ALWAYS_INLINE PSYCHO_NODISCARD size_t node_right(size_t node)
+[[nodiscard]] PSYCHO_ALWAYS_INLINE size_t node_right(size_t node)
 {
 	return node_left(node) + 1;
 }

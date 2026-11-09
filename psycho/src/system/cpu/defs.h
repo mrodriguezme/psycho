@@ -69,7 +69,7 @@ struct cpu_exception_info {
 	const char *desc;
 };
 
-PSYCHO_NODISCARD PSYCHO_ALWAYS_INLINE const struct cpu_exception_info *exception_info(unsigned int code)
+[[nodiscard]] PSYCHO_ALWAYS_INLINE const struct cpu_exception_info *exception_info(unsigned int code)
 {
 	static const struct cpu_exception_info infos[32] = {
 #define X(name, val, mnemonic, desc) [name] = { mnemonic, desc },
@@ -81,12 +81,12 @@ PSYCHO_NODISCARD PSYCHO_ALWAYS_INLINE const struct cpu_exception_info *exception
 	return &infos[code];
 }
 
-PSYCHO_NODISCARD PSYCHO_ALWAYS_INLINE const char *exception_mnemonic(unsigned int code)
+[[nodiscard]] PSYCHO_ALWAYS_INLINE const char *exception_mnemonic(unsigned int code)
 {
 	return exception_info(code)->mnemonic;
 }
 
-PSYCHO_NODISCARD PSYCHO_ALWAYS_INLINE const char *exception_desc(unsigned int code)
+[[nodiscard]] PSYCHO_ALWAYS_INLINE const char *exception_desc(unsigned int code)
 {
 	return exception_info(code)->desc;
 }
@@ -327,27 +327,27 @@ enum {
 	NCCT  = 0x3F
 };
 
-PSYCHO_NODISCARD PSYCHO_ALWAYS_INLINE uint32_t jmp_addr(uint32_t pc, uint32_t instr)
+[[nodiscard]] PSYCHO_ALWAYS_INLINE uint32_t jmp_addr(uint32_t pc, uint32_t instr)
 {
 	return (field_get32(INSTR_TARGET, instr) << 2) + (pc & 0xF0000000);
 }
 
-PSYCHO_NODISCARD PSYCHO_ALWAYS_INLINE uint32_t branch_addr(uint32_t pc, uint32_t instr)
+[[nodiscard]] PSYCHO_ALWAYS_INLINE uint32_t branch_addr(uint32_t pc, uint32_t instr)
 {
 	return sign_extend_16_32(field_get16(INSTR_IMMEDIATE, instr) << 2) + pc + sizeof(instr);
 }
 
-PSYCHO_NODISCARD PSYCHO_ALWAYS_INLINE unsigned int shift_frac(uint32_t instr)
+[[nodiscard]] PSYCHO_ALWAYS_INLINE unsigned int shift_frac(uint32_t instr)
 {
 	return (instr & INSTR_SF) ? SHIFT_FRAC : 0;
 }
 
-PSYCHO_NODISCARD PSYCHO_ALWAYS_INLINE bool ir123_lm(uint32_t instr)
+[[nodiscard]] PSYCHO_ALWAYS_INLINE bool ir123_lm(uint32_t instr)
 {
 	return instr & INSTR_LM;
 }
 
-PSYCHO_NODISCARD PSYCHO_ALWAYS_INLINE uint32_t vaddr_to_paddr(uint32_t vaddr)
+[[nodiscard]] PSYCHO_ALWAYS_INLINE uint32_t vaddr_to_paddr(uint32_t vaddr)
 {
 	return ((vaddr >> 30) == 2) ? (vaddr & 0x1FFFFFFF) : vaddr;
 }

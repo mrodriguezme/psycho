@@ -43,12 +43,12 @@ PSYCHO_NONNULL static void irq_assert(struct psycho_ctx *ctx)
 	LOG_TRACE(ctx, "IRQ asserted");
 }
 
-PSYCHO_NODISCARD PSYCHO_NONNULL static enum psycho_sio0_slot asserted_slot_get(struct psycho_ctx *ctx)
+[[nodiscard]] PSYCHO_NONNULL static enum psycho_sio0_slot asserted_slot_get(struct psycho_ctx *ctx)
 {
 	return !(ctx->sio0.cr & CR_PORT) ? PSYCHO_SIO0_SLOT_1 : PSYCHO_SIO0_SLOT_2;
 }
 
-PSYCHO_NODISCARD PSYCHO_NONNULL static unsigned int mr_br_get(struct psycho_ctx *ctx)
+[[nodiscard]] PSYCHO_NONNULL static unsigned int mr_br_get(struct psycho_ctx *ctx)
 {
 	static const unsigned int mr_br_lut[] = {
 		// clang-format off
@@ -63,7 +63,7 @@ PSYCHO_NODISCARD PSYCHO_NONNULL static unsigned int mr_br_get(struct psycho_ctx 
 	return mr_br_lut[field_get32(MR_BR_MASK, ctx->sio0.mr)];
 }
 
-PSYCHO_NODISCARD PSYCHO_NONNULL static unsigned int cr_bufsz_get(struct psycho_ctx *ctx)
+[[nodiscard]] PSYCHO_NONNULL static unsigned int cr_bufsz_get(struct psycho_ctx *ctx)
 {
 	static const unsigned int cr_bufsz_lut[] = {
 		// clang-format off
@@ -79,7 +79,7 @@ PSYCHO_NODISCARD PSYCHO_NONNULL static unsigned int cr_bufsz_get(struct psycho_c
 	return cr_bufsz_lut[field_get32(CR_BUFSZ_MASK, ctx->sio0.cr)];
 }
 
-PSYCHO_NODISCARD PSYCHO_NONNULL static unsigned int word_len_get(struct psycho_ctx *ctx)
+[[nodiscard]] PSYCHO_NONNULL static unsigned int word_len_get(struct psycho_ctx *ctx)
 {
 	return 5 + field_get32(MR_CHLEN_MASK, ctx->sio0.mr);
 }
@@ -103,7 +103,7 @@ PSYCHO_NONNULL static void devices_reset(struct psycho_ctx *ctx)
 	}
 }
 
-PSYCHO_NODISCARD PSYCHO_NONNULL static unsigned int calc_baud_rate(struct psycho_ctx *ctx, uint16_t baud)
+[[nodiscard]] PSYCHO_NONNULL static unsigned int calc_baud_rate(struct psycho_ctx *ctx, uint16_t baud)
 {
 	baud *= mr_br_get(ctx);
 	return PSYCHO_CPU_CLKFREQ_HZ / baud;

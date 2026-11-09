@@ -50,7 +50,7 @@ PSYCHO_NONNULL static void display_disabled_set(struct psycho_ctx *ctx, bool dis
 	}
 }
 
-PSYCHO_NODISCARD static int16_t sign_extend_11_16(uint32_t v)
+[[nodiscard]] static int16_t sign_extend_11_16(uint32_t v)
 {
 	return (int16_t)((int32_t)(v << 21) >> 21);
 }
@@ -85,12 +85,12 @@ PSYCHO_NONNULL static void display_range_vertical_set(struct psycho_ctx *ctx, ui
 	LOG_INFO(ctx, "vertical display range set to y1=%u y2=%u", y1, y2);
 }
 
-PSYCHO_NODISCARD static uint32_t mode_flag(uint32_t val, uint32_t mode_bit, uint32_t stat_bit)
+[[nodiscard]] static uint32_t mode_flag(uint32_t val, uint32_t mode_bit, uint32_t stat_bit)
 {
 	return (val & mode_bit) ? stat_bit : 0;
 }
 
-PSYCHO_NODISCARD static unsigned int display_hres(uint32_t stat)
+[[nodiscard]] static unsigned int display_hres(uint32_t stat)
 {
 	static const unsigned int hres[4] = { 256, 320, 512, 640 };
 
@@ -194,12 +194,12 @@ PSYCHO_NONNULL static unsigned int ysiz_copy_mask(uint32_t ysiz)
 	return ((ysiz - 1) & 0x1FF) + 1;
 }
 
-PSYCHO_NODISCARD static unsigned int copy_x(struct psycho_gpu_vram_transfer_info *info)
+[[nodiscard]] static unsigned int copy_x(struct psycho_gpu_vram_transfer_info *info)
 {
 	return (info->x0 + info->col) & (PSYCHO_GPU_VRAM_WIDTH - 1);
 }
 
-PSYCHO_NODISCARD static unsigned int copy_y(struct psycho_gpu_vram_transfer_info *info)
+[[nodiscard]] static unsigned int copy_y(struct psycho_gpu_vram_transfer_info *info)
 {
 	return (info->y0 + info->row) & (PSYCHO_GPU_VRAM_HEIGHT - 1);
 }
@@ -274,7 +274,7 @@ PSYCHO_NONNULL static void write_fifo_push(struct psycho_ctx *ctx, uint32_t data
 	psycho_gpu_fifo_write_push(&ctx->gpu.base.fifo_write, data);
 }
 
-PSYCHO_NONNULL PSYCHO_NODISCARD static uint32_t write_fifo_pop(struct psycho_ctx *ctx)
+[[nodiscard]] PSYCHO_NONNULL static uint32_t write_fifo_pop(struct psycho_ctx *ctx)
 {
 	uint32_t data = 0x00000000;
 
@@ -303,7 +303,7 @@ PSYCHO_NONNULL static void dma_direction_set(struct psycho_ctx *ctx, enum dma_di
 	LOG_INFO(ctx, "dma direction set to \"%s\"", strs[dir]);
 }
 
-PSYCHO_NODISCARD static unsigned int rect_fixed_size(uint32_t packet)
+[[nodiscard]] static unsigned int rect_fixed_size(uint32_t packet)
 {
 	static const unsigned int sizes[4] = { 0, 1, 8, 16 }; // 0 = variable
 

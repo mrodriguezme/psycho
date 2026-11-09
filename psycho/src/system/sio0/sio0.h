@@ -40,4 +40,4 @@ void psycho_sio0_br_write_halfword(struct psycho_ctx *ctx, uint16_t baud) PSYCHO
 void psycho_sio0_dsr_assert(struct psycho_ctx *ctx, void *dev) PSYCHO_NONNULL;
 void psycho_sio0_dsr_deassert(struct psycho_ctx *ctx, void *userdata) PSYCHO_NONNULL;
 
-PSYCHO_NODISCARD uint8_t psycho_sio0_dr_read_byte(struct psycho_ctx *ctx) PSYCHO_NONNULL;
+[[nodiscard]] uint8_t psycho_sio0_dr_read_byte(struct psycho_ctx *ctx) PSYCHO_NONNULL;

@@ -69,7 +69,7 @@ PSYCHO_NONNULL static void stop(struct psycho_ctx *ctx)
 	ctx->cpu.interpreter.slow = true;
 }
 
-PSYCHO_NODISCARD PSYCHO_NONNULL static uint32_t load_word(struct psycho_ctx *ctx, uint32_t vaddr, bool *valid)
+[[nodiscard]] PSYCHO_NONNULL static uint32_t load_word(struct psycho_ctx *ctx, uint32_t vaddr, bool *valid)
 {
 	psycho_sched_ts_advance(ctx, 1);
 
@@ -77,7 +77,7 @@ PSYCHO_NODISCARD PSYCHO_NONNULL static uint32_t load_word(struct psycho_ctx *ctx
 	return psycho_bus_load_word(ctx, vaddr, valid);
 }
 
-PSYCHO_NODISCARD PSYCHO_NONNULL static uint16_t load_halfword(struct psycho_ctx *ctx, uint32_t vaddr, bool *valid)
+[[nodiscard]] PSYCHO_NONNULL static uint16_t load_halfword(struct psycho_ctx *ctx, uint32_t vaddr, bool *valid)
 {
 	psycho_sched_ts_advance(ctx, 1);
 
@@ -85,7 +85,7 @@ PSYCHO_NODISCARD PSYCHO_NONNULL static uint16_t load_halfword(struct psycho_ctx 
 	return psycho_bus_load_halfword(ctx, vaddr, valid);
 }
 
-PSYCHO_NODISCARD PSYCHO_NONNULL static uint8_t load_byte(struct psycho_ctx *ctx, uint32_t vaddr, bool *valid)
+[[nodiscard]] PSYCHO_NONNULL static uint8_t load_byte(struct psycho_ctx *ctx, uint32_t vaddr, bool *valid)
 {
 	psycho_sched_ts_advance(ctx, 1);
 
@@ -324,7 +324,7 @@ PSYCHO_NONNULL static int64_t mac123_add(struct psycho_ctx *ctx, size_t mac, int
 	}
 }
 
-PSYCHO_NONNULL PSYCHO_NODISCARD static int16_t ir0_sat(struct psycho_ctx *ctx, int64_t val)
+[[nodiscard]] PSYCHO_NONNULL static int16_t ir0_sat(struct psycho_ctx *ctx, int64_t val)
 {
 	return gte_clamp(ctx, val, IR0_MIN, IR0_MAX, IR0_SATURATED);
 }
@@ -406,7 +406,7 @@ PSYCHO_NONNULL static uint32_t rgb_set(struct psycho_ctx *ctx, unsigned int colo
 	}
 }
 
-PSYCHO_NONNULL PSYCHO_NODISCARD static int64_t gte_div(struct psycho_ctx *ctx)
+[[nodiscard]] PSYCHO_NONNULL static int64_t gte_div(struct psycho_ctx *ctx)
 {
 	uint32_t h   = ctx->cpu.base.cop2.ccr.h;
 	uint32_t sz3 = ctx->cpu.base.cop2.cpr.sz[3].val;

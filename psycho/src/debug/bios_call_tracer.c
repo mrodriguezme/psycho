@@ -132,7 +132,7 @@ static const struct psycho_bios_call_tracer_func_entry call_tbl[3][0xFF] = {
 	},
 };
 
-PSYCHO_NODISCARD PSYCHO_NONNULL static const struct psycho_bios_call_tracer_func_entry *
+[[nodiscard]] PSYCHO_NONNULL static const struct psycho_bios_call_tracer_func_entry *
 func_get(const struct psycho_bios_call_tracer_func_entry *arr, size_t arr_elems, uint32_t func)
 {
 	if (func >= arr_elems)
@@ -158,8 +158,8 @@ PSYCHO_NONNULL static void frame_init(struct psycho_ctx *ctx, struct psycho_bios
 	psycho_fixed_string_init(&frame->result.str, frame->result.buf, sizeof(frame->result.buf));
 }
 
-PSYCHO_NODISCARD PSYCHO_NONNULL static uint32_t get_arg(struct psycho_ctx *ctx,
-							struct psycho_bios_call_tracer_frame *frame)
+[[nodiscard]] PSYCHO_NONNULL static uint32_t get_arg(struct psycho_ctx *ctx,
+						     struct psycho_bios_call_tracer_frame *frame)
 {
 	if (frame->arg_pos <= PSYCHO_CPU_GPR_A3)
 		return (&frame->a0)[frame->arg_pos++];
@@ -177,7 +177,7 @@ PSYCHO_NONNULL static void reset_stdout_strs(struct psycho_ctx *ctx)
 				 sizeof(ctx->bios_call_tracer.tty_original.buf));
 }
 
-PSYCHO_NODISCARD static const char *esc_seq(char c)
+[[nodiscard]] static const char *esc_seq(char c)
 {
 	switch (c) {
 	case '\n':

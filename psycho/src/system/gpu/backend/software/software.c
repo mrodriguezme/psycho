@@ -24,19 +24,19 @@ static void reset(struct psycho_ctx *ctx)
 {
 }
 
-PSYCHO_NODISCARD static unsigned int dither_channel(unsigned int c, int d)
+[[nodiscard]] static unsigned int dither_channel(unsigned int c, int d)
 {
 	return clamp((int)c + d, 0, UINT8_MAX);
 }
 
 // Positive when p is on the interior side of edge a->b (for a triangle wound so the total area is positive).
-PSYCHO_NODISCARD static int edge(struct psycho_gpu_vertex *a, struct psycho_gpu_vertex *b, int px, int py)
+[[nodiscard]] static int edge(struct psycho_gpu_vertex *a, struct psycho_gpu_vertex *b, int px, int py)
 {
 	return (b->x - a->x) * (py - a->y) - (b->y - a->y) * (px - a->x);
 }
 
 // With y pointing down and positive area, the top edge is horizontal going right and left edges go up.
-PSYCHO_NODISCARD static bool is_top_left(struct psycho_gpu_vertex *a, struct psycho_gpu_vertex *b)
+[[nodiscard]] static bool is_top_left(struct psycho_gpu_vertex *a, struct psycho_gpu_vertex *b)
 {
 	int dx = b->x - a->x;
 	int dy = b->y - a->y;
@@ -44,7 +44,7 @@ PSYCHO_NODISCARD static bool is_top_left(struct psycho_gpu_vertex *a, struct psy
 	return ((dy == 0) && (dx > 0)) || dy < 0;
 }
 
-PSYCHO_NODISCARD static uint16_t rgb888_to_rgb555(unsigned int r, unsigned int g, unsigned int b)
+[[nodiscard]] static uint16_t rgb888_to_rgb555(unsigned int r, unsigned int g, unsigned int b)
 {
 	return (uint16_t)((r >> 3) | ((g >> 3) << 5) | ((b >> 3) << 10));
 }

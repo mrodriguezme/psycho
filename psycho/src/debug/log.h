@@ -21,7 +21,7 @@
 
 #define DECLARE_LOG_MODULE(mod) static const enum psycho_log_module m_log_module = (mod)
 
-PSYCHO_NODISCARD PSYCHO_ALWAYS_INLINE PSYCHO_NONNULL bool
+[[nodiscard]] PSYCHO_ALWAYS_INLINE PSYCHO_NONNULL bool
 psycho_log_enabled(const struct psycho_ctx *ctx, enum psycho_log_module module, enum psycho_log_level level)
 {
 	return ctx->cfg.log.log_cb && ctx->cfg.log.modules[module] >= level;

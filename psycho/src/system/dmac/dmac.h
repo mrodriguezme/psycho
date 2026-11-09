@@ -61,7 +61,7 @@ void dmac_dicr_write(struct psycho_ctx *ctx, uint32_t word) PSYCHO_NONNULL;
 void psycho_dmac_channel_dreq_update(struct psycho_ctx *ctx, enum psycho_dmac_channel_id channel,
 				     bool asserted) PSYCHO_NONNULL;
 
-PSYCHO_NONNULL PSYCHO_ALWAYS_INLINE PSYCHO_NODISCARD bool psycho_dmac_dma_transfer_active(struct psycho_ctx *ctx)
+[[nodiscard]] PSYCHO_NONNULL PSYCHO_ALWAYS_INLINE bool psycho_dmac_dma_transfer_active(struct psycho_ctx *ctx)
 {
 	return true;
 }

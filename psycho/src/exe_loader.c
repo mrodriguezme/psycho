@@ -62,7 +62,7 @@ static_assert_offset(struct exe_hdr, resv_bios_fn, 0x38);
 static_assert_offset(struct exe_hdr, ascii_marker, 0x4C);
 static_assert_offset(struct exe_hdr, code, 0x800);
 
-PSYCHO_NODISCARD enum psycho_ctx_ret psycho_ctx_run_exe(struct psycho_ctx *ctx, uint8_t *exe, size_t size)
+[[nodiscard]] enum psycho_ctx_ret psycho_ctx_run_exe(struct psycho_ctx *ctx, uint8_t *exe, size_t size)
 {
 	if (unlikely(size < sizeof(struct exe_hdr)))
 		return PSYCHO_CTX_EXE_SIZE_INVALID;

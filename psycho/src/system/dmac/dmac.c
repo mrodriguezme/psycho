@@ -80,7 +80,7 @@ PSYCHO_NONNULL static void raise_interrupt(struct psycho_ctx *ctx, enum psycho_d
 	dmac_dicr_update(ctx, prev);
 }
 
-PSYCHO_NODISCARD static const char *channel_to_str(enum psycho_dmac_channel_id channel)
+[[nodiscard]] static const char *channel_to_str(enum psycho_dmac_channel_id channel)
 {
 	static const char *const strs[PSYCHO_DMAC_CHANNEL_ID_COUNT] = {
 #define X(id, name) [PSYCHO_DMAC_CHANNEL_ID_##id] = name,

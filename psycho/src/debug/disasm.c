@@ -189,7 +189,7 @@ static const char *const cop2_ccr[PSYCHO_CPU_COP2_CCR_COUNT] = {
 	// clang-format on
 };
 
-PSYCHO_NODISCARD PSYCHO_NONNULL static uint32_t instr_get(struct psycho_ctx *ctx, uint32_t pc, bool *valid)
+[[nodiscard]] PSYCHO_NONNULL static uint32_t instr_get(struct psycho_ctx *ctx, uint32_t pc, bool *valid)
 {
 	pc = vaddr_to_paddr(pc);
 	return psycho_bus_load_word(ctx, pc, valid);
@@ -203,13 +203,13 @@ static void trace_add(struct psycho_disasm_traces *traces, enum psycho_disasm_tr
 	}
 }
 
-PSYCHO_NODISCARD const char *psycho_gpr_get(enum psycho_cpu_gpr reg)
+[[nodiscard]] const char *psycho_gpr_get(enum psycho_cpu_gpr reg)
 {
 	assert(reg < PSYCHO_CPU_GPR_COUNT);
 	return gpr[reg];
 }
 
-PSYCHO_NODISCARD const char *psycho_cop0_get(enum psycho_cpu_cop0_cpr reg)
+[[nodiscard]] const char *psycho_cop0_get(enum psycho_cpu_cop0_cpr reg)
 {
 	assert(reg < PSYCHO_CPU_COP0_CPR_COUNT);
 	return cop0_cpr[reg];

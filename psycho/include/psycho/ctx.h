@@ -86,14 +86,13 @@ enum psycho_ctx_ret {
 	PSYCHO_CTX_OK			 = 1,
 };
 
-PSYCHO_NODISCARD PSYCHO_CONST struct psycho_ctx_cfg *psycho_ctx_cfg_get(struct psycho_ctx *ctx) PSYCHO_NONNULL;
+[[nodiscard]] PSYCHO_CONST struct psycho_ctx_cfg *psycho_ctx_cfg_get(struct psycho_ctx *ctx) PSYCHO_NONNULL;
 
 enum psycho_ctx_ret psycho_ctx_init(struct psycho_ctx *ctx) PSYCHO_NONNULL;
 
 void psycho_ctx_reset(struct psycho_ctx *ctx) PSYCHO_NONNULL;
 
-PSYCHO_NODISCARD enum psycho_ctx_ret psycho_ctx_run_exe(struct psycho_ctx *ctx, uint8_t *exe,
-							size_t size) PSYCHO_NONNULL;
+[[nodiscard]] enum psycho_ctx_ret psycho_ctx_run_exe(struct psycho_ctx *ctx, uint8_t *exe, size_t size) PSYCHO_NONNULL;
 
 void psycho_ctx_run(struct psycho_ctx *ctx) PSYCHO_NONNULL;
 void psycho_ctx_stop(struct psycho_ctx *ctx) PSYCHO_NONNULL;

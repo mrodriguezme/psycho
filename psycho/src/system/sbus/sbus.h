@@ -19,11 +19,11 @@
 
 #include "psycho/ctx.h"
 
-PSYCHO_NODISCARD uint32_t psycho_bus_load_word(struct psycho_ctx *ctx, uint32_t paddr, bool *valid) PSYCHO_NONNULL;
+[[nodiscard]] uint32_t psycho_bus_load_word(struct psycho_ctx *ctx, uint32_t paddr, bool *valid) PSYCHO_NONNULL;
 
-PSYCHO_NODISCARD uint16_t psycho_bus_load_halfword(struct psycho_ctx *ctx, uint32_t paddr, bool *valid) PSYCHO_NONNULL;
+[[nodiscard]] uint16_t psycho_bus_load_halfword(struct psycho_ctx *ctx, uint32_t paddr, bool *valid) PSYCHO_NONNULL;
 
-PSYCHO_NODISCARD uint8_t psycho_bus_load_byte(struct psycho_ctx *ctx, const uint32_t paddr, bool *valid) PSYCHO_NONNULL;
+[[nodiscard]] uint8_t psycho_bus_load_byte(struct psycho_ctx *ctx, const uint32_t paddr, bool *valid) PSYCHO_NONNULL;
 
 bool psycho_bus_store_word(struct psycho_ctx *ctx, uint32_t paddr, uint32_t word) PSYCHO_NONNULL;
 
