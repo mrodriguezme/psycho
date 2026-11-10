@@ -147,7 +147,7 @@ PSYCHO_NONNULL static void transfer_ram_to_device(struct psycho_ctx *ctx, enum p
 {
 	while (size--) {
 		bool valid;
-		uint32_t word = psycho_bus_load_word(ctx, *madr & MADR_ADDR_MASK, &valid);
+		uint32_t word = psycho_bus_load_word(ctx, *madr, &valid);
 
 		if (unlikely(!valid)) {
 			ctx->dmac.dicr |= DICR_BUS_ERR_FLAG;
@@ -155,7 +155,7 @@ PSYCHO_NONNULL static void transfer_ram_to_device(struct psycho_ctx *ctx, enum p
 		}
 
 		route_cfg[ch].dst(ctx, word);
-		*madr = (*madr + step) & MADR_WRITE_MASK;
+		*madr = (*madr + step) & MADR_ADDR_MASK;
 	}
 }
 
@@ -165,12 +165,12 @@ PSYCHO_NONNULL static void transfer_device_to_ram(struct psycho_ctx *ctx, enum p
 	while (size--) {
 		uint32_t word = route_cfg[ch].src(ctx);
 
-		if (unlikely(!psycho_bus_store_word(ctx, *madr & MADR_ADDR_MASK, word))) {
+		if (unlikely(!psycho_bus_store_word(ctx, *madr, word))) {
 			ctx->dmac.dicr |= DICR_BUS_ERR_FLAG;
 			return;
 		}
 
-		*madr = (*madr + step) & MADR_WRITE_MASK;
+		*madr = (*madr + step) & MADR_ADDR_MASK;
 	}
 }
 
@@ -238,10 +238,10 @@ PSYCHO_NONNULL static void otc_transfer_burst_mode(struct psycho_ctx *ctx)
 	struct psycho_dmac_channel *ch = &ctx->dmac.channels[PSYCHO_DMAC_CHANNEL_ID_OTC];
 
 	uint32_t size = burst_word_count(ch->bcr) - 1;
-	uint32_t addr = ch->madr & 0x00FFFFFC;
+	uint32_t addr = ch->madr;
 
 	while (size--) {
-		uint32_t next = (addr - 4) & 0x00FFFFFC;
+		uint32_t next = (addr - 4) & MADR_ADDR_MASK;
 
 		otc_ram_write(ctx, addr, next);
 		addr = next;
