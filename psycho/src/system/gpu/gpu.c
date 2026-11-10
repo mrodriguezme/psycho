@@ -547,6 +547,11 @@ PSYCHO_NONNULL static void do_cpu_to_vram_processing(struct psycho_ctx *ctx)
 		ctx->gpu.base.stat |= STAT_IDLE;
 }
 
+PSYCHO_NONNULL static void process_vram_to_vram(struct psycho_ctx *ctx)
+{
+	__builtin_trap();
+}
+
 PSYCHO_NONNULL static void process_cpu_to_vram(struct psycho_ctx *ctx)
 {
 	vram_transfer_init(ctx);
@@ -577,6 +582,16 @@ PSYCHO_NONNULL static void process_vram_to_cpu(struct psycho_ctx *ctx)
 {
 	vram_transfer_init(ctx);
 	ctx->gpu.base.stat |= (STAT_IDLE | STAT_RFFL);
+}
+
+PSYCHO_NONNULL static void setup_vram_to_vram_blit(struct psycho_ctx *ctx, uint32_t packet)
+{
+	write_fifo_push(ctx, packet);
+
+	ctx->gpu.base.cmd.handler	 = process_vram_to_vram;
+	ctx->gpu.base.cmd.required_words = 4;
+
+	ctx->gpu.base.stat &= ~STAT_IDLE;
 }
 
 PSYCHO_NONNULL static void setup_cpu_to_vram_blit(struct psycho_ctx *ctx, uint32_t packet)
@@ -703,6 +718,10 @@ PSYCHO_NONNULL static void setup_cmd(struct psycho_ctx *ctx, uint32_t packet)
 		setup_cmd_rect(ctx, packet);
 		break;
 
+	case CMD_TYPE_VRAM_TO_VRAM_BLIT:
+		setup_vram_to_vram_blit(ctx, packet);
+		break;
+
 	case CMD_TYPE_CPU_TO_VRAM_BLIT:
 		setup_cpu_to_vram_blit(ctx, packet);
 		break;
@@ -716,8 +735,7 @@ PSYCHO_NONNULL static void setup_cmd(struct psycho_ctx *ctx, uint32_t packet)
 		break;
 
 	default:
-		LOG_WARN(ctx, "unhandled command type %u", cmd_type);
-		break;
+		unreachable();
 	}
 }
 

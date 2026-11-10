@@ -155,7 +155,7 @@ PSYCHO_NONNULL static void transfer_ram_to_device(struct psycho_ctx *ctx, enum p
 		}
 
 		route_cfg[ch].dst(ctx, word);
-		*madr += step;
+		*madr = (*madr + step) & MADR_ADDR_MASK;
 	}
 }
 
@@ -170,7 +170,7 @@ PSYCHO_NONNULL static void transfer_device_to_ram(struct psycho_ctx *ctx, enum p
 			return;
 		}
 
-		*madr += step;
+		*madr = (*madr + step) & MADR_ADDR_MASK;
 	}
 }
 
@@ -425,7 +425,7 @@ void psycho_dmac_reset(struct psycho_ctx *ctx)
 
 void psycho_dmac_channel_madr_write(struct psycho_ctx *ctx, enum psycho_dmac_channel_id channel, uint32_t madr)
 {
-	madr &= MADR_MASK;
+	madr &= MADR_WRITE_MASK;
 
 	ctx->dmac.channels[channel].madr = madr;
 	LOG_TRACE(ctx, "%s MADR set to 0x%08X", channel_to_str(channel), madr);
