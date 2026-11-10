@@ -22,8 +22,8 @@
 // ---------------------------------------------------------------------------
 // DMAC channel MADR register layout
 // ---------------------------------------------------------------------------
-constexpr uint32_t MADR_ADDR_MASK  = GENMASK32(23, 0);
-constexpr uint32_t MADR_WRITE_MASK = GENMASK32(23, 2);
+constexpr uint32_t MADR_WRITE_MASK = GENMASK32(23, 0);
+constexpr uint32_t MADR_ADDR_MASK  = GENMASK32(23, 2);
 
 // ---------------------------------------------------------------------------
 // DMAC channel BCR register layout

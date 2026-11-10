@@ -147,7 +147,7 @@ PSYCHO_NONNULL static void transfer_ram_to_device(struct psycho_ctx *ctx, enum p
 {
 	while (size--) {
 		bool valid;
-		uint32_t word = psycho_bus_load_word(ctx, *madr, &valid);
+		uint32_t word = psycho_bus_load_word(ctx, *madr & MADR_ADDR_MASK, &valid);
 
 		if (unlikely(!valid)) {
 			ctx->dmac.dicr |= DICR_BUS_ERR_FLAG;
@@ -155,7 +155,7 @@ PSYCHO_NONNULL static void transfer_ram_to_device(struct psycho_ctx *ctx, enum p
 		}
 
 		route_cfg[ch].dst(ctx, word);
-		*madr = (*madr + step) & MADR_ADDR_MASK;
+		*madr = (*madr + step) & MADR_WRITE_MASK;
 	}
 }
 
@@ -165,12 +165,12 @@ PSYCHO_NONNULL static void transfer_device_to_ram(struct psycho_ctx *ctx, enum p
 	while (size--) {
 		uint32_t word = route_cfg[ch].src(ctx);
 
-		if (unlikely(!psycho_bus_store_word(ctx, *madr, word))) {
+		if (unlikely(!psycho_bus_store_word(ctx, *madr & MADR_ADDR_MASK, word))) {
 			ctx->dmac.dicr |= DICR_BUS_ERR_FLAG;
 			return;
 		}
 
-		*madr = (*madr + step) & MADR_ADDR_MASK;
+		*madr = (*madr + step) & MADR_WRITE_MASK;
 	}
 }
 
@@ -318,6 +318,8 @@ PSYCHO_NONNULL static void transfer_event(struct psycho_ctx *ctx, void *)
 {
 	struct psycho_dmac_channel *ch = &ctx->dmac.channels[ctx->dmac.active_channel_id];
 	uint32_t sync_mode	       = field_get32(CHCR_SYNCMODE_MASK, ch->chcr);
+
+	ch->madr &= MADR_ADDR_MASK;
 
 	route_cfg[ctx->dmac.active_channel_id].mode_handlers[sync_mode](ctx);
 }
